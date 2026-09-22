@@ -1,0 +1,12 @@
+# 编辑器 / 系统
+.DS_Store
+*.log
+Thumbs.db
+
+# 工作记忆（绝不进公开仓库）
+.workbuddy/
+
+# 临时 / 调试产物
+_deploy/
+_trash_bak*/
+_build.js
