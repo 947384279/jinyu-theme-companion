@@ -29,17 +29,18 @@ class Jinyu_SmtpConfig
     }
 
     /**
-     * 从数据库读取 SMTP 配置（敏感字段已被 jinyu_get_option 透明解密）。
+     * 从插件独立 option（jinyu_companion_settings）读取 SMTP 配置；
+     * 首次启用时由 jinyu_companion_maybe_migrate() 从主题 jinyu_options 回填（含已解密密码）。
      */
     private function cfgFromDb(): array
     {
         return [
-            'host'   => jinyu_get_option('smtp_host', ''),
-            'port'   => (int) jinyu_get_option('smtp_port', 465),
-            'secure' => jinyu_get_option('smtp_secure', 'ssl'),
-            'user'   => jinyu_get_option('smtp_user', ''),
-            'pwd'    => jinyu_get_option('smtp_pwd', ''),
-            'from'   => jinyu_get_option('smtp_from', ''),
+            'host'   => jinyu_companion_get_option('smtp_host', ''),
+            'port'   => (int) jinyu_companion_get_option('smtp_port', 465),
+            'secure' => jinyu_companion_get_option('smtp_secure', 'ssl'),
+            'user'   => jinyu_companion_get_option('smtp_user', ''),
+            'pwd'    => jinyu_companion_get_option('smtp_pwd', ''),
+            'from'   => jinyu_companion_get_option('smtp_from', ''),
         ];
     }
 

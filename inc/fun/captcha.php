@@ -87,7 +87,7 @@ function jinyu_captcha_check(string $input): bool
  */
 function jinyu_captcha_required(string $scene): bool
 {
-    $policy = jinyu_get_option('captcha_policy', 'smart');
+    $policy = jinyu_companion_get_option('captcha_policy', 'smart');
     if ($policy === 'always') {
         return true;
     }

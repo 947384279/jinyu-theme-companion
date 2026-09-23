@@ -29,7 +29,7 @@ function jinyu_poster_generate()
 
     $w = 750; $h = 1000;
     $img = imagecreatetruecolor($w, $h);
-    $primary = jinyu_get_option('style_color_primary', '#FF6B35');
+    $primary = jinyu_companion_get_option('style_color_primary', '#FF6B35');
     list($r,$g,$b) = sscanf(ltrim($primary,'#'),'%02x%02x%02x');
     $bg = imagecolorallocate($img, 247, 248, 250);
     $accent = imagecolorallocate($img, $r, $g, $b);

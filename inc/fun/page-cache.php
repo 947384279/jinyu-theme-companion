@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * 整页缓存（仅未登录访客的 GET 请求）
- * 启用开关与有效期统一由「性能优化中心」(jinyu_perf_options) 管控，不再读主题配置 JINYU_OPT；
+ * 启用开关与有效期统一由配套插件设置面板（jinyu_companion_*）管控，不再读主题配置；
  * 内容更新时由 inc/fun/cache.php 的 jinyu_cache_flush() 自动失效。
  */
 
@@ -23,7 +23,7 @@ function jinyu_page_cache_key(): string
 
 function jinyu_page_cache_serve(): void
 {
-    if (empty(jinyu_perf_get_options()['page_cache_enable'])) {
+    if ( ! jinyu_companion_is_checked( 'page_cache_enable' ) ) {
         return;
     }
     if (empty($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'GET') return;
@@ -50,7 +50,7 @@ function jinyu_page_cache_serve(): void
 
 function jinyu_page_cache_capture(): void
 {
-    if (empty(jinyu_perf_get_options()['page_cache_enable'])) {
+    if ( ! jinyu_companion_is_checked( 'page_cache_enable' ) ) {
         return;
     }
     // 检测到第三方整页缓存插件时自动让位，避免两层 HTML 缓存冲突 / 内容不同步。
@@ -62,7 +62,7 @@ function jinyu_page_cache_capture(): void
 
     ob_start(function ($html) {
         if (strlen($html) < 500) return $html;
-        $ttl = max(60, (int) ( jinyu_perf_get_options()['page_cache_ttl'] ?? 3600 ));
+        $ttl = max( 60, (int) jinyu_companion_get_option( 'page_cache_ttl', '3600' ) );
         set_transient(jinyu_page_cache_key(), $html, $ttl);
         return $html;
     });

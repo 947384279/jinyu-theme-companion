@@ -17,7 +17,7 @@ function jinyu_anti_spam($approved, $commentdata)
     if ($len > 2000) return 'spam';
 
     // 关键词过滤
-    $words = jinyu_get_option('anti_spam_words', defined('JINYU_DEFAULT_SPAM_WORDS') ? JINYU_DEFAULT_SPAM_WORDS : '彩票,色情,赌博,代写,刷量');
+    $words = jinyu_companion_get_option('anti_spam_words', defined('JINYU_DEFAULT_SPAM_WORDS') ? JINYU_DEFAULT_SPAM_WORDS : '彩票,色情,赌博,代写,刷量');
     foreach (explode(',', $words) as $w) {
         $w = trim($w);
         if ($w && stripos($text, $w) !== false) return 'spam';
@@ -35,9 +35,9 @@ function jinyu_anti_spam($approved, $commentdata)
 
 // 自动关闭超过 30 天文章的评论
 add_action('init', function(){
-    if (jinyu_get_option('close_comments_old', true)) {
+    if (jinyu_companion_is_checked('close_comments_old', true)) {
         add_filter('comments_open', function($open, $pid){
-            $days = jinyu_get_option('close_comments_days', 30);
+            $days = jinyu_companion_get_option('close_comments_days', 30);
             $post = get_post($pid);
             if ($post && (time() - strtotime($post->post_date)) > $days * 86400) return false;
             return $open;

@@ -79,7 +79,7 @@ if ( ! function_exists( 'jinyu_auto_link_content' ) ) {
 		if ( is_feed() || is_admin() || wp_doing_ajax() ) {
 			return $content;
 		}
-		if ( ! jinyu_is_checked( 'auto_link_enable' ) ) {
+		if ( ! jinyu_companion_is_checked( 'auto_link_enable', false ) ) {
 			return $content;
 		}
 		if ( ! is_singular( 'post' ) ) {

@@ -34,15 +34,13 @@ if ( ! defined( 'JINYU_CUR_VER' ) ) {
 
 /* --------------------------------------------------------------------------
  * 模块加载：下列文件原属主题，拆为独立外发插件；各文件顶部自行注册钩子。
- * 关键：这些模块在顶层调用主题的 jinyu_is_checked()/jinyu_get_option() 等函数，
- * 而 WordPress 加载顺序是「插件先于主题」，故必须延后到 after_setup_theme
- * （主题 functions.php 已包含、主题函数已就绪）再 require，否则加载期会因调用
- * 未定义函数而致命。主题未启用时跳过加载，仅保留下方兼容性提示，站点不会白屏。
+ * WordPress 加载顺序是「插件先于主题」，故必须延后到 after_setup_theme 再 require，
+ * 确保主题函数（若启用）已就绪。插件不依赖主题：所有跨主题调用经 inc/fun/theme-shims.php
+ * 兼容层 function_exists 守卫兜底，主题缺席时优雅降级，站点不会白屏 / 致命。
  * ------------------------------------------------------------------------ */
 add_action( 'after_setup_theme', static function (): void {
-	if ( ! function_exists( 'jinyu_is_checked' ) ) {
-		return; // 金玉主题未启用：不加载功能模块，避免调用未定义函数致命
-	}
+	// 不再要求金玉主题在场：插件可独立运行。所有对主题原语的调用统一经
+	// inc/fun/theme-shims.php 兼容层兜底（function_exists 守卫，主题在场优先用主题版）。
 
 	// 头部冗余输出清理（plugin-territory）：原属主题的 clean_wp_head 优化项，
 	// 迁出到配套插件，使主题通过 .org 审查；线上行为保持不变。
@@ -57,6 +55,10 @@ add_action( 'after_setup_theme', static function (): void {
 
 	// 基础设施：SMTP 配置类（被 email.php 依赖，须先加载）
 	require_once __DIR__ . '/inc/classes/Mail/Jinyu_SmtpConfig.php';
+
+	// 选项 helper + 主题兼容层（必须在各功能模块之前加载）
+	require_once __DIR__ . '/inc/fun/companion-options.php';
+	require_once __DIR__ . '/inc/fun/theme-shims.php';
 
 	// SEO / 结构化数据 / 索引推送
 	require_once __DIR__ . '/inc/seo.php';
@@ -91,6 +93,7 @@ add_action( 'after_setup_theme', static function (): void {
 	require_once __DIR__ . '/inc/fun/stats.php';
 	require_once __DIR__ . '/inc/fun/email.php';
 	require_once __DIR__ . '/inc/ajax/poster.php';
+require_once __DIR__ . '/inc/admin/settings.php';
 } );
 
 /* --------------------------------------------------------------------------

@@ -29,7 +29,7 @@ function jinyu_baidu_submit(int $post_id): void
         return;
     }
 
-    $api_url = jinyu_get_option('baidu_submit_token');
+    $api_url = jinyu_companion_get_option('baidu_submit_token');
     if (empty($api_url)) {
         return;
     }
@@ -51,6 +51,6 @@ function jinyu_baidu_submit(int $post_id): void
     update_post_meta($post_id, 'jinyu_baidu_push_status', 1);
 }
 
-if (jinyu_is_checked('baidu_auto_submit')) {
+if (jinyu_companion_get_option('baidu_auto_submit', '0') === '1') {
     add_action('save_post', 'jinyu_baidu_submit', 10, 1);
 }

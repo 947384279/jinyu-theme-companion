@@ -38,7 +38,7 @@ add_action('wp_ajax_jinyu_test_smtp', function () {
     $useForm = !empty($form['host']);
     if ($useForm) {
         \Jinyu\Mail\Jinyu_SmtpConfig::$testOverride = $form;
-    } elseif (!jinyu_get_option('smtp_host', '')) {
+    } elseif (!jinyu_companion_get_option('smtp_host', '')) {
         wp_send_json_error(__('请先在「邮件 SMTP」填写 SMTP 主机并保存，再发送测试邮件。', 'jinyu-theme-companion'));
     }
 

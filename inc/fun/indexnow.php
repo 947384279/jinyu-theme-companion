@@ -85,7 +85,7 @@ function jinyu_indexnow_serve(): void {
 add_action( 'save_post', 'jinyu_indexnow_submit', 10, 3 );
 function jinyu_indexnow_submit( int $post_id, WP_Post $post, bool $update ): void {
 	// 开关未开或无密钥则跳过。
-	if ( ! jinyu_is_checked( 'indexnow_enable' ) ) {
+	if ( ! jinyu_companion_is_checked( 'indexnow_enable', false ) ) {
 		return;
 	}
 	$key = (string) get_option( 'jinyu_indexnow_key' );

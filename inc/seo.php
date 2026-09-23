@@ -30,7 +30,7 @@ if ( ! function_exists( 'jinyu_first_para_text' ) ) {
 	}
 }
 
-if (!jinyu_is_checked('seo_open')) return;
+if (!jinyu_companion_is_checked('seo_open', true)) return;
 
 // 站点已装主流 SEO 插件时让位，避免与插件重复输出 description / og / twitter 标签
 if (
@@ -99,8 +99,8 @@ function jinyu_seo_meta()
         }
     }
 
-    $desc = jinyu_get_option('seo_desc', '');
-    $keys = jinyu_get_option('seo_keywords', '');
+    $desc = jinyu_companion_get_option('seo_desc', '');
+    $keys = jinyu_companion_get_option('seo_keywords', '');
 
     if (is_singular()) {
         global $post;
@@ -144,8 +144,9 @@ function jinyu_seo_meta()
     if (is_singular()) {
         $title = get_the_title();
         $cover = jinyu_get_post_cover(get_the_ID(), 'large', false);
-        $og_img = jinyu_get_option('og_image', '');
+        $og_img = jinyu_companion_get_option('og_image', '');
         $og_image = $cover ?: $og_img;
+        if (!$og_image && function_exists('jinyu_get_option')) $og_image = jinyu_get_option('web_logo', '');
         // 尺寸：默认分享大图按建议 1200x630 声明；其它来源尝试取真实尺寸，失败则不输出。
         $og_w = $og_h = null;
         if ($og_image === $og_img && $og_img) {
@@ -158,7 +159,7 @@ function jinyu_seo_meta()
                 $og_h = $d[1];
             }
         }
-        $site_name = jinyu_get_option('og_site_name', '');
+        $site_name = jinyu_companion_get_option('og_site_name', '');
         if (!$site_name) $site_name = get_bloginfo('name');
         echo '<meta property="og:title" content="' . esc_attr($title) . '">' . PHP_EOL;
         echo '<meta property="og:type" content="article">' . PHP_EOL;
@@ -171,7 +172,7 @@ function jinyu_seo_meta()
             if ($og_w) echo '<meta property="og:image:width" content="' . (int)$og_w . '">' . PHP_EOL;
             if ($og_h) echo '<meta property="og:image:height" content="' . (int)$og_h . '">' . PHP_EOL;
         }
-        if (jinyu_is_checked('twitter_card_enable')) {
+        if (jinyu_companion_is_checked('twitter_card_enable', true)) {
             echo '<meta name="twitter:card" content="summary_large_image">' . PHP_EOL;
             echo '<meta name="twitter:title" content="' . esc_attr($title) . '">' . PHP_EOL;
             if ($desc) echo '<meta name="twitter:description" content="' . esc_attr($desc) . '">' . PHP_EOL;
@@ -179,15 +180,18 @@ function jinyu_seo_meta()
         }
     } elseif (is_front_page() || is_home()) {
         // 首页：让用户分享站点门面链接（微信群/朋友圈）也能出卡片。
-        $site_name = jinyu_get_option('og_site_name', '');
+        $site_name = jinyu_companion_get_option('og_site_name', '');
         if (!$site_name) $site_name = get_bloginfo('name');
         $home_desc = $desc ?: get_bloginfo('description');
         // 优先用标准分享大图，其次站点 Logo，再次站点图标。
-        $home_img  = jinyu_get_option('og_image', '');
-        if (!$home_img) $home_img = jinyu_get_option('web_logo', '');
+        $home_img  = jinyu_companion_get_option('og_image', '');
+        if (!$home_img && function_exists('has_custom_logo') && has_custom_logo()) {
+            $home_img = wp_get_attachment_image_url(get_theme_mod('custom_logo'), 'full');
+        }
         if (!$home_img) $home_img = get_site_icon_url();
+        if (!$home_img && function_exists('jinyu_get_option')) $home_img = jinyu_get_option('web_logo', '');
         $og_w = $og_h = null;
-        if ($home_img === jinyu_get_option('og_image', '') && $home_img) {
+        if ($home_img === jinyu_companion_get_option('og_image', '') && $home_img) {
             $og_w = 1200;
             $og_h = 630;
         } elseif ($home_img) {
@@ -208,7 +212,7 @@ function jinyu_seo_meta()
             if ($og_w) echo '<meta property="og:image:width" content="' . (int)$og_w . '">' . PHP_EOL;
             if ($og_h) echo '<meta property="og:image:height" content="' . (int)$og_h . '">' . PHP_EOL;
         }
-        if (jinyu_is_checked('twitter_card_enable')) {
+        if (jinyu_companion_is_checked('twitter_card_enable', true)) {
             echo '<meta name="twitter:card" content="summary_large_image">' . PHP_EOL;
             echo '<meta name="twitter:title" content="' . esc_attr($site_name) . '">' . PHP_EOL;
             if ($home_desc) echo '<meta name="twitter:description" content="' . esc_attr($home_desc) . '">' . PHP_EOL;
@@ -223,7 +227,7 @@ function jinyu_seo_meta()
 add_action('wp_head', 'jinyu_llms_head_link', 2);
 function jinyu_llms_head_link()
 {
-    if (!jinyu_is_checked('llms_enable')) {
+    if (!jinyu_companion_is_checked('llms_enable', true)) {
         return;
     }
     echo '<link rel="llms.txt" href="' . esc_url(home_url('/llms.txt')) . '">' . PHP_EOL;

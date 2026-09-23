@@ -84,7 +84,7 @@ function jinyu_llms_serve(): void {
 
 	// 后台关闭时返回 404，使该端点对外不可见。
 	// 重写规则保持注册（避免「关→开」后残留陈旧规则需手动刷新），仅在此处拦截。
-	if ( ! jinyu_is_checked( 'llms_enable' ) ) {
+	if ( ! jinyu_companion_is_checked( 'llms_enable', true ) ) {
 		global $wp_query;
 		if ( isset( $wp_query ) ) {
 			$wp_query->set_404();

@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 add_action('wp_head', 'jinyu_json_ld', 99);
 function jinyu_json_ld()
 {
-    if (jinyu_is_checked('ld_json_disable')) return;
+    if (jinyu_companion_get_option('ld_json_disable', '0') === '1') return;
     $data = [];
 
     // Site 信息
@@ -38,7 +38,7 @@ function jinyu_json_ld()
         $cats      = is_singular('post') ? get_the_category($post->ID) : [];
 
         // 实体关联档案（sameAs）：来自主题配置，指向站点在其它平台的官方档案。
-        $ent_sameas = array_values( array_filter( array_map( 'trim', preg_split( '/\r\n|\r|\n/', (string) jinyu_get_option( 'entity_sameas', '' ) ) ), static function ( $u ) {
+        $ent_sameas = array_values( array_filter( array_map( 'trim', preg_split( '/\r\n|\r|\n/', (string) jinyu_companion_get_option( 'entity_sameas', '' ) ) ), static function ( $u ) {
             return filter_var( $u, FILTER_VALIDATE_URL ) !== false;
         } ) );
 
