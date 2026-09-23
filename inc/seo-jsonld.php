@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 add_action('wp_head', 'jinyu_json_ld', 99);
 function jinyu_json_ld()
 {
-    if (jinyu_companion_get_option('ld_json_disable', '0') === '1') return;
+    if ( ! jinyu_companion_is_checked('ld_json_enable', true) ) return;
     $data = [];
 
     // Site 信息
@@ -163,11 +163,21 @@ function jinyu_json_ld()
 
 // FAQ 短代码
 $jinyu_faq = function($atts, $c=''){
+    global $jinyu_faq_index;
+    $jinyu_faq_index = -1; // 每个 FAQ 块独立计数，首条展开
     return '<div class="jinyu-faq">' . do_shortcode($c) . '</div>';
 };
+// FAQ 项：默认折叠；首条自动展开（open 属性显式传 0 可强制折叠）
 $jinyu_faq_item = function($atts, $c=''){
-    $a = shortcode_atts(['q'=>''],$atts);
-    return '<details class="jinyu-faq-item"><summary>' . esc_html($a['q']) . '</summary><div class="jinyu-faq-ans">' . do_shortcode($c) . '</div></details>';
+    global $jinyu_faq_index;
+    $a = shortcode_atts(['q'=>'','open'=>''],$atts);
+    $jinyu_faq_index = isset($jinyu_faq_index) ? $jinyu_faq_index + 1 : 0;
+    if ($a['open'] !== '') {
+        $is_open = in_array(strtolower((string)$a['open']), ['1','yes','true','on'], true);
+    } else {
+        $is_open = ($jinyu_faq_index === 0);
+    }
+    return '<details class="jinyu-faq-item"' . ($is_open ? ' open' : '') . '><summary>' . esc_html($a['q']) . '</summary><div class="jinyu-faq-ans">' . do_shortcode($c) . '</div></details>';
 };
 add_shortcode('jinyu_faq', $jinyu_faq);
 add_shortcode('jinyu_faq_item', $jinyu_faq_item);

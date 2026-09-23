@@ -60,14 +60,29 @@ add_action( 'after_setup_theme', static function (): void {
 	require_once __DIR__ . '/inc/fun/companion-options.php';
 	require_once __DIR__ . '/inc/fun/theme-shims.php';
 
+	// 加密：companion 自有实现（唯一命名，不与主题 jinyu_encrypt/decrypt 冲突），
+	// storage 的 Secret 加密入库 + 一次性迁移解密主题历史密文均依赖此文件，须先于 storage.php 加载。
+	require_once __DIR__ . '/inc/fun/crypto.php';
+
+	// 对象存储引擎（又拍云 / 阿里云 OSS / 腾讯云 COS / 七牛 / S3）：
+	// 从主题拆出迁入本插件，提供 jinyu_is_storage_enabled / jinyu_storage_config / Jinyu_Storage_Factory，
+	// 主题 media.php 经 function_exists 守卫自动接管。与历史私有插件 wordpress-plugin-jinyu 的互斥
+	// 由其主文件 require 处守卫保证（PHP 8.5 编译期早绑定使文件级 return 守卫不可用，本文件禁用之）。
+	// 配置存本插件独立选项 jinyu_companion_settings（首次运行自动从主题 JINYU_OPT 平移），不依赖主题函数。
+	require_once __DIR__ . '/inc/fun/storage.php';
+
 	// SEO / 结构化数据 / 索引推送
 	require_once __DIR__ . '/inc/seo.php';
 	require_once __DIR__ . '/inc/seo-jsonld.php';
 	require_once __DIR__ . '/inc/fun/category-seo.php';
+	require_once __DIR__ . '/inc/fun/post-seo.php';
 	require_once __DIR__ . '/inc/fun/llms.php';
 	require_once __DIR__ . '/inc/fun/indexnow.php';
 	require_once __DIR__ . '/inc/fun/baidu-push.php';
 	require_once __DIR__ . '/inc/fun/no-category.php';
+	// 站点验证元标签（Google/Bing/Baidu/Yandex/360）+ 图片 alt 补全
+	require_once __DIR__ . '/inc/fun/verification.php';
+	require_once __DIR__ . '/inc/fun/img-alt.php';
 
 	// 社交：关注 / 取关 / 消息 / 未读（主题调用 jinyu_follow_user 等）
 	require_once __DIR__ . '/inc/fun/social.php';
@@ -88,6 +103,7 @@ add_action( 'after_setup_theme', static function (): void {
 	require_once __DIR__ . '/inc/fun/anti-spam.php';
 
 	// 性能 / 系统
+	require_once __DIR__ . '/inc/fun/speculation.php';
 	require_once __DIR__ . '/inc/fun/page-cache.php';
 	require_once __DIR__ . '/inc/fun/db-optimize.php';
 	require_once __DIR__ . '/inc/fun/stats.php';

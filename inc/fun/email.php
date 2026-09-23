@@ -12,15 +12,16 @@ add_action('phpmailer_init', function ($phpmailer) {
 });
 
 add_action('wp_ajax_jinyu_test_smtp', function () {
-    check_ajax_referer('jinyu_save_options', 'nonce');
+    check_ajax_referer('jinyu_companion_settings', 'jinyu_companion_nonce');
     if (!current_user_can('manage_options')) wp_send_json_error(__('权限不足', 'jinyu-theme-companion'));
 
     $to = wp_get_current_user()->user_email;
     if (!$to) $to = get_option('admin_email');
     if (!$to || !is_email($to)) wp_send_json_error(__('无法确定收件人邮箱，请先在个人资料中填写邮箱', 'jinyu-theme-companion'));
 
-    // 优先使用后台表单当前值（可能尚未保存），其次是数据库已保存值。
-    // 这样在未点「保存」前也能直接测试刚填写的配置。
+    // 测试时优先使用后台表单当前值（可能尚未保存），其余字段回退到数据库已保存值。
+    // 特别处理密码：表单密码框默认留空（"留空则不修改"），若用户未填则必须用已保存密码，
+    // 否则会出现「正确用户名 + 空密码」导致 SMTP 535 认证失败。
     $map = [
         'smtp_host'   => 'host',
         'smtp_port'   => 'port',
@@ -29,7 +30,14 @@ add_action('wp_ajax_jinyu_test_smtp', function () {
         'smtp_pwd'    => 'pwd',
         'smtp_from'   => 'from',
     ];
-    $form = [];
+    $form = [
+        'host'   => jinyu_companion_get_option('smtp_host', ''),
+        'port'   => (int) jinyu_companion_get_option('smtp_port', 465),
+        'secure' => jinyu_companion_get_option('smtp_secure', 'ssl'),
+        'user'   => jinyu_companion_get_option('smtp_user', ''),
+        'pwd'    => jinyu_companion_get_option('smtp_pwd', ''),
+        'from'   => jinyu_companion_get_option('smtp_from', ''),
+    ];
     foreach ($map as $post => $key) {
         if (isset($_POST[$post]) && $_POST[$post] !== '') {
             $form[$key] = is_string($_POST[$post]) ? wp_unslash($_POST[$post]) : $_POST[$post];
@@ -57,7 +65,7 @@ add_action('wp_ajax_jinyu_test_smtp', function () {
 });
 
 add_action('wp_ajax_jinyu_clear_cache', function () {
-    check_ajax_referer('jinyu_save_options', 'nonce');
+    check_ajax_referer('jinyu_companion_settings', 'jinyu_companion_nonce');
     if (!current_user_can('manage_options')) wp_send_json_error(__('权限不足', 'jinyu-theme-companion'));
     $n = function_exists('jinyu_cache_flush') ? jinyu_cache_flush() : 0;
     wp_send_json_success(sprintf(__('已清理 %d 条缓存', 'jinyu-theme-companion'), (int) $n));

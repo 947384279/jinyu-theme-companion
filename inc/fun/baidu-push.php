@@ -51,6 +51,8 @@ function jinyu_baidu_submit(int $post_id): void
     update_post_meta($post_id, 'jinyu_baidu_push_status', 1);
 }
 
-if (jinyu_companion_get_option('baidu_auto_submit', '0') === '1') {
+// 门控键与设置面板保持一致：面板把百度接口地址存为 baidu_submit_token（已废弃的 baidu_auto_submit 从不写入）。
+// 填了接口地址即视为开启主动推送；函数内部对空地址也已提前返回，双重保险。
+if ('' !== (string) jinyu_companion_get_option('baidu_submit_token', '')) {
     add_action('save_post', 'jinyu_baidu_submit', 10, 1);
 }

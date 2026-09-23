@@ -7,16 +7,52 @@ if ( ! defined( 'ABSPATH' ) ) {
 // 读取统一经下列函数；未设置时按约定给默认值：
 //   - 核心呈现开关（seo_open / twitter_card_enable / llms_enable）默认开启（'1'）；
 //   - 主动提交类（baidu_auto_submit）、禁用类（ld_json_disable）默认关闭（'0'）。
-if ( ! function_exists( 'jinyu_companion_get_settings' ) ) {
-	function jinyu_companion_get_settings(): array {
-		static $s = null;
-		if ( null === $s ) {
-			$s = get_option( 'jinyu_companion_settings', [] );
-			if ( ! is_array( $s ) ) {
-				$s = [];
+if ( ! function_exists( 'jinyu_companion_settings_cache' ) ) {
+	/**
+	 * 设置的请求内缓存（单一真源）。
+	 *
+	 * 为什么需要「可刷新」：插件在加载期（jinyu_companion_maybe_migrate）就会读一次设置，
+	 * 而设置页保存发生在之后的 admin_init。若缓存不可刷新，保存后同请求渲染仍读到旧值，
+	 * 表现为「第一次保存不生效、第二次才对」。
+	 *
+	 * @param array|null $write 传入数组则覆盖缓存。
+	 * @param bool       $flush 为 true 时丢弃缓存，下次读取重新查库。
+	 * @return array
+	 */
+	function jinyu_companion_settings_cache( ?array $write = null, bool $flush = false ): array {
+		static $cache = null;
+		if ( $flush ) {
+			$cache = null;
+		}
+		if ( null !== $write ) {
+			$cache = $write;
+		}
+		if ( null === $cache ) {
+			$cache = get_option( 'jinyu_companion_settings', [] );
+			if ( ! is_array( $cache ) ) {
+				$cache = [];
 			}
 		}
-		return $s;
+		return $cache;
+	}
+}
+
+if ( ! function_exists( 'jinyu_companion_get_settings' ) ) {
+	function jinyu_companion_get_settings(): array {
+		return jinyu_companion_settings_cache();
+	}
+}
+
+if ( ! function_exists( 'jinyu_companion_save_settings' ) ) {
+	/**
+	 * 唯一写入口：落库并同步刷新请求内缓存。
+	 * 绕过本函数直接 update_option() 会使缓存失真，请勿这么做。
+	 *
+	 * @param array $settings 完整设置数组。
+	 */
+	function jinyu_companion_save_settings( array $settings ): void {
+		update_option( 'jinyu_companion_settings', $settings );
+		jinyu_companion_settings_cache( $settings );
 	}
 }
 
@@ -61,10 +97,23 @@ if ( ! function_exists( 'jinyu_companion_maybe_migrate' ) ) {
 				}
 			}
 			if ( $changed ) {
-				update_option( 'jinyu_companion_settings', $s );
+				jinyu_companion_save_settings( $s );
 			}
 		}
 		update_option( 'jinyu_companion_migrated', 1 );
 	}
 	jinyu_companion_maybe_migrate();
+}
+
+// 是否安装了主流 SEO 插件（Yoast / Rank Math / AIOSEO / SEOPress / TSF）。
+// 这些插件已自带验证元标签、XML Sitemap、结构化数据等能力；配套插件在对应功能上主动让位，
+// 避免重复输出造成冲突或权重稀释。
+if ( ! function_exists( 'jinyu_seo_plugin_active' ) ) {
+	function jinyu_seo_plugin_active(): bool {
+		return defined( 'WPSEO_VERSION' )
+			|| defined( 'RANK_MATH_VERSION' )
+			|| defined( 'AIOSEO_VERSION' )
+			|| defined( 'SEOPRESS_VERSION' )
+			|| class_exists( 'The_SEO_Framework\\Load' );
+	}
 }

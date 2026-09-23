@@ -13,6 +13,40 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 如需彻底清理，删除文件末尾「旧标签别名」段落即可。
  */
 
+/**
+ * 内联 SVG 图标：替代原来的 emoji 图标。
+ * 原因：部分浏览器（国产内核 / 缺 emoji 字体环境）会把 emoji 渲染成「破图」占位符。
+ * 约定：width/height 用 1em，跟随容器 font-size 缩放；不依赖外部图标字体，可独立运行。
+ */
+if ( ! function_exists( 'jinyu_svg_icon' ) ) {
+	function jinyu_svg_icon( string $name ): string {
+		$paths = [
+			'lock'     => '<rect x="3.5" y="11" width="17" height="10" rx="2"/><path d="M7.5 11V7a4.5 4.5 0 0 1 9 0v4"/>',
+			'eye'      => '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+			'download' => '<path d="M12 3v12"/><path d="m7 12 5 5 5-5"/><path d="M5 21h14"/>',
+		];
+		if ( ! isset( $paths[ $name ] ) ) {
+			return '';
+		}
+		return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
+			. 'stroke-linejoin="round" width="1em" height="1em" style="vertical-align:-.125em" aria-hidden="true" focusable="false">'
+			. $paths[ $name ] . '</svg>';
+	}
+}
+
+// GitHub 品牌图标（实心，独立 viewBox）
+if ( ! function_exists( 'jinyu_svg_github' ) ) {
+	function jinyu_svg_github(): string {
+		return '<svg viewBox="0 0 16 16" fill="currentColor" width="1em" height="1em" style="vertical-align:-.125em" '
+			. 'aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 '
+			. '0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 '
+			. '1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 '
+			. '0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 2-.27c.68 0 1.36.09 2 .27 '
+			. '1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 '
+			. '0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>';
+	}
+}
+
 // --- 提示框 [jinyu_tip] ---
 $jinyu_tip = function ($atts, $content = '') {
 	$a = shortcode_atts( [ 'type' => 'info', 'title' => '' ], $atts );
@@ -30,7 +64,7 @@ $jinyu_download = function ($atts) {
 		return '';
 	}
 	$html = '<a class="jinyu-btn jinyu-download-btn" href="' . esc_url( $a['url'] ) . '" target="_blank" rel="noopener">';
-	$html .= '⬇ ' . esc_html( $a['name'] );
+	$html .= jinyu_svg_icon( 'download' ) . ' ' . esc_html( $a['name'] );
 	if ( $a['type'] !== 'free' ) {
 		$html .= ' <span class="jinyu-download-type">' . esc_html( $a['type'] ) . '</span>';
 	}
@@ -48,7 +82,7 @@ $jinyu_login = function ($atts, $content = '') {
 		return do_shortcode( $content );
 	}
 	return '<div class="jinyu-login-hide">'
-		 . '<div class="jinyu-login-hide-text">🔒 ' . __( '登录后可见', 'jinyu-theme-companion') . '</div>'
+		 . '<div class="jinyu-login-hide-text">' . jinyu_svg_icon( 'lock' ) . ' ' . __( '登录后可见', 'jinyu-theme-companion') . '</div>'
 		 . '<a class="jinyu-btn" href="' . esc_url( wp_login_url( get_permalink() ) ) . '">' . __( '立即登录', 'jinyu-theme-companion') . '</a>'
 		 . '</div>';
 };
@@ -70,7 +104,7 @@ $jinyu_hide = function ($atts, $content = '') {
 	if ( current_user_can( 'manage_options' ) ) {
 		return do_shortcode( $content );
 	}
-	return '<div class="jinyu-comment-hide">👀 ' . __( '隐藏内容，仅管理员可见', 'jinyu-theme-companion') . '</div>';
+	return '<div class="jinyu-comment-hide">' . jinyu_svg_icon( 'eye' ) . ' ' . __( '隐藏内容，仅管理员可见', 'jinyu-theme-companion') . '</div>';
 };
 add_shortcode( 'jinyu_hide', $jinyu_hide );
 
@@ -84,7 +118,7 @@ $jinyu_github = function ($atts) {
 		? 'https://github.com/' . $a['user'] . '/' . $a['repo']
 		: 'https://github.com/' . $a['user'];
 	return '<a class="jinyu-github-card" href="' . esc_url( $url ) . '" target="_blank" rel="noopener">'
-		 . '<span class="jinyu-github-icon">🐙</span>'
+		 . '<span class="jinyu-github-icon">' . jinyu_svg_github() . '</span>'
 		 . '<span class="jinyu-github-name">' . esc_html( $a['user'] ) . esc_html( $a['repo'] ? '/' . $a['repo'] : '' ) . '</span>'
 		 . '</a>';
 };
@@ -240,7 +274,7 @@ $jinyu_login_email = function ($atts, $content = '') {
 		}
 	}
 	return '<div class="jinyu-login-hide">'
-		 . '<div class="jinyu-login-hide-text">🔒 ' . __( '登录并验证邮箱后可见', 'jinyu-theme-companion') . '</div>'
+		 . '<div class="jinyu-login-hide-text">' . jinyu_svg_icon( 'lock' ) . ' ' . __( '登录并验证邮箱后可见', 'jinyu-theme-companion') . '</div>'
 		 . '<a class="jinyu-btn" href="' . esc_url( wp_login_url( get_permalink() ) ) . '">' . __( '立即登录', 'jinyu-theme-companion') . '</a>'
 		 . '</div>';
 };
@@ -281,7 +315,7 @@ $jinyu_password_read = function ($atts, $content = '') {
 
 	$action = esc_url( get_permalink( $post_id ) );
 	return '<form class="jinyu-password-read" method="post" action="' . $action . '">'
-		. '<div class="jinyu-password-read-icon" aria-hidden="true">🔒</div>'
+		. '<div class="jinyu-password-read-icon">' . jinyu_svg_icon( 'lock' ) . '</div>'
 		. '<div class="jinyu-password-read-tip">' . esc_html( $a['tip'] ) . '</div>'
 		. '<input type="hidden" name="jinyu_pwd_key" value="' . esc_attr( $key ) . '">'
 		. '<div class="jinyu-password-read-row">'

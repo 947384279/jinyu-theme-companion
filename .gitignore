@@ -10,3 +10,6 @@ Thumbs.db
 _deploy/
 _trash_bak*/
 _build.js
+_shot_*.png
+_theme_ref/
+settings-preview.html

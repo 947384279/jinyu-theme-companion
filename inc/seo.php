@@ -119,23 +119,29 @@ function jinyu_seo_meta()
         if (!empty($tags)) $keys = implode(',', $tags);
         $custom_keys = get_post_meta(get_the_ID(), 'jinyu_seo_keys', true);
         if ($custom_keys) $keys = $custom_keys;
-    } elseif (is_category()) {
-        $cat_id     = get_queried_object_id();
-        $cat_keys   = get_term_meta($cat_id, 'jinyu_seo_cat_keywords', true);
-        $cat_desc   = get_term_meta($cat_id, 'jinyu_seo_cat_desc', true);
-        if ($cat_keys) {
-            $keys = $cat_keys;
+    } elseif (is_category() || is_tag() || is_tax()) {
+        $term_id   = get_queried_object_id();
+        $term_keys = get_term_meta($term_id, 'jinyu_seo_cat_keywords', true);
+        $term_desc = get_term_meta($term_id, 'jinyu_seo_cat_desc', true);
+        if ($term_keys) {
+            $keys = $term_keys;
         }
-        if ($cat_desc) {
-            $desc = $cat_desc;
-        } elseif (category_description($cat_id)) {
-            $desc = category_description($cat_id);
+        if ($term_desc) {
+            $desc = $term_desc;
+        } else {
+            $td = term_description($term_id);
+            if ($td) {
+                $desc = $td;
+            }
         }
-    } elseif (is_tag()) {
-        $desc = tag_description() ?: $desc;
     } elseif (is_author()) {
         $author = get_queried_object();
         if ($author && !empty($author->description)) $desc = $author->description;
+    } elseif (is_front_page() || is_home()) {
+        // 首页：未单独配置 seo_desc 时用站点副标题兜底，确保首页也有 <meta name="description">（JY-12）。
+        if ($desc === '') {
+            $desc = get_bloginfo('description');
+        }
     }
 
     if ($desc) echo '<meta name="description" content="' . esc_attr($desc) . '">' . PHP_EOL;
