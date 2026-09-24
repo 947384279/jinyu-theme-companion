@@ -1040,13 +1040,14 @@ function jyc_perf_render_status_html(): string {
 			$val   = $meta['ms'] ? number_format_i18n( (int) $avg ) . ' ms' : $avg;
 			$worst = $meta['ms'] ? number_format_i18n( (int) $max ) . ' ms' : $max;
 			$badge = 'good' === $rate ? __( '良好', 'jinyu-theme-companion' ) : ( 'poor' === $rate ? __( '较差', 'jinyu-theme-companion' ) : __( '需优化', 'jinyu-theme-companion' ) );
-			$html .= '<div class="jperf-wv-chip rate-' . $rate . '" title="' . esc_attr( $meta['tip'] ) . '">'
+			$html .= '<div class="jperf-wv-chip rate-' . $rate . '">'
 				. '<div class="jperf-wv-top"><span class="jperf-wv-lab">' . $meta['label'] . '</span>'
-				. '<span class="jperf-wv-badge">' . $badge . '</span></div>'
+				. '<span class="jperf-wv-right"><span class="jperf-wv-badge">' . $badge . '</span>'
+				. '<button type="button" class="jperf-help" aria-expanded="false" aria-label="' . esc_attr( $meta['name'] . __( ' 的说明', 'jinyu-theme-companion' ) ) . '"><svg viewBox="0 0 24 24"><path d="M9.1 9a3 3 0 015.8 1c0 2-3 2.4-3 4"/><circle cx="12" cy="17.3" r=".6"/></svg></button></span></div>'
 				. '<div class="jperf-wv-val">' . $val . '</div>'
 				. '<div class="jperf-wv-name">' . $meta['name'] . '</div>'
 				. '<div class="jperf-wv-worst">' . esc_html__( '最差 ', 'jinyu-theme-companion' ) . $worst . '</div>'
-				. '<div class="jperf-wv-opt" title="' . esc_attr( $meta['optimize'] ) . '"><b>' . esc_html__( '优化', 'jinyu-theme-companion' ) . '</b> · ' . esc_html( $meta['optimize'] ) . '</div></div>';
+				. '<div class="jperf-tip" role="tooltip" hidden><div>' . esc_html( $meta['tip'] ) . '</div><div><b>' . esc_html__( '优化', 'jinyu-theme-companion' ) . '</b> · ' . esc_html( $meta['optimize'] ) . '</div></div></div>';
 		}
 		if ( null !== $wv_score ) {
 			$sr     = $wv_score['rate'];
@@ -1532,30 +1533,30 @@ function jyc_perf_render_pane(): void {
 			});
 		});
 
-		// 帮助气泡：点击 ? 弹出说明，点外部 / Escape 关闭，同时只开一个
-		var helpBtns = document.querySelectorAll('#jperf-toggles .jperf-help');
+		// 帮助气泡（事件委托：覆盖开关卡与体验指标卡，看板整块刷新后依然有效）
 		function closeTips(except){
-			helpBtns.forEach(function(b){
+			document.querySelectorAll('.jperf-help[aria-expanded="true"]').forEach(function(b){
 				if (b !== except) {
 					b.setAttribute('aria-expanded', 'false');
-					var t = b.closest('.jcard').querySelector('.jperf-tip');
+					var host = b.closest('.jcard, .jperf-wv-chip');
+					var t = host && host.querySelector('.jperf-tip');
 					if (t) { t.hidden = true; }
 				}
 			});
 		}
-		helpBtns.forEach(function(b){
-			b.addEventListener('click', function(e){
-				e.stopPropagation();
-				var tip = b.closest('.jcard').querySelector('.jperf-tip');
+		document.addEventListener('click', function(e){
+			var b = e.target.closest('.jperf-help');
+			if (b) {
+				var tip = b.closest('.jcard, .jperf-wv-chip');
+				tip = tip && tip.querySelector('.jperf-tip');
 				if (!tip) { return; }
 				var open = b.getAttribute('aria-expanded') === 'true';
 				closeTips(b);
 				b.setAttribute('aria-expanded', open ? 'false' : 'true');
 				tip.hidden = open;
-			});
-		});
-		document.addEventListener('click', function(e){
-			if (!e.target.closest('.jperf-tip') && !e.target.closest('.jperf-help')) { closeTips(null); }
+				return;
+			}
+			if (!e.target.closest('.jperf-tip')) { closeTips(null); }
 		});
 		document.addEventListener('keydown', function(e){
 			if (e.key === 'Escape') { closeTips(null); }
