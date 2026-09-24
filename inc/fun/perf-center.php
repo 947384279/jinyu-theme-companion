@@ -1351,8 +1351,8 @@ function jyc_perf_render_pane(): void {
 						<?php foreach ( $g_items as $key => $meta ) : ?>
 						<div class="jcard">
 							<div class="jcard-body">
-								<div class="jcard-t"><?php echo esc_html( $meta['label'] ); ?><?php if ( ! empty( $opts[ $key ] ) ) : ?><span class="jbadge"><?php esc_html_e( '默认开', 'jinyu-theme-companion' ); ?></span><?php endif; ?></div>
-								<div class="jcard-c"><?php echo esc_html( $meta['desc'] ); ?></div>
+								<div class="jcard-t"><?php echo esc_html( $meta['label'] ); ?><?php if ( ! empty( $opts[ $key ] ) ) : ?><span class="jbadge"><?php esc_html_e( '默认开', 'jinyu-theme-companion' ); ?></span><?php endif; ?><button type="button" class="jperf-help" aria-expanded="false" aria-label="<?php echo esc_attr( sprintf( __( '%s 的说明', 'jinyu-theme-companion' ), $meta['label'] ) ); ?>"><svg viewBox="0 0 24 24"><path d="M9.1 9a3 3 0 015.8 1c0 2-3 2.4-3 4"/><circle cx="12" cy="17.3" r=".6"/></svg></button></div>
+								<div class="jperf-tip" role="tooltip" hidden><?php echo esc_html( $meta['desc'] ); ?></div>
 							</div>
 							<div class="jperf-sw <?php echo ! empty( $opts[ $key ] ) ? 'on' : ''; ?>"
 								data-key="<?php echo esc_attr( $key ); ?>"
@@ -1530,6 +1530,35 @@ function jyc_perf_render_pane(): void {
 			sw.addEventListener('keydown', function(e){
 				if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); }
 			});
+		});
+
+		// 帮助气泡：点击 ? 弹出说明，点外部 / Escape 关闭，同时只开一个
+		var helpBtns = document.querySelectorAll('#jperf-toggles .jperf-help');
+		function closeTips(except){
+			helpBtns.forEach(function(b){
+				if (b !== except) {
+					b.setAttribute('aria-expanded', 'false');
+					var t = b.closest('.jcard').querySelector('.jperf-tip');
+					if (t) { t.hidden = true; }
+				}
+			});
+		}
+		helpBtns.forEach(function(b){
+			b.addEventListener('click', function(e){
+				e.stopPropagation();
+				var tip = b.closest('.jcard').querySelector('.jperf-tip');
+				if (!tip) { return; }
+				var open = b.getAttribute('aria-expanded') === 'true';
+				closeTips(b);
+				b.setAttribute('aria-expanded', open ? 'false' : 'true');
+				tip.hidden = open;
+			});
+		});
+		document.addEventListener('click', function(e){
+			if (!e.target.closest('.jperf-tip') && !e.target.closest('.jperf-help')) { closeTips(null); }
+		});
+		document.addEventListener('keydown', function(e){
+			if (e.key === 'Escape') { closeTips(null); }
 		});
 
 		// 一键应用推荐优化
