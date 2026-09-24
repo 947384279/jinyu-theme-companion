@@ -1079,9 +1079,14 @@ function jyc_perf_render_status_html(): string {
 				$sbadge = 'good' === $srate ? __( '良好', 'jinyu-theme-companion' ) : ( 'poor' === $srate ? __( '较差', 'jinyu-theme-companion' ) : __( '需优化', 'jinyu-theme-companion' ) );
 				$spct   = min( 100, (int) ( (float) $srow['lcp_max'] / (float) $wvm['lcp']['poor'] * 100 ) );
 				$slcp   = number_format_i18n( (int) $srow['lcp_max'] ) . ' ms';
+				// 显示用美化：URL 解码 + 超长截断（title 悬浮保留完整原始路径）
+				$sdisp  = urldecode( (string) $srow['path'] );
+				if ( mb_strlen( $sdisp ) > 52 ) {
+					$sdisp = mb_substr( $sdisp, 0, 52 ) . '…';
+				}
 				$html  .= '<div class="jperf-slow-row rate-' . $srate . '">'
 					. '<span class="jperf-slow-rank">' . $rank . '</span>'
-					. '<span class="jperf-slow-path" title="' . esc_attr( $srow['path'] ) . '">' . esc_html( $srow['path'] ) . '</span>'
+					. '<span class="jperf-slow-path" title="' . esc_attr( $srow['path'] ) . '">' . esc_html( $sdisp ) . '</span>'
 					. '<span class="jperf-slow-meta">' . sprintf( __( '最差 %1$s · %2$s 次', 'jinyu-theme-companion' ), $slcp, number_format_i18n( (int) $srow['n'] ) ) . '</span>'
 					. '<span class="jperf-slow-bar"><i style="width:' . $spct . '%"></i></span>'
 					. '<span class="jperf-slow-badge">' . $sbadge . '</span></div>';

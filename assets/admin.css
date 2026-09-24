@@ -498,6 +498,8 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 .jgroup-tt{font-size:13.5px;font-weight:650;letter-spacing:-.01em}
 .jgroup-n{font-size:11px;color:var(--j-muted)}
 .jgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:11px}
+/* 组内仅一张卡时占满整行，避免半宽孤卡右侧留空 */
+.jgrid > .jcard:only-child{grid-column:1 / -1}
 .jcard{display:flex;align-items:flex-start;gap:13px;padding:14px 15px;background:var(--j-bg);
 	border:1px solid var(--j-line);border-radius:12px;box-shadow:0 1px 2px rgba(24,24,27,.04);
 	transition:border-color .15s,box-shadow .15s,transform .15s}
