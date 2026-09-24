@@ -131,7 +131,11 @@
   width: 38px; height: 38px; border-radius: 11px; border: 1px solid var(--line); background: var(--surface);
   color: var(--ink-2); display: grid; place-items: center; cursor: pointer; transition: all .2s var(--ease);
 }
-.jyc-theme-tog:hover { color: var(--brand); border-color: var(--brand); box-shadow: var(--elev-1); transform: rotate(-12deg); }
+.jyc-theme-tog:hover { color: var(--brand); border-color: var(--brand); box-shadow: var(--elev-1); }
+.jyc-theme-tog svg { transition: transform .2s var(--ease); }
+@media (hover: hover) {
+  .jyc-theme-tog:hover svg { transform: rotate(-12deg); }
+}
 
 .jyc-content { flex: 1; padding: 28px 30px 40px; width: 100%; }
 /* 子页（mod-head 与面板）默认全宽单列；宽屏由文件末尾的媒体查询改为两列瀑布流。
