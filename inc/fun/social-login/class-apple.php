@@ -22,6 +22,7 @@ class Jinyu_OAuth_Provider_Apple extends Jinyu_OAuth_Provider
 	public function color(): string { return '#000000'; }
 	public function response_mode(): string { return 'form_post'; }
 	public function returns_email(): bool { return true; }
+	public function console_url(): string { return 'https://developer.apple.com/account/resources/identifiers/list/serviceId'; }
 
 	/** Apple 的“密钥”是 .p8 私钥；且须 Team ID / Key ID 齐全才算配置完整 */
 	protected function secret_field(): string { return 'private_key'; }

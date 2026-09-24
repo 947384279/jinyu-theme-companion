@@ -18,6 +18,7 @@ class Jinyu_OAuth_Provider_QQ extends Jinyu_OAuth_Provider
 	public function icon(): string { return 'Q'; }
 	public function color(): string { return '#12b7f5'; }
 	public function returns_email(): bool { return false; }
+	public function console_url(): string { return 'https://connect.qq.com/manage.html'; }
 
 	public function authorize_url( string $state, string $redirect_uri ): string {
 		return add_query_arg(

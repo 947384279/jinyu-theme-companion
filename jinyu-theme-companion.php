@@ -29,7 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 主题缺失时优雅降级，不会白屏。文本域统一使用字面量 'jinyu-theme-companion'。
  * ------------------------------------------------------------------------ */
 if ( ! defined( 'JINYU_CUR_VER' ) ) {
-	define( 'JINYU_CUR_VER', '1.0.2' );
+	define( 'JINYU_CUR_VER', '1.0.4' );
 }
 
 /* 插件自有路径常量：模块（shortcode-ui / poster 等）一律引用插件自身资源，

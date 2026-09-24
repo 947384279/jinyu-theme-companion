@@ -73,6 +73,14 @@ abstract class Jinyu_OAuth_Provider
 		return true;
 	}
 
+	/**
+	 * 开放平台开发者后台地址（申请 client_id / secret 的地方）。
+	 * 供后台配置卡片渲染「去申请」入口；无则返回空串，面板自动不渲染该链接。
+	 */
+	public function console_url(): string {
+		return '';
+	}
+
 	/* ------------------------------------------------------------ 后台配置项 */
 
 	/**

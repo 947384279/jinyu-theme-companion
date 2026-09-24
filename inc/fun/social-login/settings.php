@@ -117,9 +117,26 @@ function jinyu_sl_is_placeholder( string $v ): bool {
 	return '' !== $v && str_starts_with( (string) $v, '••••••••' );
 }
 
-/** 平台图标字母徽标（取标签首字母）。零外部图标依赖。 */
-function jinyu_sl_mono( string $label ): string {
-	return mb_strtoupper( mb_substr( $label, 0, 1, 'UTF-8' ), 'UTF-8' );
+/**
+ * 品牌色派生色阶：#rrggbb + 透明度 → rgba()。
+ * 用于卡片顶部描线 / 品牌淡底等「由平台色派生」的样式，统一服务端算好内联下传，
+ * 前端只吃 token —— 规避 CSS color-mix() 在旧内核（Chrome <111 / Safari <16.2）静默失效的问题。
+ */
+function jinyu_sl_hex_rgba( string $hex, float $alpha ): string {
+	$h = ltrim( trim( $hex ), '#' );
+	if ( 3 === strlen( $h ) ) {
+		$h = $h[0] . $h[0] . $h[1] . $h[1] . $h[2] . $h[2];
+	}
+	if ( 6 !== strlen( $h ) || ! ctype_xdigit( $h ) ) {
+		return $hex;
+	}
+	return sprintf(
+		'rgba(%d, %d, %d, %s)',
+		hexdec( substr( $h, 0, 2 ) ),
+		hexdec( substr( $h, 2, 2 ) ),
+		hexdec( substr( $h, 4, 2 ) ),
+		rtrim( rtrim( number_format( $alpha, 3, '.', '' ), '0' ), '.' )
+	);
 }
 
 /** 社交登录配置面板（配套插件设置面板 pane-social 分区内渲染，无独立表单）。 */
@@ -132,17 +149,34 @@ function jinyu_sl_settings_pane(): void {
 	$accounts = $opt['accounts'] ?? [];
 	$redirect = jinyu_sl_redirect_uri();
 	$default  = jinyu_sl_default_redirect_uri();
+	$provs    = jinyu_sl_providers();
+
+	// 顶部统计：已完整配置（client_id + 密钥齐备）的平台数
+	$ready = 0;
+	foreach ( $provs as $p => $prov ) {
+		$prov->set_config( $accounts[ $p ] ?? [] );
+		if ( $prov->is_configured() ) {
+			++$ready;
+		}
+	}
 	?>
 	<div class="jyc-mod-head"><h1><?php echo esc_html__( '第三方登录（社交登录）', 'jinyu-theme-companion' ); ?></h1>
 		<div class="jyc-sub"><?php echo esc_html__( '启用后前台登录弹窗将显示对应入口。各平台密钥经 AES 加密存储于本站数据库，不会以明文落库。', 'jinyu-theme-companion' ); ?></div></div>
 
 	<div class="jyc-sl-hero">
+		<span class="jyc-sl-hero-aurora" aria-hidden="true"></span>
 		<div class="jyc-sl-hero-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
 		<div class="jyc-sl-hero-tx">
 			<div class="jyc-sl-hero-t"><?php echo esc_html__( '第三方账号登录', 'jinyu-theme-companion' ); ?></div>
 			<div class="jyc-sl-hero-d"><?php echo esc_html__( '开启后，访客可使用下方任一平台账号一键授权登录本站，无需记忆新密码。', 'jinyu-theme-companion' ); ?></div>
 		</div>
-		<label class="jyc-switch jyc-switch-lg"><input type="checkbox" name="jinyu_sl_enable" <?php checked( $enable ); ?>><span class="jyc-track"></span></label>
+		<div class="jyc-sl-hero-side">
+			<div class="jyc-sl-hero-stat" title="<?php echo esc_attr__( '已完整填写凭据的平台数量', 'jinyu-theme-companion' ); ?>">
+				<b class="jyc-num"><?php echo (int) $ready; ?></b>
+				<span><?php echo esc_html( sprintf( __( '/ %d 已配置', 'jinyu-theme-companion' ), count( $provs ) ) ); ?></span>
+			</div>
+			<label class="jyc-switch jyc-switch-lg"><input type="checkbox" name="jinyu_sl_enable" <?php checked( $enable ); ?>><span class="jyc-track"></span></label>
+		</div>
 	</div>
 
 	<div class="jyc-panel">
@@ -165,68 +199,101 @@ function jinyu_sl_settings_pane(): void {
 
 	<div class="jyc-sl-redirect">
 		<div class="jyc-sl-redirect-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
-		<div class="jyc-sl-redirect-main">
-			<div class="jyc-fname"><?php echo esc_html__( '回调地址 (Redirect URI)', 'jinyu-theme-companion' ); ?></div>
-			<div class="jyc-fdesc"><?php echo esc_html__( '在各平台开发者后台的「回调 / Redirect URI」处填写此地址（必须 HTTPS，Apple 需完全一致）。', 'jinyu-theme-companion' ); ?></div>
-		</div>
-		<div class="jyc-sl-redirect-ctrl">
-			<input class="jyc-inp jyc-inp-mono" type="text" name="jinyu_sl_redirect_uri" value="<?php echo esc_attr( $redirect ); ?>" id="jyc-sl-redirect" data-default="<?php echo esc_attr( $default ); ?>" spellcheck="false" autocomplete="off">
-			<button type="button" class="jyc-sl-reset" id="jyc-sl-reset-redirect" title="<?php echo esc_attr__( '恢复为默认地址', 'jinyu-theme-companion' ); ?>"><?php echo esc_html__( '恢复默认', 'jinyu-theme-companion' ); ?></button>
-			<button type="button" class="jyc-sl-copy" data-copy="jyc-sl-redirect"><?php echo esc_html__( '复制', 'jinyu-theme-companion' ); ?></button>
+		<div class="jyc-sl-redirect-body">
+			<div class="jyc-sl-redirect-head">
+				<div class="jyc-fname"><?php echo esc_html__( '回调地址 (Redirect URI)', 'jinyu-theme-companion' ); ?></div>
+				<div class="jyc-fdesc"><?php echo esc_html__( '在各平台开发者后台的「回调 / Redirect URI」处填写此地址（必须 HTTPS，Apple 需完全一致）。', 'jinyu-theme-companion' ); ?></div>
+			</div>
+			<div class="jyc-sl-redirect-ctrl">
+				<input class="jyc-inp jyc-inp-mono" type="text" name="jinyu_sl_redirect_uri" value="<?php echo esc_attr( $redirect ); ?>" id="jyc-sl-redirect" data-default="<?php echo esc_attr( $default ); ?>" spellcheck="false" autocomplete="off">
+				<button type="button" class="jyc-sl-reset" id="jyc-sl-reset-redirect" title="<?php echo esc_attr__( '恢复为默认地址', 'jinyu-theme-companion' ); ?>"><?php echo esc_html__( '恢复默认', 'jinyu-theme-companion' ); ?></button>
+				<button type="button" class="jyc-sl-copy" data-copy="jyc-sl-redirect"><?php echo esc_html__( '复制', 'jinyu-theme-companion' ); ?></button>
+			</div>
 		</div>
 	</div>
 
 	<div class="jyc-sl-grid">
-		<?php foreach ( jinyu_sl_providers() as $p => $prov ) : ?>
+		<?php foreach ( $provs as $p => $prov ) : ?>
 			<?php
 				$cfg        = $accounts[ $p ] ?? [];
 				$cid        = $cfg['client_id'] ?? '';
-				$configured = '' !== $cid;
 				$sec_enc    = $cfg['client_secret'] ?? '';
 				$uses_cs    = $prov->uses_client_secret();
 				$pk_enc     = $cfg['private_key'] ?? '';
 				$pc         = $prov->color();
+				$console    = $prov->console_url();
+				$prov->set_config( $cfg );
+				$configured = $prov->is_configured();
+				$partial    = ! $configured && ( '' !== $cid || '' !== $sec_enc || '' !== $pk_enc );
+				$status     = $configured ? 'is-ok' : ( $partial ? 'is-part' : 'is-wait' );
+				$status_tx  = $configured
+					? __( '已配置', 'jinyu-theme-companion' )
+					: ( $partial ? __( '待完善', 'jinyu-theme-companion' ) : __( '未配置', 'jinyu-theme-companion' ) );
+
+				// 字段栅格为两列：半宽字段总数为奇数时（如 Apple 的 client_id + Team ID + Key ID），
+				// 让 client_id 独占一整行，否则行尾会留下一个空白格；字段总数 ≥4 的卡片在宽屏独占一整行。
+				$fields_total = 1 + ( $uses_cs ? 1 : 0 ) + count( $prov->config_fields() );
+				$textarea_num = 0;
+				foreach ( $prov->config_fields() as $f ) {
+					if ( 'textarea' === ( $f['type'] ?? '' ) ) {
+						++$textarea_num;
+					}
+				}
+				$cid_full = 1 === ( $fields_total - $textarea_num ) % 2;
+				$wide     = $fields_total >= 4;
 			?>
-			<div class="jyc-sl-card" style="--pc:<?php echo esc_attr( $pc ); ?>">
-				<div class="jyc-sl-card-top">
-					<span class="jyc-sl-badge" style="background:<?php echo esc_attr( $pc ); ?>1f;color:<?php echo esc_attr( $pc ); ?>"><?php echo esc_html( jinyu_sl_mono( $prov->label() ) ); ?></span>
-					<div class="jyc-grow">
-						<div class="jyc-sl-name"><?php echo esc_html( $prov->label() ); ?>
-							<span class="jyc-sl-status <?php echo $configured ? 'is-ok' : 'is-wait'; ?>"><?php echo $configured ? esc_html__( '已配置', 'jinyu-theme-companion' ) : esc_html__( '待配置', 'jinyu-theme-companion' ); ?></span>
-						</div>
+			<div class="jyc-sl-card<?php echo $wide ? ' jyc-sl-card-wide' : ''; ?>" style="--pc:<?php echo esc_attr( $pc ); ?>;--pc-l:<?php echo esc_attr( jinyu_sl_hex_rgba( $pc, 0.34 ) ); ?>;--pc-t:<?php echo esc_attr( jinyu_sl_hex_rgba( $pc, 0.13 ) ); ?>">
+				<div class="jyc-sl-card-hd">
+					<span class="jyc-sl-badge" aria-hidden="true"><?php echo esc_html( $prov->icon() ); ?></span>
+					<div class="jyc-sl-card-tx">
+						<div class="jyc-sl-name"><?php echo esc_html( $prov->label() ); ?></div>
 						<div class="jyc-sl-id"><?php echo esc_html( $prov->id() ); ?></div>
 					</div>
+					<span class="jyc-sl-status <?php echo esc_attr( $status ); ?>"><?php echo esc_html( $status_tx ); ?></span>
 				</div>
-				<div class="jyc-sl-fields">
-					<label class="jyc-fl"><?php echo esc_html__( 'App ID / Client ID', 'jinyu-theme-companion' ); ?>
-						<input class="jyc-inp" type="text" name="client_id_<?php echo esc_attr( $p ); ?>" value="<?php echo esc_attr( $cid ); ?>" placeholder="—">
-					</label>
-					<?php if ( $uses_cs ) : ?>
-					<label class="jyc-fl"><?php echo esc_html__( 'App Key / Client Secret', 'jinyu-theme-companion' ); ?><?php if ( $sec_enc ) echo ' ' . esc_html__( '（已设置，留空保持不变）', 'jinyu-theme-companion' ); ?>
-						<input class="jyc-inp" type="password" name="client_secret_<?php echo esc_attr( $p ); ?>" value="" autocomplete="new-password" placeholder="<?php echo $sec_enc ? esc_attr__( '••••••••（已设置，留空保持不变）', 'jinyu-theme-companion' ) : esc_attr__( '—', 'jinyu-theme-companion' ); ?>">
-					</label>
-					<?php if ( $sec_enc ) : ?>
-						<input type="hidden" name="client_secret_old_<?php echo esc_attr( $p ); ?>" value="<?php echo esc_attr( $sec_enc ); ?>">
-					<?php endif; ?>
-					<?php endif; ?>
 
-					<?php foreach ( $prov->config_fields() as $f ) : ?>
-						<?php if ( 'client_secret' === $f['id'] ) continue; ?>
-						<?php
-							$is_pk = 'private_key' === $f['id'];
-							$val   = $is_pk ? '' : ( $cfg[ $f['id'] ] ?? '' );
-						?>
-						<label class="jyc-fl jyc-full"><?php echo esc_html( $f['label'] ); ?>
-							<?php if ( $is_pk ) : ?>
-								<textarea class="jyc-inp" name="private_key_<?php echo esc_attr( $p ); ?>" rows="3" placeholder="<?php echo ! empty( $pk_enc ) ? esc_attr__( '••••••••（已设置，留空保持不变）', 'jinyu-theme-companion' ) : esc_attr__( '—', 'jinyu-theme-companion' ); ?>"></textarea>
-							<?php else : ?>
-								<input class="jyc-inp" type="text" name="<?php echo esc_attr( $f['id'] . '_' . $p ); ?>" value="<?php echo esc_attr( $val ); ?>" placeholder="—">
-							<?php endif; ?>
+				<div class="jyc-sl-card-bd">
+					<div class="jyc-sl-fields">
+						<label class="jyc-fl<?php echo $cid_full ? ' jyc-full' : ''; ?>"><span class="jyc-sl-lb"><?php echo esc_html__( 'App ID / Client ID', 'jinyu-theme-companion' ); ?><?php if ( $configured || '' !== $cid ) : ?><em class="jyc-sl-saved"><?php echo esc_html__( '已填写', 'jinyu-theme-companion' ); ?></em><?php endif; ?></span>
+							<input class="jyc-inp jyc-inp-mono" type="text" name="client_id_<?php echo esc_attr( $p ); ?>" value="<?php echo esc_attr( $cid ); ?>" placeholder="—" spellcheck="false" autocomplete="off">
 						</label>
-						<?php if ( $is_pk && ! empty( $pk_enc ) ) : ?>
-							<input type="hidden" name="private_key_old_<?php echo esc_attr( $p ); ?>" value="<?php echo esc_attr( $pk_enc ); ?>">
+						<?php if ( $uses_cs ) : ?>
+						<label class="jyc-fl"><span class="jyc-sl-lb"><?php echo esc_html__( 'App Key / Client Secret', 'jinyu-theme-companion' ); ?><?php if ( $sec_enc ) : ?><em class="jyc-sl-saved"><?php echo esc_html__( '已保存', 'jinyu-theme-companion' ); ?></em><?php endif; ?></span>
+							<input class="jyc-inp" type="password" name="client_secret_<?php echo esc_attr( $p ); ?>" value="" autocomplete="new-password" placeholder="<?php echo $sec_enc ? esc_attr__( '••••••••（留空保持不变）', 'jinyu-theme-companion' ) : esc_attr__( '—', 'jinyu-theme-companion' ); ?>">
+						</label>
+						<?php if ( $sec_enc ) : ?>
+							<input type="hidden" name="client_secret_old_<?php echo esc_attr( $p ); ?>" value="<?php echo esc_attr( $sec_enc ); ?>">
 						<?php endif; ?>
-					<?php endforeach; ?>
+						<?php endif; ?>
+
+						<?php foreach ( $prov->config_fields() as $f ) : ?>
+							<?php if ( 'client_secret' === $f['id'] ) continue; ?>
+							<?php
+								$is_pk = 'private_key' === $f['id'];
+								$val   = $is_pk ? '' : ( $cfg[ $f['id'] ] ?? '' );
+								// 多行文本框独占整行；单行字段走两列栅格（与上方 client_id 的奇偶规则配套）
+								$f_full = 'textarea' === ( $f['type'] ?? '' );
+							?>
+							<label class="jyc-fl<?php echo $f_full ? ' jyc-full' : ''; ?>"><span class="jyc-sl-lb"><?php echo esc_html( $f['label'] ); ?><?php if ( $is_pk && $pk_enc ) : ?><em class="jyc-sl-saved"><?php echo esc_html__( '已保存', 'jinyu-theme-companion' ); ?></em><?php endif; ?></span>
+								<?php if ( $is_pk ) : ?>
+									<textarea class="jyc-inp" name="private_key_<?php echo esc_attr( $p ); ?>" rows="3" placeholder="<?php echo ! empty( $pk_enc ) ? esc_attr__( '••••••••（已设置，留空保持不变）', 'jinyu-theme-companion' ) : esc_attr__( '—', 'jinyu-theme-companion' ); ?>"></textarea>
+									<span class="jyc-sl-hint"><?php echo esc_html__( '粘贴密钥文件完整内容，需包含首尾 BEGIN / END 行。', 'jinyu-theme-companion' ); ?></span>
+								<?php else : ?>
+									<input class="jyc-inp jyc-inp-mono" type="text" name="<?php echo esc_attr( $f['id'] . '_' . $p ); ?>" value="<?php echo esc_attr( $val ); ?>" placeholder="—" spellcheck="false" autocomplete="off">
+								<?php endif; ?>
+							</label>
+							<?php if ( $is_pk && ! empty( $pk_enc ) ) : ?>
+								<input type="hidden" name="private_key_old_<?php echo esc_attr( $p ); ?>" value="<?php echo esc_attr( $pk_enc ); ?>">
+							<?php endif; ?>
+						<?php endforeach; ?>
+					</div>
+				</div>
+
+				<div class="jyc-sl-card-ft">
+					<span class="jyc-sl-lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><?php echo esc_html__( '凭据加密存储', 'jinyu-theme-companion' ); ?></span>
+					<?php if ( '' !== $console ) : ?>
+						<a class="jyc-sl-console" href="<?php echo esc_url( $console ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html__( '开发者后台', 'jinyu-theme-companion' ); ?><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg></a>
+					<?php endif; ?>
 				</div>
 			</div>
 		<?php endforeach; ?>

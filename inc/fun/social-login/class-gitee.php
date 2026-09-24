@@ -15,6 +15,7 @@ class Jinyu_OAuth_Provider_Gitee extends Jinyu_OAuth_Provider
 	public function label(): string { return 'Gitee'; }
 	public function icon(): string { return '码'; }
 	public function color(): string { return '#c71d23'; }
+	public function console_url(): string { return 'https://gitee.com/oauth/applications'; }
 
 	public function authorize_url( string $state, string $redirect_uri ): string {
 		return add_query_arg(

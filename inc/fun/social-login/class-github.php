@@ -15,6 +15,7 @@ class Jinyu_OAuth_Provider_GitHub extends Jinyu_OAuth_Provider
 	public function label(): string { return 'GitHub'; }
 	public function icon(): string { return 'G'; }
 	public function color(): string { return '#24292e'; }
+	public function console_url(): string { return 'https://github.com/settings/developers'; }
 
 	public function authorize_url( string $state, string $redirect_uri ): string {
 		return add_query_arg(

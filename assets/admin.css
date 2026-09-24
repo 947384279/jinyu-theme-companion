@@ -810,99 +810,173 @@ body.jyc-dark { background: #0a111c; }
 
 
 /* ============================================================
- * 第三方登录（社交登录）面板 · 高端化布局
- * 总开关 hero + 回调地址条 + 平台品牌卡片网格
+ * 第三方登录（社交登录）面板 · PC 高端化布局
+ * 三件套：总开关 Hero（含已配置统计）/ 回调地址卡 / 平台品牌卡片网格
+ * 卡片三段式：hd（品牌标识+状态）/ bd（字段栅格）/ ft（加密标识+开发者后台）
  * ============================================================ */
 .jyc-sl-hero {
 	position: relative; overflow: hidden;
-	display: flex; align-items: center; gap: 16px;
-	padding: 20px 22px; margin-bottom: 18px;
-	background: linear-gradient(135deg, color-mix(in srgb, var(--brand) 9%, var(--surface)), var(--surface));
+	display: flex; align-items: center; gap: 18px;
+	padding: 22px 24px; margin-bottom: 18px;
+	background: linear-gradient(135deg, var(--brand-soft), var(--surface) 62%);
 	border: 1px solid var(--line); border-radius: var(--r-lg);
 	box-shadow: var(--elev-2);
 }
-.jyc-sl-hero::after {
-	content: ""; position: absolute; right: -46px; top: -46px;
-	width: 168px; height: 168px; border-radius: 50%;
-	background: radial-gradient(circle, color-mix(in srgb, var(--brand) 24%, transparent), transparent 70%);
-	pointer-events: none;
-}
+.jyc-sl-hero-aurora { position: absolute; inset: 0; pointer-events: none; }
+.jyc-sl-hero-aurora::before, .jyc-sl-hero-aurora::after { content: ""; position: absolute; border-radius: 50%; filter: blur(38px); }
+.jyc-sl-hero-aurora::before { width: 240px; height: 240px; top: -112px; right: -30px; background: radial-gradient(circle, var(--ring), transparent 70%); }
+.jyc-sl-hero-aurora::after { width: 200px; height: 200px; bottom: -120px; left: 20%; background: radial-gradient(circle, rgba(34,211,238,.16), transparent 70%); }
 .jyc-sl-hero-ico {
-	width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0; z-index: 1;
+	width: 52px; height: 52px; border-radius: 15px; flex-shrink: 0; z-index: 1;
 	display: grid; place-items: center; color: #fff;
 	background: linear-gradient(135deg, var(--brand), var(--brand-2));
-	box-shadow: 0 8px 20px -6px var(--ring);
+	box-shadow: 0 10px 22px -8px var(--ring), inset 0 1px 0 rgba(255,255,255,.42);
 }
-.jyc-sl-hero-ico svg { width: 24px; height: 24px; }
+.jyc-sl-hero-ico svg { width: 25px; height: 25px; }
 .jyc-sl-hero-tx { flex: 1; min-width: 0; z-index: 1; }
-.jyc-sl-hero-t { font-size: 16px; font-weight: 800; letter-spacing: -.02em; }
-.jyc-sl-hero-d { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; line-height: 1.5; }
+.jyc-sl-hero-t { font-size: 17px; font-weight: 800; letter-spacing: -.02em; font-family: var(--font-display); }
+.jyc-sl-hero-d { font-size: 12.5px; color: var(--ink-3); margin-top: 5px; line-height: 1.6; max-width: 660px; }
+.jyc-sl-hero-side { display: flex; align-items: center; gap: 18px; flex-shrink: 0; z-index: 1; }
+.jyc-sl-hero-stat { display: flex; align-items: baseline; gap: 5px; padding: 8px 15px; border-radius: 13px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--elev-1); }
+.jyc-sl-hero-stat b { font-size: 21px; font-weight: 800; letter-spacing: -.02em; font-family: var(--font-display); color: var(--brand); line-height: 1; }
+.jyc-sl-hero-stat span { font-size: 12px; font-weight: 600; color: var(--ink-3); }
 
+/* ---- 回调地址：整条卡片，说明在上、控件行通栏 ---- */
 .jyc-sl-redirect {
-	display: flex; align-items: center; gap: 14px;
-	padding: 14px 18px; margin-bottom: 18px;
+	display: flex; align-items: flex-start; gap: 14px;
+	padding: 18px 20px; margin-bottom: 18px;
 	background: var(--surface); border: 1px solid var(--line);
 	border-radius: var(--r-lg); box-shadow: var(--elev-1);
+	transition: box-shadow .25s var(--ease);
 }
+.jyc-sl-redirect:hover { box-shadow: var(--elev-2); }
 .jyc-sl-redirect-ico {
-	width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+	width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
 	display: grid; place-items: center; color: var(--brand); background: var(--brand-soft);
 }
-.jyc-sl-redirect-ico svg { width: 18px; height: 18px; }
-.jyc-sl-redirect-main { flex: 1; min-width: 0; }
-.jyc-sl-redirect-ctrl { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.jyc-sl-redirect-ctrl .jyc-inp { width: min(360px, 42vw); }
-.jyc-sl-copy {
+.jyc-app[data-theme="dark"] .jyc-sl-redirect-ico { color: var(--brand-on-dark); }
+.jyc-sl-redirect-ico svg { width: 19px; height: 19px; }
+.jyc-sl-redirect-body { flex: 1; min-width: 0; }
+.jyc-sl-redirect-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.jyc-sl-redirect-head .jyc-fname { font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+.jyc-sl-redirect-head .jyc-fdesc { margin: 0; font-size: 12.5px; }
+.jyc-sl-redirect-ctrl { display: flex; align-items: center; gap: 8px; margin-top: 13px; }
+.jyc-sl-redirect-ctrl .jyc-inp { flex: 1; min-width: 0; height: 42px; padding: 0 14px; }
+.jyc-sl-copy, .jyc-sl-reset {
 	font: inherit; font-size: 12.5px; font-weight: 600; flex-shrink: 0;
-	padding: 8px 14px; border-radius: 9px; cursor: pointer;
-	color: var(--brand); background: var(--surface); border: 1px solid var(--line);
-	transition: border-color .15s var(--ease), background .15s var(--ease), box-shadow .15s var(--ease);
+	height: 42px; padding: 0 17px; border-radius: 11px; cursor: pointer;
+	display: inline-flex; align-items: center; gap: 6px;
+	background: var(--surface);
+	transition: border-color .15s var(--ease), background .15s var(--ease), color .15s var(--ease), box-shadow .15s var(--ease);
 }
+.jyc-sl-copy { color: var(--brand); border: 1px solid var(--ring); }
 .jyc-sl-copy:hover { border-color: var(--brand); background: var(--brand-soft); box-shadow: var(--elev-1); }
-.jyc-sl-copy:active { transform: translateY(1px); }
-.jyc-sl-reset {
-	font: inherit; font-size: 12.5px; font-weight: 600; flex-shrink: 0;
-	padding: 8px 12px; border-radius: 9px; cursor: pointer;
-	color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line);
-	transition: border-color .15s var(--ease), background .15s var(--ease), color .15s var(--ease);
-}
-.jyc-sl-reset:hover { border-color: var(--line-strong); color: var(--ink); background: var(--surface-2); }
-.jyc-sl-reset:active { transform: translateY(1px); }
+.jyc-sl-reset { color: var(--ink-2); border: 1px solid var(--line); }
+.jyc-sl-reset:hover { color: var(--ink); border-color: #d7dae1; background: var(--surface-2); }
+.jyc-sl-copy:active, .jyc-sl-reset:active { transform: translateY(1px); }
+.jyc-app[data-theme="dark"] .jyc-sl-reset:hover { border-color: #39465e; }
 
-.jyc-sl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+/* ---- 平台卡片网格 ----
+ * 两列（与其它分区一致）。align-items:start 而非默认 stretch：
+ * 各平台字段数天然不同（Apple 4 项 / 其余 2 项），stretch 会把矮卡片拉到等高，
+ * 卡内留出大片空白（线上实测过）—— 改为各自就高，用顶部品牌线 + 脚注条收口。 */
+.jyc-sl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
 .jyc-sl-card {
 	position: relative; overflow: hidden;
+	display: flex; flex-direction: column;
 	background: var(--surface); border: 1px solid var(--line);
 	border-radius: var(--r-lg); box-shadow: var(--elev-2);
-	padding: 18px 20px 20px;
 	transition: box-shadow .25s var(--ease), transform .25s var(--ease), border-color .25s var(--ease);
 }
+/* 顶部品牌色细线：替代旧版左侧竖条，标识平台但不喧哗（--pc-t 由 PHP 派生，见 jinyu_sl_hex_rgba） */
 .jyc-sl-card::before {
-	content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-	background: var(--pc); opacity: .85;
+	content: ""; position: absolute; inset: 0 0 auto; height: 2px; z-index: 1;
+	background: linear-gradient(90deg, var(--pc), var(--pc-t, transparent) 52%, transparent);
 }
 .jyc-sl-card:hover {
 	box-shadow: var(--elev-3); transform: translateY(-2px);
-	border-color: color-mix(in srgb, var(--pc) 38%, var(--line));
+	border-color: var(--pc-l, var(--line));
 }
-.jyc-sl-card-top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.jyc-sl-card-hd {
+	display: flex; align-items: center; gap: 12px;
+	padding: 16px 18px 14px;
+	background: linear-gradient(180deg, var(--surface-2), var(--surface));
+	border-bottom: 1px solid var(--line-2);
+}
 .jyc-sl-badge {
-	width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
-	display: grid; place-items: center; font-weight: 800; font-size: 17px;
+	width: 42px; height: 42px; border-radius: 13px; flex-shrink: 0;
+	display: grid; place-items: center; font-weight: 800; font-size: 18px; color: #fff;
+	background: linear-gradient(140deg, rgba(255,255,255,.24), rgba(255,255,255,0) 52%), var(--pc);
+	box-shadow: 0 6px 14px -6px rgba(16,24,40,.32), inset 0 1px 0 rgba(255,255,255,.3);
 }
-.jyc-sl-name { font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
-.jyc-sl-id { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
-.jyc-sl-status { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }
+.jyc-app[data-theme="dark"] .jyc-sl-badge { box-shadow: 0 6px 14px -6px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.22); }
+.jyc-sl-card-tx { flex: 1; min-width: 0; }
+.jyc-sl-name { font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; }
+.jyc-sl-id { font-size: 11px; color: var(--ink-3); margin-top: 3px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.jyc-sl-status {
+	display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+	font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 99px; white-space: nowrap;
+}
+.jyc-sl-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .jyc-sl-status.is-ok { color: #0f9d6b; background: rgba(15, 157, 107, .12); }
-.jyc-sl-status.is-wait { color: #b0791a; background: rgba(245, 185, 66, .16); }
-.jyc-sl-fields { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.jyc-sl-status.is-part { color: #b0791a; background: rgba(245, 185, 66, .18); }
+.jyc-sl-status.is-wait { color: var(--ink-3); background: var(--surface-3); }
+.jyc-app[data-theme="dark"] .jyc-sl-status.is-ok { color: #34d399; background: rgba(52, 211, 153, .14); }
+.jyc-app[data-theme="dark"] .jyc-sl-status.is-part { color: #fbbf24; background: rgba(251, 191, 36, .16); }
+
+.jyc-sl-card-bd { flex: 1; padding: 18px 18px 16px; }
+.jyc-sl-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.jyc-sl-fields .jyc-fl { margin-bottom: 0; gap: 6px; font-size: 12px; font-weight: 600; }
 .jyc-sl-fields .jyc-full { grid-column: 1 / -1; }
+.jyc-sl-lb { display: inline-flex; align-items: center; gap: 7px; }
+.jyc-sl-saved {
+	font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .02em;
+	padding: 1px 7px; border-radius: 99px;
+	color: #0f9d6b; background: rgba(15, 157, 107, .1);
+}
+.jyc-app[data-theme="dark"] .jyc-sl-saved { color: #34d399; background: rgba(52, 211, 153, .14); }
+.jyc-sl-hint { font-size: 11.5px; font-weight: 400; color: var(--ink-3); margin-top: -1px; }
 .jyc-sl-fields textarea.jyc-inp { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 
+.jyc-sl-card-ft {
+	display: flex; align-items: center; justify-content: space-between; gap: 12px;
+	padding: 11px 18px; border-top: 1px solid var(--line-2);
+	background: var(--surface-2);
+}
+.jyc-sl-lock { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-3); }
+.jyc-sl-lock svg { width: 13px; height: 13px; }
+.jyc-sl-console {
+	display: inline-flex; align-items: center; gap: 5px;
+	font-size: 12px; font-weight: 600; text-decoration: none;
+	color: var(--brand);
+	transition: gap .18s var(--ease), color .18s var(--ease);
+}
+.jyc-sl-console svg { width: 13px; height: 13px; }
+.jyc-sl-console:hover { color: var(--brand-d); gap: 8px; }
+.jyc-sl-console:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 6px; }
+.jyc-app[data-theme="dark"] .jyc-sl-console { color: var(--brand-on-dark); }
+
+/* 超宽屏（≥1560px）：3 张常规卡同排 + 字段多的一行独占整行。
+   独占行内部改 4 列栅格；常规卡内部改单列 —— 卡宽收到 ~600px 后若仍两列，
+   client_id 这类 50+ 字符的长值会被截断，看不到全貌。 */
+@media (min-width: 1560px) {
+	.jyc-sl-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+	.jyc-sl-card-wide { grid-column: 1 / -1; }
+	.jyc-sl-grid > .jyc-sl-card:not(.jyc-sl-card-wide) .jyc-sl-fields { grid-template-columns: 1fr; }
+	.jyc-sl-grid > .jyc-sl-card:not(.jyc-sl-card-wide) .jyc-sl-fields > .jyc-fl { grid-column: auto; }
+	.jyc-sl-card-wide .jyc-sl-fields { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+	.jyc-sl-card-wide .jyc-sl-fields > .jyc-fl { grid-column: auto; }
+	.jyc-sl-card-wide textarea.jyc-inp { min-height: 66px; }
+}
+
 @media (max-width: 760px) {
-	.jyc-sl-grid { grid-template-columns: 1fr; }
-	.jyc-sl-fields { grid-template-columns: 1fr; }
+	.jyc-sl-hero { flex-wrap: wrap; padding: 18px; gap: 14px; }
+	.jyc-sl-hero-tx { flex: 1 1 100%; order: 2; }
+	.jyc-sl-hero-side { order: 3; width: 100%; justify-content: space-between; }
 	.jyc-sl-redirect { flex-wrap: wrap; }
-	.jyc-sl-redirect-ctrl { width: 100%; }
-	.jyc-sl-redirect-ctrl .jyc-inp { flex: 1; width: auto; min-width: 0; }
+	.jyc-sl-redirect-head { display: block; }
+	.jyc-sl-redirect-head .jyc-fdesc { margin-top: 4px; }
+	.jyc-sl-redirect-ctrl { flex-wrap: wrap; }
+	.jyc-sl-redirect-ctrl .jyc-inp { flex: 1 1 100%; }
+	.jyc-sl-grid, .jyc-sl-fields { grid-template-columns: 1fr; }
 }
