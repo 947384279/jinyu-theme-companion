@@ -5,7 +5,7 @@
  * 自主题 inc/fun/perf.php 迁入（plugin-territory：性能开关 / 缓存看板 / 清理动作
  * 均非主题呈现层职责，.org 上架要求此类能力由配套插件承载）。
  * 函数统一改用 jyc_perf_ 前缀，避免与主题历史实现发生编译期早绑定冲突；
- * 开关选项沿用 jinyu_perf_options（历史配置无损平移，无需迁移脚本）。
+ * 开关选项存于 jyc_perf_options（新键；首次读取时自动接管主题时代旧键 jinyu_perf_options 的历史配置）。
  *
  * 一个自包含的后台工具，提供：
  *   1) 状态看板：OPcache 字节码缓存（命中率/内存/脚本数/重启次数）与
@@ -19,7 +19,7 @@
  *      返回优化前后对比，并自动刷新状态看板。
  *
  * 设计原则：
- *   - 所有操作均可逆（开关存于 jinyu_perf_options，清理不删有效数据）。
+ *   - 所有操作均可逆（开关存于 jyc_perf_options，清理不删有效数据）。
  *   - 仅管理员可用（manage_options），全部 AJAX 走 nonce 校验。
  *   - 页面输出不使用任何 emoji / 图片：一律用 CSS / 内联 SVG 绘制，
  *     规避 WP emoji 脚本把字符替换为 s.w.org 远程图片、国内加载失败出现裂图的问题。
@@ -60,8 +60,12 @@ function jyc_perf_get_options(): array {
 		'iframe_lazy'           => 1, // iframe 懒加载（视频/嵌入延后到视口）
 		'restrict_guest_rest'   => 0, // 限制游客 REST API（拦截用户枚举等敏感路由）
 	];
-	$saved    = get_option( 'jyc_perf_options', [] );
-	$cache    = wp_parse_args( is_array( $saved ) ? $saved : [], $defaults );
+	$saved = get_option( 'jyc_perf_options' );
+	if ( ! is_array( $saved ) ) {
+		// 兼容主题时代遗留：新键从未保存时接管旧键 jinyu_perf_options 的历史配置
+		$saved = get_option( 'jinyu_perf_options' );
+	}
+	$cache = wp_parse_args( is_array( $saved ) ? $saved : [], $defaults );
 	return $cache;
 }
 
@@ -287,7 +291,6 @@ function jyc_perf_apply(): void {
 			return $methods;
 		} );
 		add_filter( 'pre_option_default_ping_status', '__return_zero' );
-		add_filter( 'pre_option_default_pingback_status', '__return_zero' );
 	}
 
 	// 10) 前台对非管理员隐藏 admin bar：减少一处前台 CSS/JS 注入。
@@ -1295,8 +1298,9 @@ add_action( 'wp_ajax_jyc_load_comments', 'jyc_perf_ajax_load_comments' );
  * 由 settings.php 在 pane 标题行调用（与 h1 同行）。
  */
 function jyc_perf_render_headside(): void {
-	$st    = jyc_perf_status();
-	$oc_on = ! empty( $st['object_cache'] );
+	// 轻量判断：仅为一个小状态胶囊，不跑整套看板查询（status() 含 autoload/transient/information_schema 共 4 条 SQL）
+	$mc    = jyc_perf_memcached_stats();
+	$oc_on = wp_using_ext_object_cache() || ( $mc && ! empty( $mc['reachable'] ) );
 	?>
 	<div class="jperf-headside">
 		<span class="jperf-pill"><span class="jperf-dot <?php echo $oc_on ? 'ok' : 'off'; ?>"></span><?php echo $oc_on ? esc_html__( '对象缓存运行中', 'jinyu-theme-companion' ) : esc_html__( '对象缓存未启用', 'jinyu-theme-companion' ); ?></span>
@@ -1684,7 +1688,7 @@ function jyc_perf_render_pane(): void {
 		// 手动刷新看板
 		var rf = document.getElementById('jperf-refresh');
 		if (rf) {
-			rf.addEventListener('click', function(){ rf.disabled = true; refreshStatus().then(function(){ rf.disabled = false; }); });
+			rf.addEventListener('click', function(){ rf.disabled = true; refreshStatus().then(function(){ rf.disabled = false; }).catch(function(){ rf.disabled = false; }); });
 		}
 
 		// 首次绘制
