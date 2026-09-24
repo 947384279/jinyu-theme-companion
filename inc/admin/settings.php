@@ -565,7 +565,7 @@ function jinyu_companion_settings_page_html(): void {
 										<label class="jyc-switch"><input type="checkbox" name="close_comments_old" <?php checked( $close_old, '1' ); ?>><span class="jyc-track"></span></label>
 										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '自动关闭旧文评论', 'jinyu-theme-companion' ); ?></div>
 											<div class="jyc-fdesc"><?php echo esc_html__( '超过设定天数后自动关闭评论，减少垃圾评论入口。', 'jinyu-theme-companion' ); ?></div></div>
-										<label class="jyc-fl" style="margin:0;min-width:140px"><?php echo esc_html__( '天数', 'jinyu-theme-companion' ); ?>
+										<label class="jyc-fl jyc-fnum"><?php echo esc_html__( '天数', 'jinyu-theme-companion' ); ?>
 											<input class="jyc-inp jyc-num" type="number" name="close_comments_days" value="<?php echo esc_attr( $close_days ); ?>" min="0" step="1">
 										</label>
 									</div>

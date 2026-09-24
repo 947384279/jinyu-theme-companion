@@ -242,9 +242,12 @@
 .jyc-checks .jyc-dot.jyc-on { background: var(--ok); box-shadow: 0 0 0 3px rgba(15,157,107,.18); }
 
 /* ===================== Form controls ===================== */
-.jyc-frow { display: flex; align-items: flex-start; gap: 16px; padding: 16px 0; }
+.jyc-frow { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; padding: 16px 0; }
 .jyc-frow + .jyc-frow { border-top: 1px solid var(--line-2); }
-.jyc-frow .jyc-grow { flex: 1; min-width: 0; }
+.jyc-frow .jyc-grow { flex: 1 1 220px; min-width: 0; }
+/* 行尾数字字段：收窄输入框，避免内容固有宽度把说明列挤成一字一行 */
+.jyc-frow .jyc-fnum { margin: 0; flex: 0 1 auto; min-width: 0; }
+.jyc-fnum .jyc-num { width: 96px; }
 .jyc-fname { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 9px; }
 .jyc-fdesc { font-size: 12.5px; color: var(--ink-3); margin-top: 4px; max-width: 620px; }
 .jyc-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; margin-top: 1px; }
