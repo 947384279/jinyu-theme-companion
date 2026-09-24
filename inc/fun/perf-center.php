@@ -1549,26 +1549,30 @@ function jyc_perf_render_pane(): void {
 		});
 
 		// 帮助气泡（事件委托：覆盖开关卡与体验指标卡，看板整块刷新后依然有效）
+		// 展开期间给宿主卡片加 .jperf-tip-on 抬升层级：气泡向下展开会落到下一行卡片上，
+		// 宿主 hover 带 transform 会自建层叠上下文，不抬升就会被 DOM 靠后的兄弟卡片盖住。
 		function closeTips(except){
 			document.querySelectorAll('.jperf-help[aria-expanded="true"]').forEach(function(b){
-				if (b !== except) {
-					b.setAttribute('aria-expanded', 'false');
-					var host = b.closest('.jcard, .jperf-wv-chip');
-					var t = host && host.querySelector('.jperf-tip');
-					if (t) { t.hidden = true; }
-				}
+				if (b === except) { return; }
+				b.setAttribute('aria-expanded', 'false');
+				var host = b.closest('.jcard, .jperf-wv-chip');
+				if (!host) { return; }
+				var t = host.querySelector('.jperf-tip');
+				if (t) { t.hidden = true; }
+				host.classList.remove('jperf-tip-on');
 			});
 		}
 		document.addEventListener('click', function(e){
 			var b = e.target.closest('.jperf-help');
 			if (b) {
-				var tip = b.closest('.jcard, .jperf-wv-chip');
-				tip = tip && tip.querySelector('.jperf-tip');
+				var host = b.closest('.jcard, .jperf-wv-chip');
+				var tip = host && host.querySelector('.jperf-tip');
 				if (!tip) { return; }
 				var open = b.getAttribute('aria-expanded') === 'true';
 				closeTips(b);
 				b.setAttribute('aria-expanded', open ? 'false' : 'true');
 				tip.hidden = open;
+				if (host) { host.classList.toggle('jperf-tip-on', !open); }
 				return;
 			}
 			if (!e.target.closest('.jperf-tip')) { closeTips(null); }

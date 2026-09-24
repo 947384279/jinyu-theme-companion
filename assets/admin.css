@@ -341,10 +341,16 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 .jyc-select.jyc-open .jyc-select-btn { border-color: var(--brand); box-shadow: 0 0 0 3px var(--ring); }
 .jyc-select.jyc-open .jyc-select-btn svg { transform: rotate(180deg); color: var(--brand); }
 .jyc-app[data-theme="dark"] .jyc-select.jyc-open .jyc-select-btn svg { color: var(--brand-on-dark); }
-.jyc-select-list { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 60; padding: 6px;
+/* position:fixed —— 弹层由 JS 挂到 .jyc-app 下并逐次定位。
+   面板容器（.jyc-panel / .jyc-sl-card / .jperf-wv-chip / .jyc-bento .jyc-tile）普遍带
+   overflow:hidden（为圆角与左侧色条收边），absolute 弹层一定会被裁掉；fixed 不受裁剪。
+   挂在 .jyc-app 内而非 body，是为了继续继承设计令牌（--surface / --line / --elev-3 …）。 */
+.jyc-select-list { position: fixed; z-index: 9990; padding: 6px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--elev-3);
   max-height: 240px; overflow: auto; opacity: 0; transform: translateY(-6px) scale(.98); pointer-events: none;
   transition: opacity .16s var(--ease), transform .16s var(--ease); }
+/* 视口下方空间不足 → 上翻展开，入场方向随之翻转 */
+.jyc-select-list.jyc-up:not(.jyc-open) { transform: translateY(6px) scale(.98); }
 .jyc-select-list.jyc-open { opacity: 1; transform: none; pointer-events: auto; }
 .jyc-select-item { display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 9px 12px; border-radius: 8px; font-size: 13.5px; color: var(--ink-2); cursor: pointer; }
@@ -570,6 +576,12 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 .jperf-tip[hidden]{display:none}
 .jperf-tip div+div{margin-top:6px}
 .jperf-tip b{color:var(--j-accent);font-weight:600}
+/* 气泡向下展开会落到下一行卡片上；宿主卡片 hover 时带 transform（自建层叠上下文），
+   不提升层级就会被 DOM 靠后的兄弟卡片盖住 —— 展开期间由 JS 加 .jperf-tip-on 抬升。 */
+.jcard.jperf-tip-on, .jperf-wv-chip.jperf-tip-on{z-index:30}
+/* 展开期间同时冻结 hover 位移：transform 非 none 会让宿主成为 fixed 的包含块，
+   窄屏（气泡为 position:fixed 居中弹层）会因此脱离视口错位。 */
+.jcard.jperf-tip-on:hover, .jperf-wv-chip.jperf-tip-on:hover{transform:none}
 .jcard,.jperf-wv-chip{position:relative}
 .jperf-wv-right{display:flex;align-items:center;gap:7px}
 @media(max-width:680px){
@@ -668,7 +680,9 @@ textarea.jyc-inp{font-weight:400}
 @media(max-width:480px){.jperf-wv{grid-template-columns:minmax(0,1fr)}}
 .jperf-wv-empty{grid-column:1/-1;background:var(--j-bg);border:1px dashed var(--j-line);
 	border-radius:var(--j-r);padding:18px 20px;font-size:12.5px;color:var(--j-muted);line-height:1.6}
-.jperf-wv-chip{position:relative;overflow:hidden;background:var(--j-bg);border:1px solid var(--j-line);
+/* overflow:hidden 会裁掉「向下展开的帮助气泡」（.jperf-tip 在卡片内 absolute 定位），
+   故放开裁剪，左侧色条改用自身圆角贴合卡片左下/左上圆角。 */
+.jperf-wv-chip{position:relative;overflow:visible;background:var(--j-bg);border:1px solid var(--j-line);
 	border-radius:var(--j-r);padding:15px 15px 13px;box-shadow:0 1px 2px rgba(24,24,27,.04);
 	transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .25s,border-color .25s}
 .jperf-wv-chip:hover{transform:translateY(-4px);box-shadow:0 14px 30px -14px rgba(24,24,27,.3);border-color:transparent}
@@ -679,7 +693,8 @@ textarea.jyc-inp{font-weight:400}
 	.jperf-wv-chip:hover::before{width:3px;box-shadow:none}
 }
 .jperf-wv-chip:active{transform:scale(.98);transition:transform .12s}
-.jperf-wv-chip::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--wv-c);transition:width .25s,box-shadow .25s}
+.jperf-wv-chip::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--wv-c);
+	border-radius:var(--j-r) 0 0 var(--j-r);transition:width .25s,box-shadow .25s}
 .jperf-wv-chip.rate-good{--wv-c:#16a34a}
 .jperf-wv-chip.rate-mid{--wv-c:#d97706}
 .jperf-wv-chip.rate-poor{--wv-c:#dc2626}

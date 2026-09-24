@@ -323,6 +323,85 @@
 			});
 	};
 
+	/* ---------------- Autoload 瘦身：扫描 + 改按需加载 ---------------- */
+	window.jycAutoloadScan = function (btn) {
+		var form = document.getElementById('jyc-form');
+		var box = document.getElementById('jyc-autoloadResult');
+		if (!form || !box) { return; }
+		var fd = new FormData(form);
+		fd.append('action', 'jinyu_autoload_scan');
+		var aurl = (typeof ajaxurl !== 'undefined') ? ajaxurl : '';
+		var oldTxt = '', loading = false;
+		if (btn) { oldTxt = btn.textContent; btn.disabled = true; btn.textContent = btn.getAttribute('data-loading') || '扫描中…'; loading = true; }
+		fetch(aurl, { method: 'POST', body: fd, credentials: 'same-origin' })
+			.then(function (r) { return r.json(); })
+			.then(function (res) {
+				if (!(res && res.success)) {
+					jycToast((res && res.data) ? String(res.data) : '扫描失败，请重试');
+					return;
+				}
+				var items = (res.data && res.data.items) ? res.data.items : [];
+				var html = '<div class="jyc-muted" style="font-size:12px;margin-bottom:6px">' + String(res.data.msg || '') + '</div>';
+				if (!items.length) {
+					html += '<div style="font-size:13px;color:#2e7d32">没有超过 128KB 的大选项，autoload 很干净。</div>';
+				} else {
+					html += '<table style="width:100%;border-collapse:collapse;font-size:13px">';
+					items.forEach(function (it) {
+						html += '<tr>'
+							+ '<td style="padding:5px 8px 5px 0;border-bottom:1px solid rgba(128,128,128,.18);word-break:break-all">' + esc(it.name) + (it.protected ? ' <span class="jyc-muted" style="font-size:11px">（受保护）</span>' : '') + '</td>'
+							+ '<td style="padding:5px 8px;border-bottom:1px solid rgba(128,128,128,.18);white-space:nowrap">' + esc(it.size_h) + '</td>'
+							+ '<td style="padding:5px 0;border-bottom:1px solid rgba(128,128,128,.18);text-align:right;white-space:nowrap">'
+							+ (it.protected ? '' : '<button type="button" class="jyc-btn jyc-btn-soft" style="padding:2px 10px;font-size:12px" data-opt="' + esc(it.name) + '" onclick="window.jycAutoloadFix(this)">按需加载</button>')
+							+ '</td></tr>';
+					});
+					html += '</table>';
+					html += '<div class="jyc-muted" style="font-size:12px;margin-top:6px">「受保护」= 核心必需或高频读取选项，插件拒绝修改。改动后前台如异常，刷新本页再扫描可点「恢复」。</div>';
+				}
+				box.innerHTML = html;
+				box.hidden = false;
+			})
+			.catch(function () { jycToast('请求失败，请重试'); })
+			.then(function () {
+				if (loading && btn) { btn.disabled = false; btn.textContent = oldTxt; }
+			});
+	};
+
+	window.jycAutoloadFix = function (btn) {
+		var form = document.getElementById('jyc-form');
+		var name = btn ? (btn.getAttribute('data-opt') || '') : '';
+		if (!form || !name) { return; }
+		var undo = btn.getAttribute('data-undo') === '1';
+		if (!undo && !window.confirm('将选项「' + name + '」改为按需加载（autoload=no）？\n该选项体积较大且非核心必需；若前台出现异常可点「恢复」改回。')) { return; }
+		var fd = new FormData(form);
+		fd.append('action', 'jinyu_autoload_fix');
+		fd.append('option_name', name);
+		if (undo) { fd.append('undo', '1'); }
+		var aurl = (typeof ajaxurl !== 'undefined') ? ajaxurl : '';
+		var oldTxt = btn.textContent;
+		btn.disabled = true; btn.textContent = '…';
+		fetch(aurl, { method: 'POST', body: fd, credentials: 'same-origin' })
+			.then(function (r) { return r.json(); })
+			.then(function (res) {
+				if (res && res.success) {
+					jycToast(res.data && res.data.msg ? res.data.msg : (undo ? '已恢复' : '已改为按需加载'));
+					// 双态切换：no→恢复按钮 / yes→按需加载按钮
+					if (undo) { btn.textContent = '按需加载'; btn.removeAttribute('data-undo'); }
+					else { btn.textContent = '恢复'; btn.setAttribute('data-undo', '1'); }
+					btn.disabled = false;
+				} else {
+					jycToast((res && res.data) ? String(res.data) : '操作失败，请重试');
+					btn.disabled = false; btn.textContent = oldTxt;
+				}
+			})
+			.catch(function () { jycToast('请求失败，请重试'); btn.disabled = false; btn.textContent = oldTxt; });
+	};
+
+	function esc(s) {
+		return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+			return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+		});
+	}
+
 	/* ---------------- SMTP 真实测试邮件 ---------------- */
 	window.jycTestSmtp = function (btn) {
 		var form = document.getElementById('jyc-form');
@@ -547,10 +626,50 @@
 	})();
 
 	/* ---------------- 自绘下拉：替换原生 <option> 弹层 ----------------
-	 * 原生 option 弹层浏览器禁止样式化；此增强把 select.jyc-inp 换成自绘列表。
-	 * 原生 select 隐藏保留在表单内（display:none 仍随表单提交），值双向同步。 */
-	var CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
-	var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+	 * 原生 option 弹层浏览器禁止样式化（Windows Chrome 恒白底黑字），改为自绘列表。
+	 * 原生 select 隐藏保留在表单内（display:none 仍随表单提交），值双向同步。
+	 * 定位：弹层挂到 .jyc-app 下并 position:fixed —— 面板容器（.jyc-panel / .jyc-sl-card /
+	 * .jperf-wv-chip / .jyc-bento .jyc-tile）普遍 overflow:hidden，absolute 弹层必被裁掉；
+	 * fixed 不受任何祖先裁剪，同时留在 .jyc-app 内以继承设计令牌。下方空间不足自动上翻，
+	 * 滚动 / 缩放时按 rAF 节流重定位，点击外部或 Esc 关闭。 */
+	var SEL_CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+	var SEL_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+	var SEL_GAP = 6, SEL_MAX = 240;
+
+	var selOpen = null, selPlace = new WeakMap(), selRaf = 0;
+
+	function selClose() {
+		if (!selOpen) { return; }
+		selOpen = null;
+		document.querySelectorAll('.jyc-select-list.jyc-open').forEach(function (l) { l.classList.remove('jyc-open'); });
+		document.querySelectorAll('.jyc-select.jyc-open').forEach(function (w) { w.classList.remove('jyc-open'); });
+	}
+	function selMove() {
+		if (!selOpen || selRaf) { return; }
+		selRaf = requestAnimationFrame(function () {
+			selRaf = 0;
+			if (!selOpen) { return; }
+			var place = selPlace.get(selOpen);
+			if (place) { place(); }
+		});
+	}
+	/* .jyc-app 被祖先 transform / filter / backdrop-filter / contain 困住时，fixed 会以它为
+	   包含块，定位需减去其视口偏移；正常情况下走 0 偏移分支（面板外壳无这些属性）。 */
+	function selOrigin() {
+		function none(v) { return !v || 'none' === v; }
+		var cs = window.getComputedStyle(app);
+		if (none(cs.transform) && none(cs.filter) && none(cs.perspective) &&
+			none(cs.contain) && none(cs.backdropFilter) && none(cs.webkitBackdropFilter)) {
+			return { x: 0, y: 0, h: 0 };
+		}
+		var r = app.getBoundingClientRect();
+		return { x: r.left, y: r.top, h: r.bottom };
+	}
+	window.addEventListener('scroll', selMove, true);
+	window.addEventListener('resize', selMove);
+	document.addEventListener('click', selClose);
+	document.addEventListener('keydown', function (e) { if ('Escape' === e.key) { selClose(); } });
+
 	document.querySelectorAll('.jyc-app select.jyc-inp').forEach(function (sel) {
 		if (sel.closest('.jyc-select')) { return; }
 		var wrap = document.createElement('div');
@@ -562,7 +681,7 @@
 		var lbl = document.createElement('span');
 		lbl.className = 'jyc-select-label';
 		btn.appendChild(lbl);
-		btn.insertAdjacentHTML('beforeend', CHEV);
+		btn.insertAdjacentHTML('beforeend', SEL_CHEV);
 		var list = document.createElement('div');
 		list.className = 'jyc-select-list';
 		list.setAttribute('role', 'listbox');
@@ -576,14 +695,41 @@
 				it.classList.toggle('jyc-sel', i === sel.selectedIndex);
 			});
 		}
-		function closeList() { wrap.classList.remove('jyc-open'); list.classList.remove('jyc-open'); }
+		/* 先量自然高度再决定展开方向：下方放不下整张列表且上方更宽裕 → 上翻。
+		   宽度随按钮，左右做 8px 视口内缩，避免窄屏贴边出屏。 */
+		function place() {
+			var r = btn.getBoundingClientRect();
+			var vw = document.documentElement.clientWidth;
+			var vh = document.documentElement.clientHeight;
+			var org = selOrigin();
+			list.style.width = r.width + 'px';
+			list.style.maxHeight = 'none';
+			var natural = list.offsetHeight;
+			var below = vh - r.bottom - SEL_GAP;
+			var above = r.top - SEL_GAP;
+			var up = below < Math.min(natural, SEL_MAX) && above > below;
+			list.classList.toggle('jyc-up', up);
+			list.style.maxHeight = Math.round(Math.max(120, up ? above : below)) + 'px';
+			list.style.left = (Math.min(Math.max(8, r.left), Math.max(8, vw - r.width - 8)) - org.x) + 'px';
+			if (up) {
+				list.style.top = 'auto';
+				list.style.bottom = ((org.h || vh) - (r.top - org.y) + SEL_GAP) + 'px';
+			} else {
+				list.style.bottom = 'auto';
+				list.style.top = (r.bottom + SEL_GAP - org.y) + 'px';
+			}
+		}
+		function closeList() {
+			if (selOpen === list) { selOpen = null; }
+			wrap.classList.remove('jyc-open');
+			list.classList.remove('jyc-open');
+		}
 		function openList() {
-			document.querySelectorAll('.jyc-select-list.jyc-open').forEach(function (l) {
-				l.classList.remove('jyc-open');
-				if (l.parentElement) { l.parentElement.classList.remove('jyc-open'); }
-			});
+			selClose();
 			wrap.classList.add('jyc-open');
+			place();                 // 先定位再显形，避免在旧位置闪一帧
 			list.classList.add('jyc-open');
+			selOpen = list;
 		}
 
 		Array.prototype.forEach.call(sel.options, function (o, i) {
@@ -593,7 +739,7 @@
 			var t = document.createElement('span');
 			t.textContent = o.textContent;
 			it.appendChild(t);
-			it.insertAdjacentHTML('beforeend', CHECK);
+			it.insertAdjacentHTML('beforeend', SEL_CHECK);
 			it.addEventListener('click', function () {
 				sel.selectedIndex = i;
 				sel.dispatchEvent(new Event('change', { bubbles: true }));
@@ -605,10 +751,10 @@
 		});
 
 		btn.addEventListener('click', function (e) {
-			e.stopPropagation();
+			e.stopPropagation();     // 否则 document 上的关闭监听会立刻收起
 			if (list.classList.contains('jyc-open')) { closeList(); } else { openList(); }
 		});
-		// 键盘：上下改值（同步显示），Enter 开合，Esc 关闭
+		// 键盘：上下改值（同步显示）；开合与 Esc 由全局监听处理
 		btn.addEventListener('keydown', function (e) {
 			if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
 				e.preventDefault();
@@ -619,15 +765,15 @@
 					sel.dispatchEvent(new Event('change', { bubbles: true }));
 					renderLabel(); syncItems();
 				}
-			} else if (e.key === 'Escape') { closeList(); }
+			}
 		});
-		document.addEventListener('click', closeList);
 
 		sel.style.display = 'none';
 		sel.parentNode.insertBefore(wrap, sel);
 		wrap.appendChild(btn);
-		wrap.appendChild(list);
 		wrap.appendChild(sel);
+		app.appendChild(list);       // 弹层交给 .jyc-app 托管（脱离所有裁剪容器）
+		selPlace.set(list, place);
 		renderLabel();
 	});
 
