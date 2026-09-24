@@ -691,4 +691,25 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 @media(max-width:680px){
   /* pane 内 topbar 已紧凑化，覆盖独立页遗留的大留白 */
   .jperf-topbar{padding:0 0 12px}
+  /* 指标条 2 列时收缩留白与字号，避免窄卡挤出 */
+  .jperf-stats{margin-bottom:24px}
+  .jperf-stat{padding:14px 16px}
+  .jperf-stat .jperf-v{font-size:21px;margin-top:6px}
+  .jperf-stat .jperf-k{font-size:10px}
+  .jperf-stat .jperf-d{font-size:10.5px;margin-top:3px}
+  /* 区块间距按移动端节奏收缩 */
+  .jperf-panels{gap:14px;margin-bottom:24px}
+  .jperf-grid2{margin-bottom:24px}
+  .jperf-block{margin-bottom:24px}
+  /* 长数值/URL 安全换行（原仅 ≤480px，放宽到全部小屏） */
+  .jperf-val{overflow-wrap:anywhere}
+  .jperf-kvrow{flex-wrap:wrap;row-gap:2px}
+  .jperf-result{font-size:12.5px}
+  .jperf-card{padding:16px}
+}
+@media(max-width:400px){
+  .jperf-stat .jperf-v{font-size:19px}
+  .jperf-gauge{gap:12px}
+  .jperf-pct{font-size:16px}
+  .jperf-btn{padding:9px 12px;font-size:12.5px}
 }
