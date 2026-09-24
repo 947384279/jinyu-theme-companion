@@ -768,3 +768,11 @@ textarea.jyc-inp{font-weight:400}
   .jperf-pct{font-size:16px}
   .jperf-btn{padding:9px 12px;font-size:12.5px}
 }
+
+/* ===================== WP 后台容器适配 ===================== */
+/* 手机端 WP 核心给 #wpcontent 留 10px 左 padding，深色画布左侧露出后台浅色竖条；
+   本样式仅在本插件设置页加载，不影响其它后台页面 */
+@media (max-width: 782px) {
+  #wpcontent { padding-left: 0; }
+  .jyc-app { min-height: calc(100vh - var(--wp-admin--admin-bar--height, 46px)); }
+}
