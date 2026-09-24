@@ -421,13 +421,17 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 .jperf-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--j-ink2);
 	background:var(--j-bg);border:1px solid var(--j-line);border-radius:999px;padding:4px 11px;white-space:nowrap}
 .jperf-dot{width:7px;height:7px;border-radius:50%;background:var(--j-ok);animation:jperfPulse 2.2s infinite}
-.jperf-refresh-mini{width:30px;height:30px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+.jperf-refresh-mini{width:36px;height:36px;flex:none;display:inline-flex;align-items:center;justify-content:center;
 	background:var(--j-bg);border:1px solid var(--j-line);border-radius:50%;cursor:pointer;transition:.15s;
 	vertical-align:middle}
-.jperf-refresh-mini svg{width:14px;height:14px;stroke:var(--j-ink2);stroke-width:2;fill:none;transition:.3s}
+.jperf-refresh-mini svg{width:15px;height:15px;stroke:var(--j-ink2);stroke-width:2;fill:none;transition:.3s}
 .jperf-refresh-mini:hover{border-color:var(--j-accent);box-shadow:0 3px 10px -4px var(--ring)}
 .jperf-refresh-mini:hover svg{stroke:var(--j-accent);transform:rotate(80deg)}
 .jperf-refresh-mini:disabled{opacity:.5;cursor:default}
+/* 深色下 surface/line 与 canvas 对比度过低：胶囊与圆钮会"隐形"，提亮一档 */
+.jyc-app[data-theme="dark"] .jperf-pill{background:var(--surface-3);border-color:#33415c;color:#c9d4e8}
+.jyc-app[data-theme="dark"] .jperf-refresh-mini{background:var(--surface-3);border-color:#3a4a68}
+.jyc-app[data-theme="dark"] .jperf-refresh-mini svg{stroke:#c9d4e8}
 .jperf-ts{font-size:11.5px;color:var(--j-muted);font-variant-numeric:tabular-nums}
 /* 标题行 flex 上下文（仅性能中心 pane 使用） */
 .jyc-mod-flex .jyc-mod-title{display:flex;align-items:center;flex-wrap:wrap;gap:2px 0}
