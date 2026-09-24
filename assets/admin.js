@@ -47,6 +47,8 @@
 
 	function applyTheme(dark) {
 		app.setAttribute('data-theme', dark ? 'dark' : 'light');
+		/* 同步到 body：深色下把 WP 后台容器底色一并涂黑，杜绝画布外露出的浅色条 */
+		document.body.classList.toggle('jyc-dark', dark);
 		if (ico) { ico.innerHTML = dark ? sun : moon; }
 		try { localStorage.setItem('jyc_theme', dark ? 'dark' : 'light'); } catch (e) {}
 	}
