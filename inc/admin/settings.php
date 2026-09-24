@@ -238,7 +238,7 @@ function jinyu_companion_settings_page_html(): void {
 				<div class="jyc-main">
 					<header class="jyc-topnav">
 						<div class="jyc-brand">
-							<div class="jyc-brand-mark">金</div>
+							<div class="jyc-brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="18" r="11" stroke="#FFFFFF" stroke-width="4"/><circle cx="25.8" cy="10.2" r="3.4" fill="#F5B942"/></svg></div>
 							<div class="jyc-brand-txt"><b>金玉 · 增强控制台</b><span>配套插件设置</span></div>
 						</div>
 						<nav class="jyc-nav" id="jyc-nav">
