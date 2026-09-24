@@ -9,8 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 add_action( 'admin_menu', 'jinyu_companion_register_settings_page' );
 function jinyu_companion_register_settings_page(): void {
 	add_menu_page(
-		__( 'jinyu-theme-companion', 'jinyu-theme-companion' ),
-		__( 'jinyu-theme-companion', 'jinyu-theme-companion' ),
+		__( '金玉增强', 'jinyu-theme-companion' ),
+		__( '金玉增强', 'jinyu-theme-companion' ),
 		'manage_options',
 		'jinyu-theme-companion',
 		'jinyu_companion_settings_page_html',
@@ -40,9 +40,12 @@ function jinyu_companion_handle_save(): void {
 	}
 
 	// 布尔开关：勾选存 '1'，未勾存 '0'
-	foreach ( [ 'seo_open', 'twitter_card_enable', 'llms_enable', 'auto_link_enable', 'indexnow_enable', 'close_comments_old', 'page_cache_enable', 'speculation_enable', 'img_alt_enable', 'ld_json_enable', 'storage_auto_upload', 'storage_delete_local' ] as $k ) {
+	foreach ( [ 'seo_open', 'twitter_card_enable', 'llms_enable', 'auto_link_enable', 'indexnow_enable', 'close_comments_old', 'page_cache_enable', 'speculation_enable', 'img_alt_enable', 'ld_json_enable', 'no_category_enable', 'storage_auto_upload', 'storage_delete_local' ] as $k ) {
 		$settings[ $k ] = isset( $_POST[ $k ] ) ? '1' : '0';
 	}
+
+	// 去除 /category/ 前缀开关状态变化时需刷新重写规则（开启/关闭都要 flush 一次才能生效/还原）
+	$no_cat_changed = jinyu_companion_get_option( 'no_category_enable', '1' ) !== $settings['no_category_enable'];
 
 	// 文本 / URL / 颜色
 	$settings['og_image']        = isset( $_POST['og_image'] ) ? esc_url_raw( wp_unslash( $_POST['og_image'] ) ) : '';
@@ -78,7 +81,8 @@ function jinyu_companion_handle_save(): void {
 
 	// SMTP
 	$settings['smtp_host']   = isset( $_POST['smtp_host'] ) ? sanitize_text_field( wp_unslash( $_POST['smtp_host'] ) ) : '';
-	$settings['smtp_port']   = isset( $_POST['smtp_port'] ) ? (int) wp_unslash( $_POST['smtp_port'] ) : 0;
+	// 端口最小 1：清空提交存 0 会让 PHPMailer Port=0，发信静默失败
+	$settings['smtp_port']   = isset( $_POST['smtp_port'] ) ? max( 1, (int) wp_unslash( $_POST['smtp_port'] ) ) : 0;
 	$settings['smtp_secure'] = isset( $_POST['smtp_secure'] ) && in_array( $_POST['smtp_secure'], [ 'ssl', 'tls', 'none' ], true )
 		? sanitize_key( wp_unslash( $_POST['smtp_secure'] ) )
 		: 'ssl';
@@ -111,6 +115,10 @@ function jinyu_companion_handle_save(): void {
 	if ( isset( $_POST['jyc_active_pane'] ) ) {
 		jinyu_companion_active_pane( sanitize_key( wp_unslash( $_POST['jyc_active_pane'] ) ) );
 	}
+	// 分类前缀开关切换后立即刷新重写规则（成本极低，仅在状态实际变化时触发一次）
+	if ( $no_cat_changed ) {
+		flush_rewrite_rules();
+	}
 	// 注：重写规则由 llms.php / indexnow.php 在 init 阶段按版本号自愈，此处不再做昂贵的全量 flush。
 }
 
@@ -140,7 +148,7 @@ if ( ! function_exists( 'jinyu_companion_active_pane' ) ) {
 	 */
 	function jinyu_companion_active_pane( ?string $set = null ): string {
 		static $pane = 'overview';
-		$valid       = [ 'overview', 'seo', 'content', 'perf', 'comment', 'smtp', 'storage' ];
+		$valid       = [ 'overview', 'seo', 'content', 'perf', 'perfcenter', 'comment', 'smtp', 'storage' ];
 		if ( null !== $set && in_array( $set, $valid, true ) ) {
 			$pane = $set;
 		}
@@ -250,6 +258,10 @@ function jinyu_companion_settings_page_html(): void {
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg>
 								<span>性能 / 缓存</span>
 							</button>
+							<button type="button" class="jyc-nav-item<?php echo 'perfcenter' === $active_pane ? ' jyc-active' : ''; ?>" data-mod="perfcenter">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>
+								<span>性能中心</span>
+							</button>
 							<button type="button" class="jyc-nav-item<?php echo 'comment' === $active_pane ? ' jyc-active' : ''; ?>" data-mod="comment">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.3 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 0 1 12 3a8.38 8.38 0 0 1 9 8.5z"/></svg>
 								<span>评论与互动</span>
@@ -283,9 +295,9 @@ function jinyu_companion_settings_page_html(): void {
 									<h1><?php echo esc_html__( '金玉增强控制台', 'jinyu-theme-companion' ); ?></h1>
 									<p><?php echo esc_html__( '统一管理主题的 SEO、内容增强、整页缓存、评论防护与邮件投递。所有配置存于插件独立选项，不受主题导入 / 重置影响，可脱离主题独立运行。', 'jinyu-theme-companion' ); ?></p>
 									<div class="jyc-hero-stats">
-										<div class="jyc-hs"><span class="jyc-v jyc-num">7</span><span class="jyc-k"><?php echo esc_html__( '功能分区', 'jinyu-theme-companion' ); ?></span></div>
+										<div class="jyc-hs"><span class="jyc-v jyc-num">8</span><span class="jyc-k"><?php echo esc_html__( '功能分区', 'jinyu-theme-companion' ); ?></span></div>
 										<div class="jyc-hs"><span class="jyc-v jyc-num" id="jyc-hsOn">0</span><span class="jyc-k"><?php echo esc_html__( '已启用开关', 'jinyu-theme-companion' ); ?></span></div>
-										<div class="jyc-hs"><span class="jyc-v jyc-num">44</span><span class="jyc-k"><?php echo esc_html__( '可配置字段', 'jinyu-theme-companion' ); ?></span></div>
+										<div class="jyc-hs"><span class="jyc-v jyc-num" id="jyc-hsFields">—</span><span class="jyc-k"><?php echo esc_html__( '可配置字段', 'jinyu-theme-companion' ); ?></span></div>
 										<div class="jyc-hs"><span class="jyc-v jyc-num">独立</span><span class="jyc-k"><?php echo esc_html__( '存储隔离', 'jinyu-theme-companion' ); ?></span></div>
 									</div>
 								</div>
@@ -293,7 +305,7 @@ function jinyu_companion_settings_page_html(): void {
 
 							<div class="jyc-bento">
 								<div class="jyc-tile jyc-wide"><div class="jyc-k"><i style="background:var(--brand)"></i><?php echo esc_html__( '功能启用度', 'jinyu-theme-companion' ); ?></div>
-									<div class="jyc-v jyc-num" id="jyc-bentoPct">0%</div><div class="jyc-n"><?php echo esc_html__( '10 项开关平均开启比例', 'jinyu-theme-companion' ); ?></div></div>
+									<div class="jyc-v jyc-num" id="jyc-bentoPct">0%</div><div class="jyc-n"><?php echo esc_html__( '全部功能开关平均开启比例', 'jinyu-theme-companion' ); ?></div></div>
 								<div class="jyc-tile"><div class="jyc-k"><i style="background:var(--ok)"></i>SEO 呈现</div><div class="jyc-v jyc-num" id="jyc-sSeo">—</div><div class="jyc-n">OG / Twitter / llms</div></div>
 								<div class="jyc-tile"><div class="jyc-k"><i style="background:#0ea5e9"></i>主动推送</div><div class="jyc-v jyc-num" id="jyc-sPush">—</div><div class="jyc-n">IndexNow / 百度</div></div>
 								<div class="jyc-tile"><div class="jyc-k"><i style="background:#64748b"></i>缓存命中</div><div class="jyc-v jyc-num" id="jyc-sCache">关</div><div class="jyc-n"><?php echo esc_html__( '整页缓存状态', 'jinyu-theme-companion' ); ?></div></div>
@@ -329,6 +341,11 @@ function jinyu_companion_settings_page_html(): void {
 										<label class="jyc-switch"><input type="checkbox" name="llms_enable" <?php checked( $llms, '1' ); ?>><span class="jyc-track"></span></label>
 										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( 'llms.txt 发现链接', 'jinyu-theme-companion' ); ?></div>
 											<div class="jyc-fdesc"><?php echo esc_html__( '在头部输出 llms.txt 发现链接，便于大模型站点理解。', 'jinyu-theme-companion' ); ?></div></div>
+									</div>
+									<div class="jyc-frow">
+										<label class="jyc-switch"><input type="checkbox" name="no_category_enable" <?php checked( jinyu_companion_get_option( 'no_category_enable', '1' ), '1' ); ?>><span class="jyc-track"></span></label>
+										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '去除 /category/ 前缀', 'jinyu-theme-companion' ); ?></div>
+											<div class="jyc-fdesc"><?php echo esc_html__( '分类链接不再带 /category/ 前缀（旧前缀链接 301 到新地址）；保存时自动刷新重写规则。', 'jinyu-theme-companion' ); ?></div></div>
 									</div>
 								</div>
 							</div>
@@ -495,6 +512,22 @@ function jinyu_companion_settings_page_html(): void {
 									</label>
 								</div>
 							</div>
+							<div class="jyc-panel">
+								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg></span><?php echo esc_html__( '数据库优化', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '一次性维护工具', 'jinyu-theme-companion' ); ?></span></div>
+								<div class="jyc-panel-b">
+									<div class="jyc-test-row">
+										<button class="jyc-btn jyc-btn-soft" type="button" id="jyc-dbOptimize" data-loading="<?php echo esc_attr__( '优化中…', 'jinyu-theme-companion' ); ?>" onclick="window.jycDbOptimize(this)"><?php echo esc_html__( '立即优化', 'jinyu-theme-companion' ); ?></button>
+										<span class="jyc-muted" style="font-size:12px"><?php echo esc_html__( '清理文章修订版本、自动草稿、垃圾评论、孤立元数据与过期瞬态，并优化数据表；不影响正常文章 / 评论 / 用户。', 'jinyu-theme-companion' ); ?></span>
+									</div>
+								</div>
+							</div>
+						</section>
+
+						<!-- ===================== PERF CENTER（性能优化中心，自主题迁入） ===================== -->
+						<section id="pane-perfcenter" class="jyc-pane<?php echo 'perfcenter' === $active_pane ? ' jyc-shown' : ''; ?>">
+							<div class="jyc-mod-head"><h1><?php echo esc_html__( '性能中心', 'jinyu-theme-companion' ); ?></h1>
+								<div class="jyc-sub"><?php echo esc_html__( 'OPcache / Memcached 实时看板、真实用户体验指标、可逆性能开关、多层缓存清理与一键优化。', 'jinyu-theme-companion' ); ?></div></div>
+							<?php jyc_perf_render_pane(); ?>
 						</section>
 
 						<!-- ===================== COMMENT ===================== -->

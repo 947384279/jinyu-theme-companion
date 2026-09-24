@@ -66,6 +66,11 @@ function jinyu_ajax_web_vitals() {
 		wp_send_json_error( 'method', 405 );
 	}
 
+	// 匿名端点防滥用：每 IP 每小时最多 30 次上报，防恶意刷库放大攻击（一次上报=一次 option 读改写）
+	if ( ! jinyu_rate_limit_check( 'web_vitals', 30, HOUR_IN_SECONDS ) ) {
+		wp_send_json_error( 'rate_limited', 429 );
+	}
+
 	$raw = isset( $_POST['data'] ) ? wp_unslash( $_POST['data'] ) : '';
 	$data = json_decode( $raw, true );
 	if ( ! is_array( $data ) ) {
@@ -75,7 +80,11 @@ function jinyu_ajax_web_vitals() {
 	$metrics = [];
 	foreach ( [ 'lcp', 'inp', 'cls', 'fcp', 'ttfb' ] as $k ) {
 		if ( isset( $data[ $k ] ) && is_numeric( $data[ $k ] ) ) {
-			$metrics[ $k ] = floatval( $data[ $k ] );
+			$v = floatval( $data[ $k ] );
+			// 合理性校验：指标毫秒/无单位数均不可能为负或超过 10 分钟，过滤脏数据污染统计
+			if ( $v >= 0 && $v < 600000 ) {
+				$metrics[ $k ] = $v;
+			}
 		}
 	}
 	if ( empty( $metrics ) ) {

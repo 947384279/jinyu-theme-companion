@@ -12,13 +12,49 @@ if ( ! defined( 'ABSPATH' ) ) {
 add_action('init', 'jinyu_page_cache_serve');
 add_action('template_redirect', 'jinyu_page_cache_capture');
 
+// 内容变更自动失效：发布/更新/删除文章、评论增删审核都会触碰整页缓存。
+// 不依赖主题的 jinyu_cache_flush()，本插件自闭环。
+add_action('save_post', 'jinyu_page_cache_flush', 999);
+add_action('deleted_post', 'jinyu_page_cache_flush');
+add_action('comment_post', static function ( $comment_id ): void {
+	$comment = get_comment( $comment_id );
+	if ( $comment && 1 === (int) $comment->comment_approved ) {
+		jinyu_page_cache_flush();
+	}
+}, 999);
+add_action('wp_set_comment_status', static function ( $comment_id, $status ): void {
+	if ( in_array( $status, [ 'approve', '1', 'hold', '0', 'spam', 'trash' ], true ) ) {
+		jinyu_page_cache_flush();
+	}
+}, 999, 2);
+
+/**
+ * 整页缓存代际（epoch）：flush 时推进代际号，旧代际的所有 key 一次性整体失效，
+ * 无需逐 URI 枚举删除。option 不自动加载（autoload=no），成本为一次主键级 UPDATE。
+ */
+function jinyu_page_cache_epoch(): string
+{
+    $epoch = get_option('jinyu_page_cache_epoch');
+    if (!is_string($epoch) || '' === $epoch) {
+        $epoch = '1';
+        update_option('jinyu_page_cache_epoch', $epoch, false);
+    }
+    return $epoch;
+}
+
+function jinyu_page_cache_flush(): void
+{
+    update_option('jinyu_page_cache_epoch', (string) time(), false);
+}
+
 function jinyu_page_cache_key(): string
 {
     // 缓存页里内嵌了 wp_create_nonce('jinyu_front')，nonce 以 12h 为一个 tick 轮换。
     // 把当前 tick 并入 key：跨 tick 后旧缓存自然失效，绝不会把已过期的 nonce 发给访客
     // （否则点赞 / AI 对话 / 评论会被 check_ajax_referer 打回 -1）。
+    // 代际 epoch 并入 key：save_post 等内容变更后旧页面立即失效。
     $tick = function_exists('wp_nonce_tick') ? wp_nonce_tick() : (int) ceil(time() / (DAY_IN_SECONDS / 2));
-    return jinyu_cache_key('page_' . $tick . '_' . md5($_SERVER['REQUEST_URI'] ?? '/'));
+    return jinyu_cache_key('page_' . jinyu_page_cache_epoch() . '_' . $tick . '_' . md5($_SERVER['REQUEST_URI'] ?? '/'));
 }
 
 function jinyu_page_cache_serve(): void
@@ -42,6 +78,10 @@ function jinyu_page_cache_serve(): void
         // 确保匿名访客的来源 PV/UV 在缓存命中时仍被记录（写库已在函数内延迟到 shutdown，exit 后仍会执行）。
         if (function_exists('jinyu_track_visit_source')) {
             jinyu_track_visit_source();
+        }
+        // UV Cookie 补写：命中路径绕过了 wp 钩子，不补写则每个缓存 PV 都会被 shutdown 统计记为新 UV。
+        if (function_exists('jinyu_stats_set_uv_cookie_now')) {
+            jinyu_stats_set_uv_cookie_now();
         }
         echo $html;
         exit;

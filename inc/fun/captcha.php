@@ -174,6 +174,11 @@ add_action('wp_ajax_jinyu_captcha', 'jinyu_captcha_output');
 add_action('wp_ajax_nopriv_jinyu_captcha', 'jinyu_captcha_output');
 function jinyu_captcha_output(): void
 {
+    // 限流：每次调用生成随机数 + 写 transient（memcached），无限流会被脚本刷爆对象缓存
+    if ( function_exists( 'jinyu_rate_limit_check' ) && ! jinyu_rate_limit_check( 'captcha', 60, HOUR_IN_SECONDS ) ) {
+        status_header( 429 );
+        wp_die( 'Too Many Requests' );
+    }
     nocache_headers();
     header('Content-Type: image/svg+xml; charset=utf-8');
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');

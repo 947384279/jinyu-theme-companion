@@ -87,9 +87,15 @@ function jinyu_json_ld()
         }
         // GEO 增强：把净化后的正文直接喂给结构化数据，AI 无需解析 HTML 即得全文；
         // inLanguage 显式声明语种（多语言站点的 AI 索引关键），isAccessibleForFree 声明非付费墙。
-        $article_body = wp_strip_all_tags( apply_filters( 'the_content', $post->post_content ) );
-        if ( mb_strlen( $article_body, 'UTF-8' ) > 5000 ) {
-            $article_body = mb_substr( $article_body, 0, 5000, 'UTF-8' ) . '…';
+        // 按文章+修改时间缓存：apply_filters('the_content') 是完整二次渲染，曾每次 wp_head 都跑一遍。
+        $body_cache_key = jinyu_cache_key('jsonld_body_' . $post->ID . '_' . $post->post_modified_gmt);
+        $article_body = get_transient($body_cache_key);
+        if (!is_string($article_body) || $article_body === '') {
+            $article_body = wp_strip_all_tags(apply_filters('the_content', $post->post_content));
+            if (mb_strlen($article_body, 'UTF-8') > 5000) {
+                $article_body = mb_substr($article_body, 0, 5000, 'UTF-8') . '…';
+            }
+            set_transient($body_cache_key, $article_body, WEEK_IN_SECONDS);
         }
         $article['articleBody']         = $article_body;
         $article['inLanguage']          = get_locale();

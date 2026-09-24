@@ -23,12 +23,33 @@ function jinyu_stats_install()
     dbDelta($sql);
 }
 
+/**
+ * 是否应计入统计：过滤爬虫（空 UA / bot 特征）、预取请求（Speculation /
+ * Sec-Purpose: prefetch）与 AJAX / REST / cron 上下文，避免 PV 虚高。
+ */
+function jinyu_stats_should_track()
+{
+    if (wp_doing_ajax() || wp_doing_cron() || (defined('REST_REQUEST') && REST_REQUEST)) return false;
+
+    $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    if ($ua === '' || preg_match('/bot|crawl|spider|slurp|curl|wget|python|java\/|httpclient|go-http|facebookexternalhit|bingpreview|ahrefs|semrush|mj12|dotbot|petalbot|bytespider|headlesschrome|phantomjs|okhttp|libwww/i', $ua)) {
+        return false;
+    }
+
+    $purpose = strtolower(($_SERVER['HTTP_SEC_PURPOSE'] ?? '') . ' ' . ($_SERVER['HTTP_PURPOSE'] ?? ''));
+    if (strpos($purpose, 'prefetch') !== false || strpos($purpose, 'prerender') !== false) {
+        return false;
+    }
+
+    return true;
+}
+
 // 前端计数
 // 延迟到 shutdown 写库：统计计数不阻塞页面渲染（原挂 wp_footer 会在 HTML 输出阶段同步写库）
 add_action('shutdown', 'jinyu_stats_track');
 function jinyu_stats_track()
 {
-    if (is_admin() || is_robots() || is_feed()) return;
+    if (is_admin() || is_robots() || is_feed() || !jinyu_stats_should_track()) return;
     global $wpdb;
     $tbl = $wpdb->prefix . 'jinyu_stats';
     $today = current_time('Y-m-d');
@@ -59,7 +80,19 @@ function jinyu_stats_track()
 add_action('wp', 'jinyu_stats_set_uv_cookie');
 function jinyu_stats_set_uv_cookie()
 {
-    if (is_admin() || is_robots() || is_feed()) return;
+    if (is_admin() || is_robots() || is_feed() || !jinyu_stats_should_track()) return;
+    jinyu_stats_set_uv_cookie_now();
+}
+
+/**
+ * 立即写 UV Cookie（不依赖 WP 条件标签）。
+ * 整页缓存命中时页面在 init 阶段即输出并 exit，wp 钩子永不执行，
+ * 缓存命中路径（page-cache.php）须显式调用本函数补写 Cookie，
+ * 否则 shutdown 统计会把每个缓存页 PV 都当成新 UV（UV 虚高）。
+ */
+function jinyu_stats_set_uv_cookie_now(): void
+{
+    if (!jinyu_stats_should_track()) return;
     $uv_key = 'jinyu_uv_' . current_time('Y-m-d');
     if (!isset($_COOKIE[$uv_key])) {
         setcookie($uv_key, '1', time() + DAY_IN_SECONDS, '/');

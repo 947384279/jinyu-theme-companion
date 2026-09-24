@@ -4,15 +4,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * 数据库优化（维护工具面板「数据库优化」入口）
+ * 数据库优化（设置面板「性能 / 缓存」分区「数据库优化」入口）
  * 仅清理可安全删除的冗余数据，绝不触碰正常文章 / 评论 / 用户。
- * 校验：jinyu_save_options nonce + manage_options 权限。
+ * 校验：本插件设置 nonce（jinyu_companion_settings）+ manage_options 权限。
  */
 
 add_action( 'wp_ajax_jinyu_db_optimize', 'jinyu_db_optimize' );
 
 function jinyu_db_optimize() {
-	check_ajax_referer( 'jinyu_save_options', 'nonce' );
+	check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_send_json_error( __( '权限不足', 'jinyu-theme-companion') );
 	}

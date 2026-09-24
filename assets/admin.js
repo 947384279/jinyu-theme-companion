@@ -16,6 +16,7 @@
 		seo: document.getElementById('pane-seo'),
 		content: document.getElementById('pane-content'),
 		perf: document.getElementById('pane-perf'),
+		perfcenter: document.getElementById('pane-perfcenter'),
 		comment: document.getElementById('pane-comment'),
 		smtp: document.getElementById('pane-smtp'),
 		storage: document.getElementById('pane-storage')
@@ -106,9 +107,10 @@
 	/* ---------------- 概览联动 ---------------- */
 	var toggleKeys = [
 		['seo_open', 'SEO / OG'], ['twitter_card_enable', 'Twitter 卡片'], ['llms_enable', 'llms.txt'],
+		['no_category_enable', '去除 /category/'], ['ld_json_enable', 'JSON-LD'],
 		['auto_link_enable', '自动内链'], ['indexnow_enable', 'IndexNow'], ['page_cache_enable', '整页缓存'],
 		['speculation_enable', 'Speculation 预取'], ['img_alt_enable', '图片 alt 补全'], ['close_comments_old', '旧文关评'],
-		['ld_json_enable', 'JSON-LD']
+		['storage_auto_upload', '附件自动上云'], ['storage_delete_local', '推送后删本地']
 	];
 	function computeOverview() {
 		var on = 0;
@@ -139,6 +141,8 @@
 		var fill = document.getElementById('jyc-pbarFill');
 		if (fill) { fill.style.width = pct + '%'; }
 		set('jyc-hsOn', on);
+		/* 可配置字段总数：按面板真实控件数动态统计，避免硬编码失真 */
+		set('jyc-hsFields', document.querySelectorAll('.jyc-pane input, .jyc-pane select, .jyc-pane textarea').length);
 		var seoEl = document.querySelector('input[name="seo_open"]');
 		var pushEl = document.querySelector('input[name="indexnow_enable"]');
 		var cacheEl = document.querySelector('input[name="page_cache_enable"]');
@@ -170,6 +174,28 @@
 	};
 	// 保存成功后由服务端渲染 .jyc-show 进场，这里只接管自动隐藏
 	if (toastEl && toastEl.classList.contains('jyc-show')) { scheduleHide(3000); }
+
+	/* ---------------- 数据库优化 ---------------- */
+	window.jycDbOptimize = function (btn) {
+		var form = document.getElementById('jyc-form');
+		if (!form) { return; }
+		if (!window.confirm('确定立即优化数据库？将清理修订版本、自动草稿、垃圾评论、孤立元数据与过期瞬态。')) { return; }
+		var fd = new FormData(form);
+		fd.append('action', 'jinyu_db_optimize');
+		var aurl = (typeof ajaxurl !== 'undefined') ? ajaxurl : '';
+		var oldTxt = '', loading = false;
+		if (btn) { oldTxt = btn.textContent; btn.disabled = true; btn.textContent = btn.getAttribute('data-loading') || '优化中…'; loading = true; }
+		fetch(aurl, { method: 'POST', body: fd, credentials: 'same-origin' })
+			.then(function (r) { return r.json(); })
+			.then(function (res) {
+				if (res && res.success) { jycToast(res.data && res.data.msg ? res.data.msg : '数据库优化完成'); }
+				else { jycToast((res && res.data) ? String(res.data) : '优化失败，请重试'); }
+			})
+			.catch(function () { jycToast('请求失败，请重试'); })
+			.then(function () {
+				if (loading && btn) { btn.disabled = false; btn.textContent = oldTxt; }
+			});
+	};
 
 	/* ---------------- SMTP 真实测试邮件 ---------------- */
 	window.jycTestSmtp = function (btn) {

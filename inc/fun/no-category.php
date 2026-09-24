@@ -5,23 +5,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * 去除分类链接中的 /category/ 前缀。
- * 仅在后台「SEO → 去除分类前缀」开启时，本文件才会被 core.php 引入，
- * 从而改写分类重写规则；关闭后 WP 默认规则自动恢复，互不污染。
+ * 由设置面板「SEO / 社交」分区的「去除 /category/ 前缀」开关控制（默认开启，
+ * 保持历史行为可关闭）；关闭后 WP 默认规则自动恢复，互不污染。
  *
  * WP 7.x 兼容：去掉旧版 version_compare('3.4') 分支（早已无意义），
  * 直接写入 extra_permastructs['category']['struct']。
  */
 
-add_action('load-themes.php', 'jinyu_no_category_base_flush');
-add_action('created_category', 'jinyu_no_category_base_flush');
-add_action('edited_category', 'jinyu_no_category_base_flush');
-add_action('delete_category', 'jinyu_no_category_base_flush');
-add_action('admin_init', 'jinyu_no_category_base_maybe_flush');
-add_action('init', 'jinyu_no_category_base_permastruct');
-add_filter('category_rewrite_rules', 'jinyu_no_category_base_rewrite_rules');
-add_filter('query_vars', 'jinyu_no_category_base_query_vars');
-add_filter('request', 'jinyu_no_category_base_request');
-add_filter('category_link', 'jinyu_no_category_base_link', 10, 2);
+if ( jinyu_companion_is_checked( 'no_category_enable', '1' ) ) {
+	add_action('load-themes.php', 'jinyu_no_category_base_flush');
+	add_action('created_category', 'jinyu_no_category_base_flush');
+	add_action('edited_category', 'jinyu_no_category_base_flush');
+	add_action('delete_category', 'jinyu_no_category_base_flush');
+	add_action('admin_init', 'jinyu_no_category_base_maybe_flush');
+	add_action('init', 'jinyu_no_category_base_permastruct');
+	add_filter('category_rewrite_rules', 'jinyu_no_category_base_rewrite_rules');
+	add_filter('query_vars', 'jinyu_no_category_base_query_vars');
+	add_filter('request', 'jinyu_no_category_base_request');
+	add_filter('category_link', 'jinyu_no_category_base_link', 10, 2);
+}
 
 function jinyu_no_category_base_flush(): void
 {

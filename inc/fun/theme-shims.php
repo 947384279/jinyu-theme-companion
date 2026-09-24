@@ -42,8 +42,16 @@ if ( ! function_exists( 'jinyu_cache_set' ) ) {
 	}
 }
 if ( ! function_exists( 'jinyu_cache_flush' ) ) {
+	/**
+	 * 内容变更后的缓存失效：整页缓存（代际失效）+ llms.txt 输出缓存。
+	 * 不再是空操作 —— 否则插件独立运行时发布/更新文章最长 TTL 内一直是旧页面。
+	 */
 	function jinyu_cache_flush(): void {
-		// transients 按 TTL 自动过期；全量清理交给 WP 自身，此处为空操作占位。
+		if ( function_exists( 'jinyu_page_cache_flush' ) ) {
+			jinyu_page_cache_flush();
+		}
+		delete_transient( 'jinyu_llms_index_cache' );
+		delete_transient( 'jinyu_llms_full_cache' );
 	}
 }
 
@@ -114,9 +122,22 @@ if ( ! function_exists( 'jinyu_has_external_page_cache' ) ) {
 	}
 }
 
-// 限流检查：无主题时放行
+// 限流检查（真实实现）：按 IP + 动作做滑动窗口计数（transient 承载）。
+// 主题在场时优先用主题版（Memcached）；主题缺席时本实现兜底，
+// 供海报生成 / Web Vitals 上报等匿名端点防滥用，不再是「恒放行」。
 if ( ! function_exists( 'jinyu_rate_limit_check' ) ) {
 	function jinyu_rate_limit_check( string $action, int $limit, int $window ): bool {
+		$raw_ip = (string) ( $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '' );
+		$ip     = trim( explode( ',', $raw_ip )[0] );
+		if ( '' === $ip ) {
+			return true; // 无法识别来源时放行，避免误杀
+		}
+		$key = 'jyc_rl_' . md5( $action . '|' . $ip );
+		$n   = (int) get_transient( $key );
+		if ( $n >= $limit ) {
+			return false;
+		}
+		set_transient( $key, $n + 1, $window );
 		return true;
 	}
 }

@@ -174,15 +174,20 @@ add_shortcode( 'jinyu_progress', $jinyu_progress );
 
 // --- 选项卡 [jinyu_tabs]...[jinyu_tab title="x"]...[/jinyu_tab]...[/jinyu_tabs] ---
 $jinyu_tabs = function ($atts, $content = '') {
-	preg_match_all( '/\[jinyu_tab[^\]]*\](.*?)\[\/jinyu_tab\]/s', $content, $m );
-	preg_match_all( '/\[jinyu_tab[^\]]*title="([^"]*)"[^\]]*\]/', $content, $t );
-	if ( empty( $m[1] ) ) {
+	// PREG_SET_ORDER：同一正则内一次性捕获「属性串 + 正文」，标题与正文必须同源匹配，
+	// 独立收集会在某个 tab 缺 title 属性时错位串位。
+	preg_match_all( '/\[jinyu_tab([^\]]*)\](.*?)\[\/jinyu_tab\]/s', $content, $m, PREG_SET_ORDER );
+	if ( empty( $m ) ) {
 		return '';
 	}
 	$tabs  = '';
 	$panes = '';
-	foreach ( $m[1] as $i => $body ) {
-		$title  = $t[1][ $i ] ?? ( 'Tab ' . ( $i + 1 ) );
+	foreach ( $m as $i => $tab ) {
+		$title  = 'Tab ' . ( $i + 1 );
+		if ( preg_match( '/title="([^"]*)"/', $tab[1], $tm ) && '' !== $tm[1] ) {
+			$title = $tm[1];
+		}
+		$body   = $tab[2];
 		$active = $i === 0 ? ' jinyu-tab-active' : '';
 		$tabs  .= '<button class="jinyu-tab-btn' . $active . '" data-target="jinyu-tab-pane-' . $i . '">' . esc_html( $title ) . '</button>';
 		$panes .= '<div class="jinyu-tab-pane' . $active . '" id="jinyu-tab-pane-' . $i . '">' . do_shortcode( $body ) . '</div>';

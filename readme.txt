@@ -4,9 +4,9 @@ Jinyu Theme Companion
 Contributors: qicaiyun
 Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
-Tested up to: 6.6
+Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -24,6 +24,8 @@ Features:
 * Content enhancement: related posts, popular posts, the "series" taxonomy, the "moments" custom post type, automatic internal linking, shortcodes with a visual UI, and Web Vitals metrics
 * Comments & interaction: comment notifications and anti-spam
 * Performance & system: page cache, database optimization, mail (SMTP configuration), and post posters
+
+* Performance center (migrated from the theme): OPcache / Memcached status boards, reversible performance toggles, per-layer cache flushing (OPcache / Memcached / page cache), one-click optimization, and real-user Web Vitals board
 
 This plugin works best when paired with the Jinyu theme. When the theme is not active, every feature degrades gracefully and will not white-screen the site.
 
@@ -52,6 +54,9 @@ To comply with the WordPress.org plugin prefix rule (at least 4 characters and n
 (Add screenshots before release: settings page, related posts, message center, shortcode UI, and so on.)
 
 == Changelog ==
+
+= 1.0.2 =
+* New: Performance center pane — OPcache / Memcached real-time stats, cache flushing, reversible performance toggles and one-click optimization (migrated from the theme so the theme stays presentation-only).
 
 = 1.0.1 =
 * WordPress.org compliance hardening: English readme, valid plugin headers (Requires at least / Tested up to / Domain Path), replaced heredoc output with escaped inline PHP, added languages/ domain path, safe core substitutions (wp_strip_all_tags, wp_parse_url), trimmed short description under 150 chars.

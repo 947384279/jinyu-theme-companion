@@ -127,7 +127,7 @@ function jinyu_notify_install()
           content TEXT NOT NULL,
           link VARCHAR(512) NOT NULL DEFAULT '',
           is_read TINYINT UNSIGNED NOT NULL DEFAULT 0,
-          created_at DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00',
+          created_at DATETIME NOT NULL,
           PRIMARY KEY (id),
           KEY user_read (user_id, is_read),
           KEY created_at (created_at)

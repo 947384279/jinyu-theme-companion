@@ -42,8 +42,8 @@ function jinyu_img_alt_autofill( $content ) {
 			$src = $s[1];
 			$alt = '';
 
-			// 优先：本站媒体库附件标题
-			$id = function_exists( 'attachment_url_to_postid' ) ? attachment_url_to_postid( $src ) : 0;
+			// 优先：本站媒体库附件标题（按 URL 缓存映射，避免图多时每次渲染 N 条 DB 查询）
+			$id = jinyu_img_alt_postid_cached( $src );
 			if ( $id ) {
 				$alt = (string) get_the_title( $id );
 			}
@@ -62,4 +62,28 @@ function jinyu_img_alt_autofill( $content ) {
 	);
 
 	return $content;
+}
+
+/**
+ * attachment_url_to_postid 的缓存包装：0 也缓存（防反复查询同一外链/已删附件），
+ * 请求内静态 memo + 24h transient 两级，写库成本摊薄到每 URL 每天一次。
+ */
+function jinyu_img_alt_postid_cached( string $url ): int {
+	static $memo = [];
+	if ( isset( $memo[ $url ] ) ) {
+		return $memo[ $url ];
+	}
+	if ( ! function_exists( 'attachment_url_to_postid' ) ) {
+		return 0;
+	}
+	$key     = 'jyc_alt_pid_' . md5( $url );
+	$cached  = get_transient( $key );
+	if ( false !== $cached && is_numeric( $cached ) ) {
+		$memo[ $url ] = (int) $cached;
+		return (int) $cached;
+	}
+	$id = (int) attachment_url_to_postid( $url );
+	set_transient( $key, $id, DAY_IN_SECONDS );
+	$memo[ $url ] = $id;
+	return $id;
 }

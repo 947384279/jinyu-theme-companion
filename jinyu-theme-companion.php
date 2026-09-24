@@ -6,7 +6,7 @@
  *              three-part structure, this plugin takes over all functional capabilities (SEO, structured
  *              data, social, related posts, shortcodes, cache, anti-spam, index ping, and more) so the
  *              theme stays a pure presentation layer. All outbound features are off by default.
- * Version:     1.0.1
+ * Version:     1.0.2
  * Author:      金玉主题作者
  * Author URI:  https://www.qicaiyun.top
  * License:     GPL-2.0-or-later
@@ -14,7 +14,7 @@
  * Text Domain: jinyu-theme-companion
  * Domain Path: /languages
  * Requires at least: 6.2
- * Tested up to: 6.6
+ * Tested up to: 6.8
  * Requires PHP: 7.4
  *
  * @package Jinyu_Theme_Companion
@@ -29,8 +29,52 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 主题缺失时优雅降级，不会白屏。文本域统一使用字面量 'jinyu-theme-companion'。
  * ------------------------------------------------------------------------ */
 if ( ! defined( 'JINYU_CUR_VER' ) ) {
-	define( 'JINYU_CUR_VER', '1.0.1' );
+	define( 'JINYU_CUR_VER', '1.0.2' );
 }
+
+/* 插件自有路径常量：模块（shortcode-ui / poster 等）一律引用插件自身资源，
+ * 不再依赖主题的 JINYU_ABS_DIR / JINYU_ABS_URI（主题缺席时未定义常量会直接抛 Error）。 */
+if ( ! defined( 'JINYU_COMPANION_DIR' ) ) {
+	define( 'JINYU_COMPANION_DIR', plugin_dir_path( __FILE__ ) );
+}
+if ( ! defined( 'JINYU_COMPANION_URL' ) ) {
+	define( 'JINYU_COMPANION_URL', plugin_dir_url( __FILE__ ) );
+}
+
+/* 激活即建表：通知表（jinyu_notify）/ 统计表不再只靠 after_switch_theme + footer 兜底，
+ * 避免插件激活后首个请求内表缺失导致写入失败。 */
+register_activation_hook( __FILE__, static function (): void {
+	require_once __DIR__ . '/inc/fun/companion-options.php';
+	require_once __DIR__ . '/inc/fun/social.php';
+	require_once __DIR__ . '/inc/fun/stats.php';
+	if ( function_exists( 'jinyu_notify_install' ) ) {
+		jinyu_notify_install();
+	}
+	if ( function_exists( 'jinyu_stats_install' ) ) {
+		jinyu_stats_install();
+	}
+	// storage 任务表：原先拖到首次 AJAX 才建，批处理前必有一次空跑
+	require_once __DIR__ . '/inc/fun/storage.php';
+	if ( function_exists( 'jinyu_storage_install_table' ) ) {
+		jinyu_storage_install_table();
+	}
+	// 标记下次 init 刷新重写规则：moments/series 等自定义 rewrite 在全新安装后
+	// 不 flush 会 404，直到手动保存固定链接。此刻 CPT 尚未注册，只能延后到 init(99)。
+	update_option( 'jinyu_companion_flush_rewrite', 1, false );
+} );
+
+/* 激活后首个请求：CPT 已注册（after_setup_theme 先于 init），此时 flush 才有效 */
+add_action( 'init', static function (): void {
+	if ( get_option( 'jinyu_companion_flush_rewrite' ) ) {
+		flush_rewrite_rules();
+		delete_option( 'jinyu_companion_flush_rewrite' );
+	}
+}, 99 );
+
+/* 翻译加载：.org 审查硬性要求（languages/ 目录已随包发布） */
+add_action( 'init', static function (): void {
+	load_plugin_textdomain( 'jinyu-theme-companion', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+} );
 
 /* --------------------------------------------------------------------------
  * 模块加载：下列文件原属主题，拆为独立外发插件；各文件顶部自行注册钩子。
@@ -106,6 +150,9 @@ add_action( 'after_setup_theme', static function (): void {
 	require_once __DIR__ . '/inc/fun/speculation.php';
 	require_once __DIR__ . '/inc/fun/page-cache.php';
 	require_once __DIR__ . '/inc/fun/db-optimize.php';
+	// 性能优化中心（自主题 perf.php 迁入）：OPcache/Memcached 看板、
+	// 性能开关、缓存清理、一键优化。渲染挂在设置面板「性能中心」分区。
+	require_once __DIR__ . '/inc/fun/perf-center.php';
 	require_once __DIR__ . '/inc/fun/stats.php';
 	require_once __DIR__ . '/inc/fun/email.php';
 	require_once __DIR__ . '/inc/ajax/poster.php';

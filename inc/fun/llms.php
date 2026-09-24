@@ -96,8 +96,17 @@ function jinyu_llms_serve(): void {
 	header( 'Content-Type: text/markdown; charset=utf-8' );
 	header( 'X-Robots-Tag: index, follow' );
 
+	// 输出缓存：AI 爬虫抓取 /llms-full.txt 曾每次触发全量文章查询 + HTML→MD 转换（CPU 尖峰）。
+	// 内容变更由 jinyu_cache_flush()（save_post 等钩子）清掉，TTL 仅兜底。
+	$cache_key = 'full' === $mode ? 'jinyu_llms_full_cache' : 'jinyu_llms_index_cache';
+	$cached    = get_transient( $cache_key );
+	if ( is_string( $cached ) && '' !== $cached ) {
+		echo $cached;
+		exit;
+	}
+
 	if ( $mode === 'full' ) {
-		jinyu_llms_serve_full();
+		jinyu_llms_serve_full( $cache_key );
 		return;
 	}
 
@@ -241,8 +250,18 @@ function jinyu_llms_serve(): void {
 		}
 	}
 
+	jinyu_llms_cache_output( $cache_key, $out );
 	echo $out;
 	exit;
+}
+
+/**
+ * 缓存 llms 输出；超过 5MB 不缓存（避免超大站点把 options 表撑爆），靠 TTL 自然过期。
+ */
+function jinyu_llms_cache_output( string $cache_key, string $out ): void {
+	if ( strlen( $out ) <= 5 * 1024 * 1024 ) {
+		set_transient( $cache_key, $out, 6 * HOUR_IN_SECONDS );
+	}
 }
 
 /**
@@ -317,8 +336,10 @@ function jinyu_html_to_md( string $html ): string {
 
 /**
  * 输出 /llms-full.txt：全站已发布文章正文（纯 markdown），供 AI 整站吸收。
+ *
+ * @param string $cache_key 输出缓存 key（由调用方按模式决定）。
  */
-function jinyu_llms_serve_full(): void {
+function jinyu_llms_serve_full( string $cache_key = 'jinyu_llms_full_cache' ): void {
 	$site_name = (string) get_bloginfo( 'name' );
 	$desc      = (string) get_bloginfo( 'description' );
 
@@ -357,6 +378,7 @@ function jinyu_llms_serve_full(): void {
 		$out .= "\n" . $content . "\n\n---\n\n";
 	}
 
+	jinyu_llms_cache_output( $cache_key, $out );
 	echo $out;
 	exit;
 }

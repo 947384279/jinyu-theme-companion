@@ -7,7 +7,13 @@ add_action('wp_ajax_jinyu_poster', 'jinyu_poster_generate');
 add_action('wp_ajax_nopriv_jinyu_poster', 'jinyu_poster_generate');
 function jinyu_poster_generate()
 {
-    check_ajax_referer('jinyu_front', '_ajax_nonce');
+    // 双 nonce 兼容：主题在场时前端用主题 jinyu_front nonce；插件独立运行时
+    // 接受本插件设置页签发的 jinyu_companion_settings nonce。两者任一通过即可。
+    $ok = check_ajax_referer('jinyu_front', '_ajax_nonce', false)
+        || check_ajax_referer('jinyu_companion_settings', '_ajax_nonce', false);
+    if (!$ok) {
+        wp_send_json_error(__('nonce 校验失败', 'jinyu-theme-companion'), 403);
+    }
 
     $post_id = isset($_REQUEST['post_id']) ? intval($_REQUEST['post_id']) : 0;
     if (!$post_id) wp_send_json_error('invalid');
@@ -30,6 +36,9 @@ function jinyu_poster_generate()
     $w = 750; $h = 1000;
     $img = imagecreatetruecolor($w, $h);
     $primary = jinyu_companion_get_option('style_color_primary', '#FF6B35');
+    if (!is_string($primary) || !preg_match('/^#?[0-9a-fA-F]{6}$/', $primary)) {
+        $primary = '#FF6B35'; // 空值/非法值兜底，避免 sscanf 返回 null 触发 imagecolorallocate 参数错误
+    }
     list($r,$g,$b) = sscanf(ltrim($primary,'#'),'%02x%02x%02x');
     $bg = imagecolorallocate($img, 247, 248, 250);
     $accent = imagecolorallocate($img, $r, $g, $b);
@@ -42,7 +51,9 @@ function jinyu_poster_generate()
 
     $cover_url = jinyu_get_post_cover($post_id, 'large');
     if ($cover_url) {
-        $cover_data = file_get_contents($cover_url);
+        // 用 WP HTTP API 并限时 8s：file_get_contents 无超时，CDN 抖动时 AJAX 会挂满 PHP 超时
+        $resp = wp_remote_get($cover_url, ['timeout' => 8]);
+        $cover_data = is_wp_error($resp) ? '' : (string) wp_remote_retrieve_body($resp);
         if ($cover_data) {
             // imagecreatefromstring 对损坏数据会发告警，此处仅抑制该调用的告警（结果已显式判断）
             set_error_handler(static function () { return true; });
@@ -57,21 +68,26 @@ function jinyu_poster_generate()
     }
 
     $font = null;
+    // 海报标题多为中文：优先选 CJK 字体，拉丁字体（DejaVu/Liberation）只作最后兜底，
+    // 否则 Linux 服务器无中文字体时中文渲染成方块
     $font_candidates = [
-        ABSPATH . 'wp-includes/fonts/opensans/OpenSans-Regular.ttf',
-        JINYU_ABS_DIR . '/assets/fonts/poster.ttf',
-        'C:/Windows/Fonts/msyh.ttc',
+        'C:/Windows/Fonts/msyh.ttc',            // 微软雅黑
         'C:/Windows/Fonts/msyh.ttf',
-        'C:/Windows/Fonts/arial.ttf',
-        '/System/Library/Fonts/PingFang.ttc',
-        '/System/Library/Fonts/Supplemental/Arial.ttf',
+        'C:/Windows/Fonts/simsun.ttc',          // 宋体
+        '/System/Library/Fonts/PingFang.ttc',   // macOS 苹方
+        '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',   // Linux 文泉驿
+        '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc', // Noto CJK（Debian fonts-noto-cjk）
+        '/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc',
+        '/usr/share/fonts/truetype/arphic/uming.ttc',     // AR PL UMing
+        ABSPATH . 'wp-includes/fonts/opensans/OpenSans-Regular.ttf',
         '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
         '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
     ];
     foreach ($font_candidates as $c) {
         if ($c && file_exists($c)) { $font = $c; break; }
     }
-    if (function_exists('imagettftext') && file_exists($font)) {
+    if (function_exists('imagettftext') && is_string($font) && file_exists($font)) {
         imagettftext($img, 28, 0, 50, 720, $title_c, $font, $post->post_title);
         imagettftext($img, 16, 0, 50, 850, $site_c, $font, get_bloginfo('name'));
         imagettftext($img, 14, 0, 50, 930, $site_c, $font, get_permalink($post_id));

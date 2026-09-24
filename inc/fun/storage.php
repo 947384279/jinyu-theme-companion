@@ -768,6 +768,33 @@ function jinyu_is_storage_enabled() {
 	return $cfg['provider'] !== '' && $cfg['bucket'] !== '' && $cfg['access_key'] !== '' && $cfg['secret'] !== '';
 }
 
+/**
+ * 配置完整性校验：S3 兼容模式下 endpoint / region 缺失会导致 host 拼成
+ * 「bucket.」、签名区域为空，报错极难排查，故提前拦截并给出明确提示。
+ *
+ * @return string|true true 表示通过，否则返回错误文案。
+ */
+function jinyu_storage_validate_cfg( $cfg ) {
+	if ( ( $cfg['provider'] ?? '' ) === 'upyun' ) {
+		return true;
+	}
+	$missing = array();
+	if ( trim( (string) ( $cfg['endpoint'] ?? '' ) ) === '' ) {
+		$missing[] = 'Endpoint';
+	}
+	if ( trim( (string) ( $cfg['region'] ?? '' ) ) === '' ) {
+		$missing[] = 'Region';
+	}
+	if ( $missing ) {
+		return sprintf(
+			/* translators: %s: 字段清单 */
+			__( 'S3 兼容模式必须填写：%s（例如阿里云 OSS 填 oss-cn-hangzhou.aliyuncs.com，Region 填 oss-cn-hangzhou）', 'jinyu-theme-companion' ),
+			implode( '、', $missing )
+		);
+	}
+	return true;
+}
+
 /* ───────────────────────────────────────────────────────────
  * 加速域名 URL 重写（仅前台；优先级 5 先于主题 cdn_url）
  * ─────────────────────────────────────────────────────────── */
@@ -829,10 +856,53 @@ add_action(
 			}
 		}
 		$basedir = wp_upload_dir()['basedir'];
+		$items   = array();
 		foreach ( array_unique( $files ) as $f ) {
 			if ( is_file( $f ) ) {
 				$rel = wp_normalize_path( ltrim( str_replace( $basedir, '', $f ), '/' ) );
-				$ad->put( $f, $prefix . $rel );
+				$items[] = array( 'local' => $f, 'key' => $prefix . $rel );
+			}
+		}
+		// curl_multi 并发上传（8 路），多尺寸图片不再逐个串行等待。
+		if ( $items ) {
+			$ad->put_multi( $items, 8 );
+		}
+	}
+);
+
+/* 删除媒体时同步删除云端对象：delete_attachment 在本地文件删除前触发，
+ * 此时可完整取到主文件与全部尺寸的相对路径，远端 key 与推送映射一致。 */
+add_action(
+	'delete_attachment',
+	function ( $post_id ) {
+		if ( ! jinyu_is_storage_enabled() ) {
+			return;
+		}
+		$cfg = jinyu_storage_config();
+		$ad  = Jinyu_Storage_Factory::make( $cfg );
+		if ( ! $ad ) {
+			return;
+		}
+		$prefix  = rtrim( $cfg['prefix'], '/' ) . '/';
+		$basedir = wp_upload_dir()['basedir'];
+		$file    = get_attached_file( $post_id );
+		$files   = array();
+		if ( $file ) {
+			$files[] = $file;
+		}
+		$meta = wp_get_attachment_metadata( $post_id );
+		if ( is_array( $meta ) && ! empty( $meta['sizes'] ) && $file ) {
+			$dir = dirname( $file );
+			foreach ( $meta['sizes'] as $s ) {
+				if ( ! empty( $s['file'] ) ) {
+					$files[] = $dir . '/' . $s['file'];
+				}
+			}
+		}
+		foreach ( array_unique( $files ) as $f ) {
+			$rel = wp_normalize_path( ltrim( str_replace( $basedir, '', $f ), '/' ) );
+			if ( $rel !== '' ) {
+				$ad->delete( $prefix . $rel );
 			}
 		}
 	}
@@ -847,8 +917,19 @@ function jinyu_storage_table() {
 }
 
 function jinyu_storage_install_table() {
+	static $exists = null;
+	if ( $exists ) {
+		return; // 本请求内已确认表存在，跳过昂贵的 dbDelta（批处理每 2.5s 调一次）
+	}
 	global $wpdb;
 	$table   = jinyu_storage_table();
+	// 先廉价探测：表已存在则本请求内不再触发 dbDelta（全表结构比对 + 潜在 ALTER）
+	if ( null === $exists ) {
+		$exists = (bool) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+		if ( $exists ) {
+			return;
+		}
+	}
 	$charset = $wpdb->get_charset_collate();
 	$sql     = "CREATE TABLE IF NOT EXISTS $table (
 		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -865,6 +946,7 @@ function jinyu_storage_install_table() {
 	) $charset;";
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 	dbDelta( $sql );
+	$exists = true;
 }
 
 add_action( 'after_switch_theme', 'jinyu_storage_install_table' );
@@ -990,6 +1072,10 @@ add_action(
 		if ( empty( $cfg['provider'] ) || empty( $cfg['bucket'] ) || empty( $cfg['access_key'] ) || empty( $cfg['secret'] ) ) {
 			wp_send_json_error( __( '请填写完整的存储配置（服务商 / 桶 / AccessKey / Secret）', 'jinyu-theme-companion' ) );
 		}
+		$validate = jinyu_storage_validate_cfg( $cfg );
+		if ( $validate !== true ) {
+			wp_send_json_error( $validate );
+		}
 		$ad = Jinyu_Storage_Factory::make( $cfg );
 		if ( ! $ad ) {
 			wp_send_json_error( __( '不支持的存储服务商', 'jinyu-theme-companion' ) );
@@ -1018,6 +1104,10 @@ add_action(
 		$cfg   = jinyu_storage_config( $_POST );
 		if ( empty( $cfg['provider'] ) || empty( $cfg['bucket'] ) || empty( $cfg['access_key'] ) || empty( $cfg['secret'] ) ) {
 			wp_send_json_error( __( '请先填写并保存存储配置', 'jinyu-theme-companion' ) );
+		}
+		$validate = jinyu_storage_validate_cfg( $cfg );
+		if ( $validate !== true ) {
+			wp_send_json_error( $validate );
 		}
 		$ad = Jinyu_Storage_Factory::make( $cfg );
 		if ( ! $ad ) {

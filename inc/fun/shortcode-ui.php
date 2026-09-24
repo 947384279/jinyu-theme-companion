@@ -31,22 +31,21 @@ if ( ! function_exists( 'jinyu_sc_editor_list' ) ) {
 			[ 'key' => 'music',         'label' => '音乐播放',      'tpl' => '[jinyu_music url="" name="" artist="" cover=""]' ],
 			[ 'key' => 'video',         'label' => '视频',          'tpl' => '[jinyu_video url="" cover=""]' ],
 			[ 'key' => 'btn',           'label' => '按钮',          'tpl' => '[jinyu_btn type="primary" href="https://example.com"]按钮文字[/jinyu_btn]' ],
-			[ 'key' => 'oauth',         'label' => '登录入口',      'tpl' => '[jinyu_oauth]' ],
 			[ 'key' => 'faq',           'label' => 'FAQ',           'tpl' => '[jinyu_faq][jinyu_faq_item q="问题？"]答案[/jinyu_faq_item][/jinyu_faq]' ],
 			[ 'key' => 'howto',         'label' => 'HowTo',         'tpl' => '[jinyu_howto][jinyu_step name="步骤1"]说明[/jinyu_step][/jinyu_howto]' ],
 		];
 	}
 }
 
-// TinyMCE 外部插件（由 assets/dist/js/shortcodes.min.js 提供）
+// TinyMCE 外部插件（插件自带 assets/shortcodes.min.js，不依赖主题资源目录）
 add_filter( 'mce_external_plugins', function ( $plugins ) {
 	global $pagenow;
 	if ( ! in_array( $pagenow, [ 'post.php', 'post-new.php' ], true ) ) {
 		return $plugins;
 	}
-	$sc_js = JINYU_ABS_DIR . '/assets/dist/js/shortcodes.min.js';
+	$sc_js = JINYU_COMPANION_DIR . 'assets/shortcodes.min.js';
 	$sc_ver = file_exists( $sc_js ) ? filemtime( $sc_js ) : JINYU_CUR_VER;
-	$plugins['jinyu_shortcodes'] = JINYU_ABS_URI . '/assets/dist/js/shortcodes.min.js?ver=' . $sc_ver;
+	$plugins['jinyu_shortcodes'] = JINYU_COMPANION_URL . 'assets/shortcodes.min.js?ver=' . $sc_ver;
 	return $plugins;
 } );
 
@@ -92,10 +91,11 @@ add_action( 'admin_print_footer_scripts', function () {
 
 // 块编辑器（Gutenberg）快捷入口：仅块编辑器加载，注入数据并注册侧栏面板
 add_action( 'enqueue_block_editor_assets', function () {
-	$ver = JINYU_CUR_VER;
+	$gb_js = JINYU_COMPANION_DIR . 'assets/shortcodes-gb.min.js';
+	$ver = file_exists( $gb_js ) ? filemtime( $gb_js ) : JINYU_CUR_VER;
 	wp_enqueue_script(
 		'jinyu-shortcodes-gb',
-		JINYU_ABS_URI . '/assets/dist/js/shortcodes-gb.min.js',
+		JINYU_COMPANION_URL . 'assets/shortcodes-gb.min.js',
 		[ 'wp-plugins', 'wp-edit-post', 'wp-element', 'wp-components', 'wp-data', 'wp-blocks' ],
 		$ver,
 		true

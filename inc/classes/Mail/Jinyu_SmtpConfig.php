@@ -57,7 +57,9 @@ class Jinyu_SmtpConfig
 
         $phpmailer->isSMTP();
         $phpmailer->Host       = (string) $cfg['host'];
-        $phpmailer->Port       = (int) ($cfg['port'] ?? 465);
+        // 端口 0/负值（历史脏数据）回退 465，避免 PHPMailer Port=0 静默失败
+        $port                  = (int) ($cfg['port'] ?? 0);
+        $phpmailer->Port       = $port > 0 ? $port : 465;
         $secure                = (string) ($cfg['secure'] ?? 'ssl');
         $phpmailer->SMTPSecure = ($secure === 'none') ? '' : $secure;
 

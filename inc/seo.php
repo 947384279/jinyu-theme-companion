@@ -95,6 +95,11 @@ function jinyu_seo_meta()
             $canonical = home_url('/?s=' . rawurlencode(get_search_query()));
         }
         if ($canonical && !is_wp_error($canonical)) {
+            // 分页页 canonical 须指向自身（带 /page/N/）：指向第 1 页会被搜索引擎视为重复内容压索引。
+            $paged = max( 1, (int) get_query_var('paged'), (int) get_query_var('page') );
+            if ( ! is_singular() && $paged > 1 ) {
+                $canonical = get_pagenum_link( $paged );
+            }
             echo '<link rel="canonical" href="' . esc_url($canonical) . '">' . PHP_EOL;
         }
     }
@@ -223,6 +228,66 @@ function jinyu_seo_meta()
             echo '<meta name="twitter:title" content="' . esc_attr($site_name) . '">' . PHP_EOL;
             if ($home_desc) echo '<meta name="twitter:description" content="' . esc_attr($home_desc) . '">' . PHP_EOL;
             if ($home_img)  echo '<meta name="twitter:image" content="' . esc_url($home_img) . '">' . PHP_EOL;
+        }
+    } elseif (is_archive()) {
+        // 归档页（分类/标签/作者/日期）：分享到微信 / QQ 也能出卡片。
+        $site_name = jinyu_companion_get_option('og_site_name', '');
+        if (!$site_name) $site_name = get_bloginfo('name');
+        $arc_title = wp_strip_all_tags(get_the_archive_title());
+        $arc_desc  = '';
+        if (function_exists('get_the_archive_description')) {
+            $arc_desc = wp_strip_all_tags((string) get_the_archive_description());
+        }
+        if (!$arc_desc) $arc_desc = get_bloginfo('description');
+        // 归档链接：术语 / 作者走标准函数，其余（日期等）按当前请求路径兜底。
+        $queried = get_queried_object();
+        if ($queried instanceof WP_Term) {
+            $arc_url = get_term_link($queried);
+            if (is_wp_error($arc_url)) $arc_url = '';
+        } elseif ($queried instanceof WP_User) {
+            $arc_url = get_author_posts_url($queried->ID);
+        } else {
+            global $wp;
+            $arc_url = home_url(user_trailingslashit($wp->request));
+        }
+        $arc_img = jinyu_companion_get_option('og_image', '');
+        if (!$arc_img && function_exists('has_custom_logo') && has_custom_logo()) {
+            $arc_img = wp_get_attachment_image_url(get_theme_mod('custom_logo'), 'full');
+        }
+        if (!$arc_img) $arc_img = get_site_icon_url();
+        if (!$arc_img && function_exists('jinyu_get_option')) $arc_img = jinyu_get_option('web_logo', '');
+        // 归档分页页 og:url 指向自身（带 /page/N/），与 canonical 口径一致
+        $arc_paged = max( 1, (int) get_query_var('paged'), (int) get_query_var('page') );
+        if ( $arc_paged > 1 && $arc_url && ! is_wp_error( $arc_url ) ) {
+            $arc_url = get_pagenum_link( $arc_paged );
+            if ( is_wp_error( $arc_url ) ) $arc_url = '';
+        }
+        $og_w = $og_h = null;
+        if ($arc_img === jinyu_companion_get_option('og_image', '') && $arc_img) {
+            $og_w = 1200;
+            $og_h = 630;
+        } elseif ($arc_img) {
+            $d = jinyu_og_image_dims($arc_img);
+            if ($d) { $og_w = $d[0]; $og_h = $d[1]; }
+        }
+        if ($arc_url) {
+            echo '<meta property="og:title" content="' . esc_attr($arc_title) . '">' . PHP_EOL;
+            echo '<meta property="og:type" content="website">' . PHP_EOL;
+            echo '<meta property="og:url" content="' . esc_url($arc_url . $wx_suffix) . '">' . PHP_EOL;
+            echo '<meta property="og:site_name" content="' . esc_attr($site_name) . '">' . PHP_EOL;
+            echo '<meta property="og:locale" content="' . str_replace('_', '-', get_locale()) . '">' . PHP_EOL;
+            if ($arc_desc) echo '<meta property="og:description" content="' . esc_attr($arc_desc) . '">' . PHP_EOL;
+            if ($arc_img) {
+                echo '<meta property="og:image" content="' . esc_url($arc_img) . '">' . PHP_EOL;
+                if ($og_w) echo '<meta property="og:image:width" content="' . (int)$og_w . '">' . PHP_EOL;
+                if ($og_h) echo '<meta property="og:image:height" content="' . (int)$og_h . '">' . PHP_EOL;
+            }
+            if (jinyu_companion_is_checked('twitter_card_enable', true)) {
+                echo '<meta name="twitter:card" content="summary_large_image">' . PHP_EOL;
+                echo '<meta name="twitter:title" content="' . esc_attr($arc_title) . '">' . PHP_EOL;
+                if ($arc_desc) echo '<meta name="twitter:description" content="' . esc_attr($arc_desc) . '">' . PHP_EOL;
+                if ($arc_img) echo '<meta name="twitter:image" content="' . esc_url($arc_img) . '">' . PHP_EOL;
+            }
         }
     }
 
