@@ -1291,6 +1291,24 @@ add_action( 'wp_ajax_jyc_load_comments', 'jyc_perf_ajax_load_comments' );
 /* ───────────────────────── 渲染：设置面板「性能中心」分区 ───────────────────────── */
 
 /**
+ * 标题行右侧组件：对象缓存状态胶囊 + 紧凑刷新按钮。
+ * 由 settings.php 在 pane 标题行调用（与 h1 同行）。
+ */
+function jyc_perf_render_headside(): void {
+	$st    = jyc_perf_status();
+	$oc_on = ! empty( $st['object_cache'] );
+	?>
+	<div class="jperf-headside">
+		<span class="jperf-pill"><span class="jperf-dot <?php echo $oc_on ? 'ok' : 'off'; ?>"></span><?php echo $oc_on ? esc_html__( '对象缓存运行中', 'jinyu-theme-companion' ) : esc_html__( '对象缓存未启用', 'jinyu-theme-companion' ); ?></span>
+		<button type="button" class="jperf-refresh-mini" id="jperf-refresh" title="<?php esc_attr_e( '刷新看板', 'jinyu-theme-companion' ); ?>" aria-label="<?php esc_attr_e( '刷新看板', 'jinyu-theme-companion' ); ?>">
+			<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-3-6.7M21 4v5h-5"/></svg>
+		</button>
+		<span class="jperf-ts" id="jperf-refreshed-at" hidden></span>
+	</div>
+	<?php
+}
+
+/**
  * 渲染性能优化中心（嵌入插件设置面板 pane-perfcenter 分区）。
  * 原为主题独立子菜单页，迁入插件后由 settings.php 在对应分区内调用，
  * 不再注册 admin_menu 子页。
@@ -1306,18 +1324,6 @@ function jyc_perf_render_pane(): void {
 	$oc_on   = ! empty( $st['object_cache'] );
 	?>
 	<div class="jperf-wrap">
-		<header class="jperf-topbar">
-			<div class="jperf-topright">
-				<div class="jperf-topstatus">
-					<span class="jperf-pill"><span class="jperf-dot <?php echo $oc_on ? 'ok' : 'off'; ?>"></span><?php echo $oc_on ? esc_html__( '对象缓存运行中', 'jinyu-theme-companion' ) : esc_html__( '对象缓存未启用', 'jinyu-theme-companion' ); ?></span>
-					<span class="jperf-ts" id="jperf-refreshed-at"></span>
-				</div>
-				<button type="button" class="jperf-btn-ghost" id="jperf-refresh">
-					<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-3-6.7M21 4v5h-5"/></svg><?php esc_html_e( '刷新看板', 'jinyu-theme-companion' ); ?>
-				</button>
-			</div>
-		</header>
-
 		<div id="jperf-status-zone"><?php echo jyc_perf_render_status_html(); // 内部均为服务端构造的受控 HTML ?></div>
 
 		<section class="jperf-block">

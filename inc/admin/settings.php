@@ -525,7 +525,11 @@ function jinyu_companion_settings_page_html(): void {
 
 						<!-- ===================== PERF CENTER（性能优化中心，自主题迁入） ===================== -->
 						<section id="pane-perfcenter" class="jyc-pane<?php echo 'perfcenter' === $active_pane ? ' jyc-shown' : ''; ?>">
-							<div class="jyc-mod-head"><h1><?php echo esc_html__( '性能中心', 'jinyu-theme-companion' ); ?></h1>
+							<div class="jyc-mod-head jyc-mod-flex">
+								<div class="jyc-mod-title">
+									<h1><?php echo esc_html__( '性能中心', 'jinyu-theme-companion' ); ?></h1>
+									<?php jyc_perf_render_headside(); ?>
+								</div>
 								<div class="jyc-sub"><?php echo esc_html__( '服务器运行时运维：OPcache / Memcached 实时看板、可逆优化开关、多层缓存清理与一键优化。整页缓存等前台配置在「前台加速」。', 'jinyu-theme-companion' ); ?></div></div>
 							<?php jyc_perf_render_pane(); ?>
 						</section>

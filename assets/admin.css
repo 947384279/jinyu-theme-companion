@@ -175,6 +175,9 @@
 .jyc-app[data-theme="dark"] .jyc-section-ico { color: var(--brand-on-dark); }
 .jyc-muted { color: var(--ink-3); }
 .jyc-mod-head { margin-bottom: 22px; }
+/* WP 核心 h1–h6 { color:#1d2327 } 是元素选择器直接命中，优先于继承的 --ink，
+   深色模式下标题会变暗色；此处显式夺回（置于 .jyc-hero-inner h1 之前，hero 白字不受影响） */
+.jyc-app :is(h1, h2, h3, h4, h5, h6) { color: var(--ink); }
 .jyc-mod-head h1 { font-size: 24px; font-weight: 800; letter-spacing: -.03em; margin: 0 0 7px; font-family: var(--font-display); }
 .jyc-mod-head .jyc-sub { font-size: 13px; color: var(--ink-3); max-width: 760px; }
 
@@ -413,20 +416,22 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 }
 .jperf-wrap *{box-sizing:border-box}
 
-/* 顶栏 */
-.jperf-topbar{display:flex;align-items:center;justify-content:flex-end;gap:14px;
-	padding:0 0 14px;margin-bottom:18px}
-.jperf-topright{display:flex;align-items:center;gap:16px}
-.jperf-topstatus{display:flex;align-items:center;gap:14px}
+/* 标题行右侧组件（状态胶囊 + 紧凑刷新按钮，与 pane h1 同行） */
+.jperf-headside{display:inline-flex;align-items:center;gap:8px;margin-left:12px;vertical-align:middle}
 .jperf-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--j-ink2);
-	background:var(--j-bg);border:1px solid var(--j-line);border-radius:999px;padding:5px 11px}
+	background:var(--j-bg);border:1px solid var(--j-line);border-radius:999px;padding:4px 11px;white-space:nowrap}
 .jperf-dot{width:7px;height:7px;border-radius:50%;background:var(--j-ok);animation:jperfPulse 2.2s infinite}
+.jperf-refresh-mini{width:30px;height:30px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+	background:var(--j-bg);border:1px solid var(--j-line);border-radius:50%;cursor:pointer;transition:.15s;
+	vertical-align:middle}
+.jperf-refresh-mini svg{width:14px;height:14px;stroke:var(--j-ink2);stroke-width:2;fill:none;transition:.3s}
+.jperf-refresh-mini:hover{border-color:var(--j-accent);box-shadow:0 3px 10px -4px var(--ring)}
+.jperf-refresh-mini:hover svg{stroke:var(--j-accent);transform:rotate(80deg)}
+.jperf-refresh-mini:disabled{opacity:.5;cursor:default}
 .jperf-ts{font-size:11.5px;color:var(--j-muted);font-variant-numeric:tabular-nums}
-.jperf-btn-ghost{font:inherit;font-size:13px;color:var(--j-ink);background:var(--j-bg);
-	border:1px solid var(--j-line);border-radius:9px;padding:7px 13px;cursor:pointer;margin-left:auto;
-	display:inline-flex;align-items:center;gap:6px;transition:.15s}
-.jperf-btn-ghost:hover{border-color:#d8d8dd;background:#fafafb}
-.jperf-btn-ghost svg{width:13px;height:13px;stroke:var(--j-ink2);stroke-width:2;fill:none}
+/* 标题行 flex 上下文（仅性能中心 pane 使用） */
+.jyc-mod-flex .jyc-mod-title{display:flex;align-items:center;flex-wrap:wrap;gap:2px 0}
+.jyc-mod-flex .jyc-mod-title h1{margin:0}
 
 /* 指标条 */
 .jperf-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:36px;
@@ -541,8 +546,7 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 @keyframes jperfTipUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 /* ── 深色模式补漏：jperf 遗留的浅色 hover/徽标 ── */
 .jyc-app[data-theme="dark"] .jperf-btn:hover,
-.jyc-app[data-theme="dark"] .jperf-btn-ghost:hover{border-color:#39465e;background:var(--surface-2);box-shadow:0 6px 14px -8px rgba(0,0,0,.55)}
-.jyc-app[data-theme="dark"] .jcard:hover{border-color:#39465e;box-shadow:0 6px 16px -10px rgba(0,0,0,.6)}
+.jyc-app[data-theme="dark"] .jyc-app[data-theme="dark"] .jcard:hover{border-color:#39465e;box-shadow:0 6px 16px -10px rgba(0,0,0,.6)}
 .jyc-app[data-theme="dark"] .jperf-btn-danger:hover{border-color:#7f2c2c;background:#371d1d;box-shadow:0 6px 14px -8px rgba(220,38,38,.3)}
 .jyc-app[data-theme="dark"] .jperf-unsaved{color:#fbbf24;background:#33270f;border-color:#5c4a1a}
 .jyc-app[data-theme="dark"] .jperf-unsaved.saved{color:#4ade80;background:#0f2a1c;border-color:#1f5c38}
@@ -713,19 +717,12 @@ textarea.jyc-inp{font-weight:400}
 	.jperf-pct u{font-size:11px}
 	.jperf-kv{gap:7px}
 	.jperf-kvrow{font-size:12px;padding-bottom:6px}
-	.jperf-topbar{flex-direction:column;align-items:stretch;gap:14px;padding:20px 0 18px}
-	.jperf-topright{flex-direction:column;align-items:stretch;gap:12px;width:100%}
-	.jperf-topstatus{flex-wrap:wrap;gap:8px}
-	.jperf-pill{flex:1 1 calc(50% - 4px);justify-content:center}
-	.jperf-ts{order:3;flex:1 1 auto;white-space:nowrap}
-	.jperf-btn-ghost{width:100%;justify-content:center;margin-left:0}
-	.jperf-block-head{flex-direction:column;align-items:flex-start;gap:5px}
+		.jperf-block-head{flex-direction:column;align-items:flex-start;gap:5px}
 	.jperf-input{width:100%}
 	.jperf-actions{gap:8px}
 	.jperf-actions .jperf-btn{flex:1 1 calc(50% - 4px);justify-content:center}
 }
 @media(max-width:480px){
-	.jperf-topbar{padding:18px 0 16px}
 	.jperf-ring{width:80px;height:80px}
 	.jperf-pct{font-size:17px}
 	.jperf-rlbl{font-size:9.5px}
@@ -737,7 +734,6 @@ textarea.jyc-inp{font-weight:400}
 /* token 已桥接到 .jyc-app 设计变量：品牌蓝统一、深色模式由 [data-theme="dark"] 驱动 */
 @media(max-width:680px){
   /* pane 内 topbar 已紧凑化，覆盖独立页遗留的大留白 */
-  .jperf-topbar{padding:0 0 12px}
   /* 指标条 2 列时收缩留白与字号，避免窄卡挤出 */
   .jperf-stats{margin-bottom:24px}
   .jperf-stat{padding:14px 16px}
