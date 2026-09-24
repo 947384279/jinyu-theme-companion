@@ -57,6 +57,18 @@ function jinyu_page_cache_key(): string
     return jinyu_cache_key('page_' . jinyu_page_cache_epoch() . '_' . $tick . '_' . md5($_SERVER['REQUEST_URI'] ?? '/'));
 }
 
+/**
+ * 按 URI 特征判定搜索请求（?s=… 或 /search/… 重写）。
+ * serve 端先于 WP 查询运行，is_search() 尚不可用，故以 URI 判定；
+ * capture 端仅作 is_search() 之外的兜底。
+ */
+function jinyu_page_cache_is_search_uri(): bool
+{
+    $uri = $_SERVER['REQUEST_URI'] ?? '';
+    if ('' === $uri) return false;
+    return (bool) (preg_match('#[?&]s=[^&]*#', $uri) || stripos($uri, '/search/') !== false);
+}
+
 function jinyu_page_cache_serve(): void
 {
     if ( ! jinyu_companion_is_checked( 'page_cache_enable' ) ) {
@@ -66,6 +78,9 @@ function jinyu_page_cache_serve(): void
     if (is_user_logged_in() || is_admin()) return;
     if (strpos($_SERVER['REQUEST_URI'] ?? '', 'wp-admin') !== false) return;
     if (strpos($_SERVER['REQUEST_URI'] ?? '', 'wp-login') !== false) return;
+    // 搜索页不缓存：serve 端早于 WP 查询（is_search() 不可用），按 URI 特征判定；
+    // 每个搜索词一个 URI，缓存只会膨胀且命中意义不大。
+    if (jinyu_page_cache_is_search_uri()) return;
 
     $html = get_transient(jinyu_page_cache_key());
     if ($html !== false) {
@@ -97,8 +112,9 @@ function jinyu_page_cache_capture(): void
     if (function_exists('jinyu_has_external_page_cache') && jinyu_has_external_page_cache()) return;
     if (empty($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'GET') return;
     if (is_user_logged_in() || is_admin()) return;
-    // 这些响应体不该进整页缓存：404 / feed / 预览 / robots / trackback
-    if (is_404() || is_feed() || is_preview() || is_robots() || is_trackback()) return;
+    // 这些响应体不该进整页缓存：404 / feed / 预览 / robots / trackback / 搜索
+    if (is_404() || is_feed() || is_preview() || is_robots() || is_trackback() || is_search()) return;
+    if (jinyu_page_cache_is_search_uri()) return;
 
     ob_start(function ($html) {
         if (strlen($html) < 500) return $html;

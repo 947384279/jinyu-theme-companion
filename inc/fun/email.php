@@ -29,6 +29,7 @@ add_action('wp_ajax_jinyu_test_smtp', function () {
         'smtp_user'   => 'user',
         'smtp_pwd'    => 'pwd',
         'smtp_from'   => 'from',
+        'smtp_from_name' => 'from_name',
     ];
     $form = [
         'host'   => jinyu_companion_get_option('smtp_host', ''),
@@ -37,6 +38,7 @@ add_action('wp_ajax_jinyu_test_smtp', function () {
         'user'   => jinyu_companion_get_option('smtp_user', ''),
         'pwd'    => jinyu_companion_get_option('smtp_pwd', ''),
         'from'   => jinyu_companion_get_option('smtp_from', ''),
+        'from_name' => jinyu_companion_get_option('smtp_from_name', ''),
     ];
     foreach ($map as $post => $key) {
         if (isset($_POST[$post]) && $_POST[$post] !== '') {

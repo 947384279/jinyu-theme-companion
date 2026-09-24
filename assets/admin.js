@@ -19,7 +19,8 @@
 		perfcenter: document.getElementById('pane-perfcenter'),
 		comment: document.getElementById('pane-comment'),
 		smtp: document.getElementById('pane-smtp'),
-		storage: document.getElementById('pane-storage')
+		storage: document.getElementById('pane-storage'),
+		social: document.getElementById('pane-social')
 	};
 
 	function showPane(name) {
@@ -28,14 +29,137 @@
 		}
 	}
 
+	/* 滑动指示器：导航底部高亮条，随激活 tab 平滑滑动到其位置并匹配宽度。 */
+	var nav = document.getElementById('jyc-nav');
+	var navIndicator = null;
+	if (nav) {
+		navIndicator = document.createElement('span');
+		navIndicator.className = 'jyc-nav-indicator jyc-hidden';
+		nav.appendChild(navIndicator);
+	}
+	function moveIndicator(el) {
+		if (!navIndicator || !nav || !el) { return; }
+		var left = el.offsetLeft - nav.scrollLeft;
+		navIndicator.style.width = el.offsetWidth + 'px';
+		navIndicator.style.transform = 'translateX(' + left + 'px)';
+		navIndicator.classList.remove('jyc-hidden');
+	}
+	function activeNavEl() {
+		return document.querySelector('#jyc-nav .jyc-nav-item.jyc-active');
+	}
+	// 横向滚动 / 窗口缩放时指示器跟手：拖动期间瞬时跟随（去过渡），松手恢复滑动。
+	var scrollRAF;
+	if (nav) {
+		nav.addEventListener('scroll', function () {
+			cancelAnimationFrame(scrollRAF);
+			scrollRAF = requestAnimationFrame(function () {
+				navIndicator.style.transition = 'none';
+				moveIndicator(activeNavEl());
+				requestAnimationFrame(function () { navIndicator.style.transition = ''; });
+			});
+		}, { passive: true });
+		window.addEventListener('resize', function () { moveIndicator(activeNavEl()); });
+	}
+
+	/* 让激活的 tab 在「横向溢出」的导航条里可见：窄屏 / 多 tab 时高亮项被挤出可视区，
+	 * 用户看不到它高亮、误以为没跳到 tab。仅当该项确实在可视区外才滚动，避免无谓抖动。
+	 * behavior：点击用 smooth，进入用 auto（不与窗口滚动抢动画）。 */
+	function scrollNavIntoView(el, behavior) {
+		var nav = document.getElementById('jyc-nav');
+		if (!nav || !el) { return; }
+		var navRect = nav.getBoundingClientRect();
+		var elRect = el.getBoundingClientRect();
+		if (elRect.left < navRect.left || elRect.right > navRect.right) {
+			var target = nav.scrollLeft + (elRect.left - navRect.left) - 16;
+			if (nav.scrollTo) {
+				try { nav.scrollTo({ left: target, behavior: behavior || 'auto' }); } catch (e) { nav.scrollLeft = target; }
+			} else {
+				nav.scrollLeft = target;
+			}
+		}
+	}
+
+	/* 用户偏好：减少动态效果时，所有滚动降级为即时（无障碍 + 不晕）。 */
+	var reduceMotion = false;
+	try {
+		reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+	} catch (e) {}
+
+	/* 窗口滚动到分区顶部：JS 实时测算 sticky 顶栏（WP adminbar + 本插件顶栏，含窄屏换行）
+	 * 的累计高度作为偏移，避免被遮挡或留白过大；统一平滑/即时，比 scrollIntoView 更可控优雅。 */
+	function scrollPaneIntoView(pane, behavior) {
+		if (!pane) { return; }
+		if (behavior === 'smooth' && reduceMotion) { behavior = 'auto'; }
+		behavior = behavior || 'auto';
+		var offset = 14;
+		var bar = document.getElementById('wpadminbar');
+		if (bar) { offset += bar.getBoundingClientRect().height || 0; }
+		var top = document.querySelector('.jyc-topnav');
+		if (top) { offset += top.getBoundingClientRect().height || 0; }
+		var y = pane.getBoundingClientRect().top + window.pageYOffset - offset;
+		try { window.scrollTo({ top: Math.max(0, y), behavior: behavior }); }
+		catch (e) { try { window.scrollTo(0, Math.max(0, y)); } catch (e2) {} }
+	}
+
+	/* 选中并切换分区：统一处理 nav 高亮 / 显隐 / 隐藏域 / 记忆 / 地址栏 / tab 入视。
+	 * 记忆优先级：URL ?pane（可分享/书签）> localStorage（最稳，刷新必在）> 服务端已渲染 .jyc-shown。
+	 * smooth：点击切换时平滑；刷新/直链进入时即时（避免加载动画）。 */
+	function selectPane(mod, smooth) {
+		if (!mod || !panes[mod]) { mod = 'overview'; }
+		navItems.forEach(function (n) {
+			n.classList.toggle('jyc-active', n.getAttribute('data-mod') === mod);
+		});
+		showPane(mod);
+		var ap = document.getElementById('jyc-activePane');
+		if (ap) { ap.value = mod; }
+		try { localStorage.setItem('jyc_pane', mod); } catch (e) {}
+		try {
+			var u = new URL(window.location.href);
+			if (mod === 'overview') { u.searchParams.delete('pane'); }
+			else { u.searchParams.set('pane', mod); }
+			window.history.replaceState(null, '', u.toString());
+		} catch (e) {}
+		scrollNavIntoView(document.querySelector('#jyc-nav .jyc-nav-item.jyc-active'), smooth ? 'smooth' : 'auto');
+		moveIndicator(activeNavEl());
+	}
+
 	navItems.forEach(function (it) {
 		it.addEventListener('click', function () {
-			navItems.forEach(function (n) { n.classList.remove('jyc-active'); });
-			it.classList.add('jyc-active');
-			showPane(it.getAttribute('data-mod'));
-			// 记住当前分区，供保存后停留原页（服务端读此隐藏字段）
-			var ap = document.getElementById('jyc-activePane');
-			if (ap) { ap.value = it.getAttribute('data-mod'); }
+			var mod = it.getAttribute('data-mod');
+			selectPane(mod, true);
+			scrollPaneIntoView(panes[mod], 'smooth');
+		});
+	});
+
+	/* 刷新 / 直链进入：主动恢复选中 tab，避免仅靠 URL 参数丢失后回落概览。 */
+	function resolvePane() {
+		try {
+			var p = new URL(window.location.href).searchParams.get('pane');
+			if (p && panes[p]) { return p; }
+		} catch (e) {}
+		try {
+			var s = localStorage.getItem('jyc_pane');
+			if (s && panes[s]) { return s; }
+		} catch (e) {}
+		for (var k in panes) {
+			if (panes[k] && panes[k].classList.contains('jyc-shown')) { return k; }
+		}
+		return 'overview';
+	}
+	/* 防止浏览器刷新后自动恢复旧滚动位置，否则会与下方「跳到 tab」叠加成先恢复再跳走的双段抖动。 */
+	try { if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; } } catch (e) {}
+
+	// 进入即定位到上次所在分区：先切好高亮/显隐，等布局稳定一帧再平滑滚到该 tab 顶部；
+	// 已禁用浏览器恢复，全过程只有一次顺滑运动，干净不抖。概览页本就在顶部，无需滚动。
+	var entryPane = resolvePane();
+	selectPane(entryPane, false);
+	// 首屏指示器瞬时落位（不计动画），避免从左侧滑入的怪异感；点击切换时才平滑滑动。
+	if (navIndicator) { navIndicator.style.transition = 'none'; }
+	moveIndicator(activeNavEl());
+	requestAnimationFrame(function () {
+		requestAnimationFrame(function () {
+			if (navIndicator) { navIndicator.style.transition = ''; }
+			if (entryPane !== 'overview') { scrollPaneIntoView(panes[entryPane], 'smooth'); }
 		});
 	});
 
@@ -506,5 +630,44 @@
 		wrap.appendChild(sel);
 		renderLabel();
 	});
+
+	/* ---------------- 社交登录：复制回调地址 ---------------- */
+	document.querySelectorAll('.jyc-sl-copy').forEach(function (btn) {
+		btn.addEventListener('click', function () {
+			var id = btn.getAttribute('data-copy');
+			var el = id ? document.getElementById(id) : null;
+			if (!el) { return; }
+			var done = function () {
+				var old = btn.textContent;
+				btn.textContent = '已复制';
+				if (window.jycToast) { window.jycToast('已复制到剪贴板'); }
+				setTimeout(function () { btn.textContent = old; }, 1400);
+			};
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(el.value).then(done, function () {
+					el.select();
+					try { document.execCommand('copy'); } catch (e) {}
+					done();
+				});
+			} else {
+				el.select();
+				try { document.execCommand('copy'); } catch (e) {}
+				done();
+			}
+		});
+	});
+
+	/* 社交登录：恢复默认回调地址 */
+	var resetRedirBtn = document.getElementById('jyc-sl-reset-redirect');
+	var redirInput = document.getElementById('jyc-sl-redirect');
+	if (resetRedirBtn && redirInput) {
+		resetRedirBtn.addEventListener('click', function () {
+			var def = redirInput.getAttribute('data-default') || '';
+			if (!def) { return; }
+			redirInput.value = def;
+			redirInput.focus();
+			if (window.jycToast) { window.jycToast('已恢复为默认回调地址'); }
+		});
+	}
 
 })();

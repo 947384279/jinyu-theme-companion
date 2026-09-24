@@ -6,7 +6,7 @@
  *              three-part structure, this plugin takes over all functional capabilities (SEO, structured
  *              data, social, related posts, shortcodes, cache, anti-spam, index ping, and more) so the
  *              theme stays a pure presentation layer. All outbound features are off by default.
- * Version:     1.0.2
+ * Version:     1.0.4
  * Author:      金玉主题作者
  * Author URI:  https://www.qicaiyun.top
  * License:     GPL-2.0-or-later
@@ -39,6 +39,21 @@ if ( ! defined( 'JINYU_COMPANION_DIR' ) ) {
 }
 if ( ! defined( 'JINYU_COMPANION_URL' ) ) {
 	define( 'JINYU_COMPANION_URL', plugin_dir_url( __FILE__ ) );
+}
+
+/* 文本域兜底：社交登录等从私有插件迁入的模块沿用 JINYU 常量作为 __() 文本域，
+ * 此处统一指向配套插件自身文本域，保证翻译可被 load_plugin_textdomain 加载。 */
+if ( ! defined( 'JINYU' ) ) {
+	define( 'JINYU', 'jinyu-theme-companion' );
+}
+
+/* 第三方登录（社交登录）模块：从私有增强插件迁入，使配套插件可独立提供该能力。
+ * 必须在顶层加载（先于主题 functions.php），因为主题 user.php 用 if(!function_exists('jinyu_oauth_*'))
+ * 提供降级桩，本模块须在主题运行前定义真实现，否则桩被采用、真实登录失效。
+ * 与历史私有插件 wordpress-plugin-jinyu 互斥：双方均在 require 处用 function_exists 守卫，
+ * 无论加载顺序如何，仅有一方定义 jinyu_oauth_enabled 等符号（PHP 8.5 编译期早绑定要求互斥置于 require 处）。 */
+if ( ! function_exists( 'jinyu_oauth_enabled' ) ) {
+	require_once __DIR__ . '/inc/fun/social-login/loader.php';
 }
 
 /* 激活即建表：通知表（jinyu_notify）/ 统计表不再只靠 after_switch_theme + footer 兜底，

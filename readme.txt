@@ -6,7 +6,7 @@ Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.0.2
+Stable tag: 1.0.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -24,6 +24,7 @@ Features:
 * Content enhancement: related posts, popular posts, the "series" taxonomy, the "moments" custom post type, automatic internal linking, shortcodes with a visual UI, and Web Vitals metrics
 * Comments & interaction: comment notifications and anti-spam
 * Performance & system: page cache, database optimization, mail (SMTP configuration), and post posters
+* Third-party login (social login): optional sign-in with GitHub / Gitee / QQ / Apple — off by default. Each provider stores only the OAuth credentials you configure (encrypted at rest); no personal data leaves the site except the standard OAuth exchange when a user signs in.
 
 * Performance center (migrated from the theme): OPcache / Memcached status boards, reversible performance toggles, per-layer cache flushing (OPcache / Memcached / page cache), one-click optimization, and real-user Web Vitals board
 
@@ -49,11 +50,35 @@ Only index ping (IndexNow, Baidu) and optional stats send URLs or basic visit da
 
 To comply with the WordPress.org plugin prefix rule (at least 4 characters and not conflicting with others), the jinyu_ prefix is used consistently, matching the Jinyu theme.
 
+== External Services ==
+
+The optional "Third-party Login (Social Login)" feature connects to external OAuth providers only when it is enabled AND a visitor uses it to sign in. No requests are made unless both conditions are true.
+
+For each enabled provider, the plugin exchanges the OAuth authorization code for an access token and retrieves the user's public profile (id, display name, avatar, and a verified email when the provider supplies one). Only the data the OAuth protocol requires is transmitted.
+
+* GitHub — https://github.com/login/oauth/authorize ; Privacy: https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement
+* Gitee — https://gitee.com/oauth ; Privacy: https://gitee.com/terms/privacy
+* QQ — https://graph.qq.com/oauth2.0/authorize ; Privacy: https://privacy.qq.com/
+* Apple — https://appleid.apple.com/auth/authorize ; Privacy: https://www.apple.com/legal/privacy/
+
+Client secrets are encrypted (AES-256-CBC with HMAC) in your site's own database using WordPress salts; they are never transmitted to any party other than the provider they belong to.
+
 == Screenshots ==
 
 (Add screenshots before release: settings page, related posts, message center, shortcode UI, and so on.)
 
 == Changelog ==
+
+= 1.0.4 =
+* New: Social login — configurable auto-registration gate and default role for new users (Subscriber / Contributor / Author), replacing the hardcoded Contributor role.
+* New: Comment email notification toggles — separately enable/disable reply notifications and post-author notifications.
+* New: SMTP "From name" field (falls back to the site name when empty).
+* New: IndexNow key is now visible and copyable on the Content pane, along with its verification file URL.
+* New: Auto internal-link per-post limit is now configurable (1–20) instead of a hardcoded constant.
+* New: Overview pane lists built-in always-on capabilities so they are not mistaken for missing features.
+
+= 1.0.3 =
+* New: Third-party login (social login) module — optional sign-in with GitHub / Gitee / QQ / Apple, migrated from the private enhancement plugin so the public companion can provide it independently (WordPress.org plugin-territory compliance). Config lives in its own option; secrets are AES-256-CBC + HMAC encrypted at rest. External Services and privacy disclosures added to this readme.
 
 = 1.0.2 =
 * New: Performance center pane — OPcache / Memcached real-time stats, cache flushing, reversible performance toggles and one-click optimization (migrated from the theme so the theme stays presentation-only).
@@ -83,5 +108,6 @@ This plugin does not collect or upload any personal data by default.
 * Index ping (IndexNow / Baidu): only after you enable it, it submits the public URLs of published posts to the corresponding search-engine endpoints. It does not include post bodies or user information.
 * Stats (off by default): if enabled, it records only anonymized basic visit counts and does not record personal identity beyond the IP address.
 * Social follow / messages: it stores only the follow and message relationships between your site's users in your local database and sends nothing to third parties.
+* Third-party login (social login): when enabled and a user signs in with a provider, the plugin sends the standard OAuth parameters to that provider and receives back the user's id, display name, avatar, and verified email (where applicable). No data is shared unless the user initiates a login. Provider privacy policies are listed in the External Services section.
 
 Administrators can disable any of the above outbound features at any time in the corresponding settings; once disabled, the related requests stop.

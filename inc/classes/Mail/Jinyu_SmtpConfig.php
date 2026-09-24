@@ -41,6 +41,7 @@ class Jinyu_SmtpConfig
             'user'   => jinyu_companion_get_option('smtp_user', ''),
             'pwd'    => jinyu_companion_get_option('smtp_pwd', ''),
             'from'   => jinyu_companion_get_option('smtp_from', ''),
+            'from_name' => jinyu_companion_get_option('smtp_from_name', ''),
         ];
     }
 
@@ -71,9 +72,14 @@ class Jinyu_SmtpConfig
 
         $from = (string) ($cfg['from'] ?? '');
         if ($from && is_email($from)) {
+            // 发件人名称：后台可配置，留空回退站点名称
+            $fromName = trim((string) ($cfg['from_name'] ?? ''));
+            if ('' === $fromName) {
+                $fromName = get_bloginfo('name');
+            }
             $phpmailer->From      = $from;
-            $phpmailer->FromName  = get_bloginfo('name');
-            $phpmailer->addReplyTo($from, get_bloginfo('name'));
+            $phpmailer->FromName  = $fromName;
+            $phpmailer->addReplyTo($from, $fromName);
         }
     }
 }

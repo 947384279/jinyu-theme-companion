@@ -134,7 +134,8 @@ if ( ! function_exists( 'jinyu_auto_link_content' ) ) {
 
 		$count       = 0;
 		$linked_keys = [];
-		$limit       = (int) JINYU_AUTO_LINK_LIMIT;
+		// 上限面板可调（1-20），未配置时回退常量默认值 5
+		$limit       = max( 1, min( 20, (int) jinyu_companion_get_option( 'auto_link_limit', JINYU_AUTO_LINK_LIMIT ) ) );
 
 		foreach ( $targets as $t ) {
 			if ( $count >= $limit ) {

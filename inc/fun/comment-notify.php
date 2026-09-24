@@ -11,6 +11,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 add_action('wp_insert_comment', 'jinyu_comment_notify', 10, 2);
 function jinyu_comment_notify($comment_id, $comment_approved)
 {
+    // 两类通知均可在「评论与互动 → 评论邮件通知」面板关闭（默认开）
+    $notify_reply  = jinyu_companion_is_checked('comment_notify_reply', true);
+    $notify_author = jinyu_companion_is_checked('comment_notify_author', true);
+    if (!$notify_reply && !$notify_author) return;
+
     if ($comment_approved != 1) return;
 
     $comment = get_comment($comment_id);
@@ -23,7 +28,7 @@ function jinyu_comment_notify($comment_id, $comment_approved)
     $headers = ['Content-Type: text/html; charset=UTF-8'];
 
     // 如果有父评论 -> 通知父评论作者
-    if ($comment->comment_parent > 0) {
+    if ($notify_reply && $comment->comment_parent > 0) {
         $parent = get_comment($comment->comment_parent);
         if ($parent && $parent->comment_author_email && $parent->comment_author_email !== $comment->comment_author_email) {
             $link = get_comment_link($comment_id);
@@ -36,7 +41,7 @@ function jinyu_comment_notify($comment_id, $comment_approved)
     }
 
     // 通知文章作者
-    $post_author_email = get_userdata($post->post_author)->user_email;
+    $post_author_email = $notify_author ? get_userdata($post->post_author)->user_email : '';
     if ($post_author_email && $post_author_email !== $comment->comment_author_email) {
         $link = get_permalink($post->ID);
         $body = '<p>' . sprintf(__('你的文章《%s》有新评论', 'jinyu-theme-companion'), $post->post_title) . '</p>'

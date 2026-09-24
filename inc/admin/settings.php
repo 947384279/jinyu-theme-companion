@@ -40,7 +40,7 @@ function jinyu_companion_handle_save(): void {
 	}
 
 	// 布尔开关：勾选存 '1'，未勾存 '0'
-	foreach ( [ 'seo_open', 'twitter_card_enable', 'llms_enable', 'auto_link_enable', 'indexnow_enable', 'close_comments_old', 'page_cache_enable', 'speculation_enable', 'img_alt_enable', 'ld_json_enable', 'no_category_enable', 'storage_auto_upload', 'storage_delete_local' ] as $k ) {
+	foreach ( [ 'seo_open', 'twitter_card_enable', 'llms_enable', 'auto_link_enable', 'indexnow_enable', 'close_comments_old', 'page_cache_enable', 'speculation_enable', 'img_alt_enable', 'ld_json_enable', 'no_category_enable', 'storage_auto_upload', 'storage_delete_local', 'comment_notify_reply', 'comment_notify_author' ] as $k ) {
 		$settings[ $k ] = isset( $_POST[ $k ] ) ? '1' : '0';
 	}
 
@@ -60,6 +60,8 @@ function jinyu_companion_handle_save(): void {
 	$settings['style_color_primary'] = isset( $_POST['style_color_primary'] ) ? sanitize_hex_color( wp_unslash( $_POST['style_color_primary'] ) ) : '';
 	$settings['close_comments_days'] = isset( $_POST['close_comments_days'] ) ? (int) wp_unslash( $_POST['close_comments_days'] ) : 0;
 	$settings['page_cache_ttl'] = isset( $_POST['page_cache_ttl'] ) ? max( 60, (int) wp_unslash( $_POST['page_cache_ttl'] ) ) : 3600;
+	// 自动内链：单篇总链接数上限（1-20，默认 5）
+	$settings['auto_link_limit'] = isset( $_POST['auto_link_limit'] ) ? max( 1, min( 20, (int) wp_unslash( $_POST['auto_link_limit'] ) ) ) : 5;
 
 	// 站点验证元标签（仅保留安全字符，去除可能的注入内容）
 	foreach ( [ 'verify_google', 'verify_bing', 'verify_baidu', 'verify_yandex', 'verify_360' ] as $vk ) {
@@ -88,6 +90,8 @@ function jinyu_companion_handle_save(): void {
 		: 'ssl';
 	$settings['smtp_user']   = isset( $_POST['smtp_user'] ) ? sanitize_text_field( wp_unslash( $_POST['smtp_user'] ) ) : '';
 	$settings['smtp_from']   = isset( $_POST['smtp_from'] ) ? sanitize_email( wp_unslash( $_POST['smtp_from'] ) ) : '';
+	// 发件人名称：显示在收件箱的署名，留空回退站点名称
+	$settings['smtp_from_name'] = isset( $_POST['smtp_from_name'] ) ? sanitize_text_field( wp_unslash( $_POST['smtp_from_name'] ) ) : '';
 	// 密码留空则保留原值（避免保存时误清空）
 	if ( isset( $_POST['smtp_pwd'] ) && '' !== (string) wp_unslash( $_POST['smtp_pwd'] ) ) {
 		$settings['smtp_pwd'] = sanitize_text_field( wp_unslash( $_POST['smtp_pwd'] ) );
@@ -120,6 +124,11 @@ function jinyu_companion_handle_save(): void {
 		flush_rewrite_rules();
 	}
 	// 注：重写规则由 llms.php / indexnow.php 在 init 阶段按版本号自愈，此处不再做昂贵的全量 flush。
+
+	// 第三方登录（社交登录）配置：复用本表单 nonce，写入模块自有选项 JINYU_SL_OPT。
+	if ( function_exists( 'jinyu_sl_process_post' ) ) {
+		jinyu_sl_process_post();
+	}
 }
 
 if ( ! function_exists( 'jinyu_companion_settings_saved' ) ) {
@@ -148,9 +157,18 @@ if ( ! function_exists( 'jinyu_companion_active_pane' ) ) {
 	 */
 	function jinyu_companion_active_pane( ?string $set = null ): string {
 		static $pane = 'overview';
-		$valid       = [ 'overview', 'seo', 'content', 'perf', 'perfcenter', 'comment', 'smtp', 'storage' ];
-		if ( null !== $set && in_array( $set, $valid, true ) ) {
-			$pane = $set;
+		$valid       = [ 'overview', 'seo', 'content', 'perf', 'perfcenter', 'comment', 'smtp', 'storage', 'social' ];
+		if ( null !== $set ) {
+			// 保存提交时由调用方传入（POST 优先级最高），保证保存后停留原页。
+			if ( in_array( $set, $valid, true ) ) {
+				$pane = $set;
+			}
+		} elseif ( isset( $_GET['pane'] ) ) {
+			// GET 优先于默认：刷新 / 书签直达时保持当前分区，避免每次刷新跳回概览。
+			$g = sanitize_key( wp_unslash( $_GET['pane'] ) );
+			if ( in_array( $g, $valid, true ) ) {
+				$pane = $g;
+			}
 		}
 		return $pane;
 	}
@@ -181,6 +199,13 @@ function jinyu_companion_settings_page_html(): void {
 	$smtp_secure  = jinyu_companion_get_option( 'smtp_secure', 'ssl' );
 	$smtp_user    = jinyu_companion_get_option( 'smtp_user', '' );
 	$smtp_from    = jinyu_companion_get_option( 'smtp_from', '' );
+	$smtp_from_name = jinyu_companion_get_option( 'smtp_from_name', '' );
+	// 评论邮件通知开关（默认开，保持既有行为）
+	$notify_reply  = jinyu_companion_get_option( 'comment_notify_reply', '1' );
+	$notify_author = jinyu_companion_get_option( 'comment_notify_author', '1' );
+	// 自动内链上限 + IndexNow 密钥（init 阶段自动生成，面板可见可复制）
+	$auto_link_limit = (int) jinyu_companion_get_option( 'auto_link_limit', 5 );
+	$indexnow_key    = (string) get_option( 'jinyu_indexnow_key', '' );
 	// 对象存储（CDN）
 	$storage_provider   = jinyu_companion_get_option( 'storage_provider', '' );
 	$storage_bucket     = jinyu_companion_get_option( 'storage_bucket', '' );
@@ -274,14 +299,18 @@ function jinyu_companion_settings_page_html(): void {
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>
 								<span>对象存储</span>
 							</button>
+							<button type="button" class="jyc-nav-item<?php echo 'social' === $active_pane ? ' jyc-active' : ''; ?>" data-mod="social">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+								<span>第三方登录</span>
+							</button>
 						</nav>
 						<div class="jyc-top-actions">
+							<button class="jyc-theme-tog" id="jyc-themeTog" type="button" title="<?php echo esc_attr__( '切换深色 / 浅色', 'jinyu-theme-companion' ); ?>">
+								<svg id="jyc-themeIco" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+							</button>
 							<button class="jyc-btn jyc-btn-primary" type="submit">
 								<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
 								<?php echo esc_html__( '保存更改', 'jinyu-theme-companion' ); ?>
-							</button>
-							<button class="jyc-theme-tog" id="jyc-themeTog" type="button" title="<?php echo esc_attr__( '切换深色 / 浅色', 'jinyu-theme-companion' ); ?>">
-								<svg id="jyc-themeIco" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
 							</button>
 						</div>
 					</header>
@@ -295,7 +324,7 @@ function jinyu_companion_settings_page_html(): void {
 									<h1><?php echo esc_html__( '金玉增强控制台', 'jinyu-theme-companion' ); ?></h1>
 									<p><?php echo esc_html__( '统一管理主题的 SEO、内容增强、整页缓存、评论防护与邮件投递。所有配置存于插件独立选项，不受主题导入 / 重置影响，可脱离主题独立运行。', 'jinyu-theme-companion' ); ?></p>
 									<div class="jyc-hero-stats">
-										<div class="jyc-hs"><span class="jyc-v jyc-num">8</span><span class="jyc-k"><?php echo esc_html__( '功能分区', 'jinyu-theme-companion' ); ?></span></div>
+										<div class="jyc-hs"><span class="jyc-v jyc-num">9</span><span class="jyc-k"><?php echo esc_html__( '功能分区', 'jinyu-theme-companion' ); ?></span></div>
 										<div class="jyc-hs"><span class="jyc-v jyc-num" id="jyc-hsOn">0</span><span class="jyc-k"><?php echo esc_html__( '已启用开关', 'jinyu-theme-companion' ); ?></span></div>
 										<div class="jyc-hs"><span class="jyc-v jyc-num" id="jyc-hsFields">—</span><span class="jyc-k"><?php echo esc_html__( '可配置字段', 'jinyu-theme-companion' ); ?></span></div>
 										<div class="jyc-hs"><span class="jyc-v jyc-num">独立</span><span class="jyc-k"><?php echo esc_html__( '存储隔离', 'jinyu-theme-companion' ); ?></span></div>
@@ -316,6 +345,15 @@ function jinyu_companion_settings_page_html(): void {
 								<div class="jyc-pc-head"><h3><?php echo esc_html__( '功能启用度明细', 'jinyu-theme-companion' ); ?></h3><span class="jyc-pct" id="jyc-pct">0%</span></div>
 								<div class="jyc-pbar"><i id="jyc-pbarFill" style="width:0%"></i></div>
 								<div class="jyc-checks" id="jyc-checks"></div>
+							</div>
+
+							<div class="jyc-panel">
+								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg></span><?php echo esc_html__( '内置恒启能力', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '与主题模板深度集成，始终随主题运行', 'jinyu-theme-companion' ); ?></span></div>
+								<div class="jyc-panel-b">
+									<div class="jyc-muted" style="font-size:13px;line-height:1.9">
+										<?php echo esc_html__( '关注 / 消息系统 · 站点访问统计 · 相关文章 · 系列文章 · 快讯 (Moments) · 短代码与短代码 UI · 对象存储引擎。以上能力由主题模板直接调用，无需配置即可使用；若需整体停用，停用本插件即可（主题经 function_exists 守卫自动降级）。', 'jinyu-theme-companion' ); ?>
+									</div>
+								</div>
 							</div>
 						</section>
 
@@ -439,12 +477,26 @@ function jinyu_companion_settings_page_html(): void {
 										<label class="jyc-switch"><input type="checkbox" name="auto_link_enable" <?php checked( $auto_link, '1' ); ?>><span class="jyc-track"></span></label>
 										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '自动内链', 'jinyu-theme-companion' ); ?></div>
 											<div class="jyc-fdesc"><?php echo esc_html__( '自动为文章关键词添加内链，强化站内权重传递。', 'jinyu-theme-companion' ); ?></div></div>
+										<label class="jyc-fl jyc-fnum"><?php echo esc_html__( '单篇上限', 'jinyu-theme-companion' ); ?>
+											<input class="jyc-inp jyc-num" type="number" name="auto_link_limit" value="<?php echo esc_attr( $auto_link_limit ); ?>" min="1" max="20" step="1">
+										</label>
 									</div>
 									<div class="jyc-frow">
 										<label class="jyc-switch"><input type="checkbox" name="indexnow_enable" <?php checked( $indexnow, '1' ); ?>><span class="jyc-track"></span></label>
 										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( 'IndexNow 推送', 'jinyu-theme-companion' ); ?></div>
 											<div class="jyc-fdesc"><?php echo esc_html__( '发布 / 更新文章时向 IndexNow 提交 URL，加速收录。', 'jinyu-theme-companion' ); ?></div></div>
 									</div>
+								</div>
+							</div>
+
+							<div class="jyc-panel">
+								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><?php echo esc_html__( 'IndexNow 密钥', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '自动生成，无需手动配置', 'jinyu-theme-companion' ); ?></span></div>
+								<div class="jyc-panel-b">
+									<div class="jyc-sl-redirect-ctrl" style="width:100%">
+										<input class="jyc-inp jyc-inp-mono" type="text" readonly value="<?php echo esc_attr( $indexnow_key ); ?>" id="jyc-indexnow-key" spellcheck="false" autocomplete="off">
+										<button type="button" class="jyc-sl-copy" data-copy="jyc-indexnow-key"><?php echo esc_html__( '复制', 'jinyu-theme-companion' ); ?></button>
+									</div>
+									<span class="jyc-muted" style="font-size:12px"><?php echo esc_html__( '验证文件位于站点根目录；把此地址加入 Bing 等平台后即可主动推送：', 'jinyu-theme-companion' ); ?> <code id="jyc-indexnow-loc" style="user-select:all"><?php echo esc_html( home_url( '/' . $indexnow_key . '.txt' ) ); ?></code></span>
 								</div>
 							</div>
 
@@ -559,6 +611,22 @@ function jinyu_companion_settings_page_html(): void {
 							</div>
 
 							<div class="jyc-panel">
+								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg></span><?php echo esc_html__( '评论邮件通知', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '默认开启，经 SMTP 通道发信', 'jinyu-theme-companion' ); ?></span></div>
+								<div class="jyc-panel-b">
+									<div class="jyc-frow">
+										<label class="jyc-switch"><input type="checkbox" name="comment_notify_reply" <?php checked( $notify_reply, '1' ); ?>><span class="jyc-track"></span></label>
+										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '回复通知', 'jinyu-theme-companion' ); ?></div>
+											<div class="jyc-fdesc"><?php echo esc_html__( '有人回复评论时，邮件通知父评论作者。', 'jinyu-theme-companion' ); ?></div></div>
+									</div>
+									<div class="jyc-frow">
+										<label class="jyc-switch"><input type="checkbox" name="comment_notify_author" <?php checked( $notify_author, '1' ); ?>><span class="jyc-track"></span></label>
+										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '作者通知', 'jinyu-theme-companion' ); ?></div>
+											<div class="jyc-fdesc"><?php echo esc_html__( '文章有新评论时，邮件通知文章作者。', 'jinyu-theme-companion' ); ?></div></div>
+									</div>
+								</div>
+							</div>
+
+							<div class="jyc-panel">
 								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><?php echo esc_html__( '旧文评论', 'jinyu-theme-companion' ); ?></h2></div>
 								<div class="jyc-panel-b">
 									<div class="jyc-frow">
@@ -603,6 +671,10 @@ function jinyu_companion_settings_page_html(): void {
 										</label>
 										<label class="jyc-fl jyc-full"><?php echo esc_html__( '发件地址', 'jinyu-theme-companion' ); ?>
 											<input class="jyc-inp" type="email" name="smtp_from" value="<?php echo esc_attr( $smtp_from ); ?>" placeholder="no-reply@example.com">
+										</label>
+										<label class="jyc-fl jyc-full"><?php echo esc_html__( '发件人名称', 'jinyu-theme-companion' ); ?>
+											<input class="jyc-inp" type="text" name="smtp_from_name" value="<?php echo esc_attr( $smtp_from_name ); ?>" placeholder="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>">
+											<span class="jyc-muted" style="font-size:12px"><?php echo esc_html__( '收件箱里显示的署名，留空使用站点名称。', 'jinyu-theme-companion' ); ?></span>
 										</label>
 									</div>
 									<div class="jyc-test-row">
@@ -700,6 +772,11 @@ function jinyu_companion_settings_page_html(): void {
 									</div>
 								</div>
 							</div>
+						</section>
+
+						<!-- ===================== SOCIAL LOGIN（第三方登录，自私有插件迁入） ===================== -->
+						<section id="pane-social" class="jyc-pane<?php echo 'social' === $active_pane ? ' jyc-shown' : ''; ?>">
+							<?php jinyu_sl_settings_pane(); ?>
 						</section>
 
 					</main>
