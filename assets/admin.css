@@ -384,6 +384,9 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
   .jyc-panel-h { padding: 15px 16px 13px; }
   .jyc-panel-b { padding: 16px; }
   .jyc-frow { gap: 12px; }
+  /* 行尾字段窄屏换行铺满：iOS 式「标签居左、输入框居右」，缩进对齐上方文字列（开关 46px + 间距 12px） */
+  .jyc-frow .jyc-fnum { flex: 1 1 100%; flex-direction: row; align-items: center; justify-content: space-between; padding-left: 58px; }
+  .jyc-fnum .jyc-num { flex: 0 0 auto; width: 110px; }
   .jyc-progress-card { padding: 16px; }
   /* 输入控件 ≥16px：规避 iOS Safari 聚焦时自动放大页面 */
   .jyc-inp, .jyc-select-btn, select.jyc-inp { font-size: 16px; }
