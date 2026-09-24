@@ -415,22 +415,31 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 	width:100%; color:var(--j-ink);
 }
 .jperf-wrap *{box-sizing:border-box}
+/* headside 在 .jyc-mod-title 内、位于 .jperf-wrap 之外，需自带同一套 --j-* 桥接 */
+.jperf-headside{
+	--j-bg:var(--surface); --j-line:var(--line); --j-line2:var(--line-2);
+	--j-ink:var(--ink); --j-ink2:var(--ink-2); --j-muted:var(--ink-3); --j-faint:var(--line);
+	--j-accent:var(--brand); --j-accent-soft:var(--brand-soft); --j-ok:var(--ok); --j-r:14px;
+	--j-dot-glow:rgba(15,157,107,.5);
+}
 
 /* 标题行右侧组件（状态胶囊 + 紧凑刷新按钮，与 pane h1 同行） */
 .jperf-headside{display:inline-flex;align-items:center;gap:8px;margin-left:12px;vertical-align:middle}
 .jperf-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--j-ink2);
-	background:var(--j-bg);border:1px solid var(--j-line);border-radius:999px;padding:4px 11px;white-space:nowrap}
-.jperf-dot{width:7px;height:7px;border-radius:50%;background:var(--j-ok);animation:jperfPulse 2.2s infinite}
+	background:#fff;border:1px solid #cbd5e1;border-radius:999px;padding:4px 11px;white-space:nowrap;
+	box-shadow:0 1px 3px rgba(15,23,42,.08)}
+.jperf-dot{width:8px;height:8px;border-radius:50%;background:var(--j-ok);animation:jperfPulse 1.8s ease-out infinite}
+.jperf-dot.off{animation:none;background:var(--j-muted)}
 .jperf-refresh-mini{width:36px;height:36px;flex:none;display:inline-flex;align-items:center;justify-content:center;
-	background:var(--j-bg);border:1px solid var(--j-line);border-radius:50%;cursor:pointer;transition:.15s;
-	vertical-align:middle}
-.jperf-refresh-mini svg{width:15px;height:15px;stroke:var(--j-ink2);stroke-width:2;fill:none;transition:.3s}
+	background:#fff;border:1px solid #cbd5e1;border-radius:50%;cursor:pointer;transition:.15s;
+	vertical-align:middle;box-shadow:0 1px 3px rgba(15,23,42,.10)}
+.jperf-refresh-mini svg{width:15px;height:15px;stroke:#475569;stroke-width:2;fill:none;transition:.3s}
 .jperf-refresh-mini:hover{border-color:var(--j-accent);box-shadow:0 3px 10px -4px var(--ring)}
 .jperf-refresh-mini:hover svg{stroke:var(--j-accent);transform:rotate(80deg)}
 .jperf-refresh-mini:disabled{opacity:.5;cursor:default}
 /* 深色下 surface/line 与 canvas 对比度过低：胶囊与圆钮会"隐形"，提亮一档 */
 .jyc-app[data-theme="dark"] .jperf-pill{background:var(--surface-3);border-color:#33415c;color:#c9d4e8}
-.jyc-app[data-theme="dark"] .jperf-refresh-mini{background:var(--surface-3);border-color:#3a4a68}
+.jyc-app[data-theme="dark"] .jperf-refresh-mini{background:var(--surface-3);border-color:#3a4a68;box-shadow:none}
 .jyc-app[data-theme="dark"] .jperf-refresh-mini svg{stroke:#c9d4e8}
 .jperf-ts{font-size:11.5px;color:var(--j-muted);font-variant-numeric:tabular-nums}
 /* 标题行 flex 上下文（仅性能中心 pane 使用） */
@@ -608,7 +617,7 @@ textarea.jyc-inp{font-weight:400}
 .jperf-unsaved[hidden]{display:none}
 .jperf-unsaved.saved{color:#15803d;background:#f0fdf4;border-color:#bbf7d0}
 @keyframes jperfIn{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
-@keyframes jperfPulse{0%{box-shadow:0 0 0 0 var(--j-dot-glow)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@keyframes jperfPulse{0%{box-shadow:0 0 0 0 var(--j-dot-glow);transform:scale(1)}60%{box-shadow:0 0 0 9px transparent;transform:scale(1.15)}100%{box-shadow:0 0 0 0 transparent;transform:scale(1)}}
 .jperf-stat,.jperf-panel,.jperf-block,.jperf-wv-chip,.jperf-card{animation:jperfIn .55s cubic-bezier(.22,1,.36,1) both}
 .jperf-stats .jperf-stat:nth-child(1){animation-delay:.03s}
 .jperf-stats .jperf-stat:nth-child(2){animation-delay:.07s}
