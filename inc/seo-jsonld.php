@@ -37,8 +37,14 @@ function jinyu_json_ld()
         $logo_url  = $logo_id ? wp_get_attachment_image_url($logo_id, 'full') : get_site_icon_url();
         $cats      = is_singular('post') ? get_the_category($post->ID) : [];
 
-        // 实体关联档案（sameAs）：来自主题配置，指向站点在其它平台的官方档案。
-        $ent_sameas = array_values( array_filter( array_map( 'trim', preg_split( '/\r\n|\r|\n/', (string) jinyu_companion_get_option( 'entity_sameas', '' ) ) ), static function ( $u ) {
+        // 实体关联档案（sameAs）：指向站点在其它平台的官方档案。
+        // 默认无 UI（冷门字段）；开发者可用 jinyu_seo_entity_sameas 过滤器返回换行分隔的 URL 串或数组。
+        $sameas_raw = (string) jinyu_companion_get_option( 'entity_sameas', '' );
+        $sameas_raw = apply_filters( 'jinyu_seo_entity_sameas', $sameas_raw );
+        if ( is_array( $sameas_raw ) ) {
+            $sameas_raw = implode( "\n", $sameas_raw );
+        }
+        $ent_sameas = array_values( array_filter( array_map( 'trim', preg_split( '/\r\n|\r|\n/', $sameas_raw ) ), static function ( $u ) {
             return filter_var( $u, FILTER_VALIDATE_URL ) !== false;
         } ) );
 

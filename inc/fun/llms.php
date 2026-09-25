@@ -161,6 +161,7 @@ function jinyu_llms_serve(): void {
 		: get_posts( [
 			'post_type'      => 'post',
 			'post_status'    => 'publish',
+		'has_password'    => false,
 			'posts_per_page' => 8,
 			'no_found_rows'  => true,
 			'orderby'        => 'comment_count',
@@ -176,6 +177,7 @@ function jinyu_llms_serve(): void {
 	$latest   = get_posts( [
 		'post_type'      => 'post',
 		'post_status'    => 'publish',
+		'has_password'    => false,
 		'posts_per_page' => 8,
 		'no_found_rows'  => true,
 		'orderby'        => 'date',
@@ -350,6 +352,7 @@ function jinyu_llms_serve_full( string $cache_key = 'jinyu_llms_full_cache' ): v
 	$posts = get_posts( [
 		'post_type'      => [ 'post', 'page' ],
 		'post_status'    => 'publish',
+		'has_password'    => false,
 		'posts_per_page' => -1,
 		'orderby'        => 'date',
 		'order'          => 'DESC',

@@ -6,7 +6,7 @@ Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.0.4
+Stable tag: 1.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -23,7 +23,7 @@ Features:
 * Social: user follow / unfollow, message center, unread counts
 * Content enhancement: related posts, popular posts, the "series" taxonomy, the "moments" custom post type, automatic internal linking, shortcodes with a visual UI, and Web Vitals metrics
 * Comments & interaction: comment notifications and anti-spam
-* Performance & system: page cache, database optimization, mail (SMTP configuration), and post posters
+* Performance & system: page cache (with path / query-parameter exclusion rules), database optimization, mail (SMTP configuration), HTTP transport check (compression, cache headers, HTTP/3), and post posters
 * Third-party login (social login): optional sign-in with GitHub / Gitee / QQ / Apple — off by default. Each provider stores only the OAuth credentials you configure (encrypted at rest); no personal data leaves the site except the standard OAuth exchange when a user signs in.
 
 * Performance center (migrated from the theme): OPcache / Memcached status boards, reversible performance toggles, per-layer cache flushing (OPcache / Memcached / page cache), one-click optimization, and real-user Web Vitals board
@@ -69,6 +69,21 @@ Client secrets are encrypted (AES-256-CBC with HMAC) in your site's own database
 
 == Changelog ==
 
+= 1.1.0 =
+* New: HTTP transport check on the Front-end Acceleration pane — measures what the plugin cannot configure itself: text compression (HTML vs static assets, checked separately), static-asset cache lifetime, HTML cache headers, and HTTP/3 support. Nothing is requested until you press "Run check"; results are cached for 10 minutes.
+* New: Page-cache exclusion rules — "Do not cache these paths" (one per line, directory-prefix and wildcard matching, `#` comments), "Ignored query parameters" (removed from the cache key so one page serves every campaign parameter; defaults to the common utm_* / gclid / fbclid set), and "Do not cache when these parameters are present" (for dynamic or personalized pages).
+* Tweak: Page-cache keys are now built from a normalized URI (ignored parameters stripped, remaining ones sorted), so the same page with different tracking parameters reuses a single cache entry. The serve and capture paths share one exclusion check, so nothing is written that can never be read back.
+* New: Overview pane adds three tiles — Load Performance (real-user LCP score), Optimization To-dos (click the tile to jump to the pane that needs attention), and Database Health — filling the 4x2 grid.
+* Tweak: Overview "Cache hit" tile renamed to "Page cache" (it reports an on/off state, not a hit rate), and the Hero "functional panes" count is now derived from the pane list instead of a hardcoded number.
+* Fix: Performance-center status is snapshotted per request, so the overview tile and the performance pane share a single query and the page-load SQL count is unchanged.
+
+= 1.0.5 =
+* Fix: comment email notifications never actually went out. The `wp_insert_comment` callback treated its second argument (a WP_Comment object) as the approval value, so every run bailed out at the first check. Reply and post-author notifications are now sent as configured.
+* Fix: duplicate emails — when the plugin's post-author notification is enabled, the core "Email me whenever anyone posts a comment" mail is suppressed so one comment sends one email.
+* New: Blocked-comment alert for the site admin — emails the admin when a comment is held for moderation or flagged as spam (with author, IP, and a link to the queue; merged into one email within a 15-minute window). Off by default.
+* New: Comment-approved notice for the commenter — when a held/spam comment is approved later, the commenter is told their comment is live. Off by default.
+* Tweak: comment notification panel hint now states that each notice can be toggled separately.
+
 = 1.0.4 =
 * New: Social login — configurable auto-registration gate and default role for new users (Subscriber / Contributor / Author), replacing the hardcoded Contributor role.
 * New: Comment email notification toggles — separately enable/disable reply notifications and post-author notifications.
@@ -90,6 +105,9 @@ Client secrets are encrypted (AES-256-CBC with HMAC) in your site's own database
 * Initial public release, extracted from the Jinyu theme: SEO / structured data / index ping / social follow and messages / related posts / series / moments / automatic internal linking / shortcodes / anti-spam / page cache / database optimization / mail / posters.
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Adds the HTTP transport check and page-cache exclusion rules. Existing page-cache settings are preserved; the new "ignored parameters" default only raises the hit rate, it never changes which pages are cached.
 
 = 1.0.0 =
 First release: the functional companion plugin split out from the Jinyu theme.

@@ -128,7 +128,9 @@ if ( ! function_exists( 'jinyu_has_external_page_cache' ) ) {
 if ( ! function_exists( 'jinyu_rate_limit_check' ) ) {
 	function jinyu_rate_limit_check( string $action, int $limit, int $window ): bool {
 		$raw_ip = (string) ( $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '' );
-		$ip     = trim( explode( ',', $raw_ip )[0] );
+		// 取 XFF 最右（末跳代理记录的客户端地址）而非最左（客户端可伪造），XFF 缺失退回真实 TCP 对端 REMOTE_ADDR。
+		$parts = array_map( 'trim', explode( ',', $raw_ip ) );
+		$ip    = trim( (string) end( $parts ) );
 		if ( '' === $ip ) {
 			return true; // 无法识别来源时放行，避免误杀
 		}

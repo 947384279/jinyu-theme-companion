@@ -42,12 +42,20 @@ function jinyu_anti_spam($approved, $commentdata)
         if ($w && stripos($text, $w) !== false) return 'spam';
     }
 
-    // 频率限制 (10分钟内同 IP 超过 5 条)
-    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
-    $transient = 'jy_comment_ips_' . md5($ip);
-    $count = get_transient($transient) ?: 0;
-    if ($count >= 5) return 'spam';
-    set_transient($transient, $count + 1, 600);
+    // 频率限制（默认开，面板可调：X 分钟内最多 N 条，超出即判垃圾）
+    if ( jinyu_companion_is_checked( 'comment_freq_enable', true ) ) {
+        $freq_window = max( 1, (int) jinyu_companion_get_option( 'comment_freq_window', 10 ) );
+        $freq_max    = max( 1, (int) jinyu_companion_get_option( 'comment_freq_max', 5 ) );
+        $ip          = $_SERVER['REMOTE_ADDR'] ?? '';
+        if ( '' !== $ip ) {
+            $transient = 'jy_comment_ips_' . md5( $ip );
+            $count     = (int) ( get_transient( $transient ) ?: 0 );
+            if ( $count >= $freq_max ) {
+                return 'spam';
+            }
+            set_transient( $transient, $count + 1, $freq_window * 60 );
+        }
+    }
 
     return $approved;
 }

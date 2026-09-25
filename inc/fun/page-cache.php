@@ -53,8 +53,137 @@ function jinyu_page_cache_key(): string
     // 把当前 tick 并入 key：跨 tick 后旧缓存自然失效，绝不会把已过期的 nonce 发给访客
     // （否则点赞 / AI 对话 / 评论会被 check_ajax_referer 打回 -1）。
     // 代际 epoch 并入 key：save_post 等内容变更后旧页面立即失效。
+    // URI 用归一化结果：被「忽略参数」剔除的推广参数不参与 key，且参数顺序无关。
     $tick = function_exists('wp_nonce_tick') ? wp_nonce_tick() : (int) ceil(time() / (DAY_IN_SECONDS / 2));
-    return jinyu_cache_key('page_' . jinyu_page_cache_epoch() . '_' . $tick . '_' . md5($_SERVER['REQUEST_URI'] ?? '/'));
+    return jinyu_cache_key('page_' . jinyu_page_cache_epoch() . '_' . $tick . '_' . md5(jinyu_page_cache_canonical_uri()));
+}
+
+/**
+ * 拆出当前请求的 path 与查询参数数组。
+ *
+ * @return array{0:string,1:array} [path, params]
+ */
+function jinyu_page_cache_uri_parts(): array
+{
+    $uri = $_SERVER['REQUEST_URI'] ?? '/';
+    if (!is_string($uri) || '' === $uri) {
+        return ['/', []];
+    }
+    $path = parse_url($uri, PHP_URL_PATH);
+    if (!is_string($path) || '' === $path) {
+        $path = '/';
+    }
+    $params = [];
+    $query  = parse_url($uri, PHP_URL_QUERY);
+    if (is_string($query) && '' !== $query) {
+        parse_str($query, $params);
+    }
+    return [$path, is_array($params) ? $params : []];
+}
+
+/**
+ * 多行规则文本 → 规则数组（去空行、去首尾空白、跳过 # 注释行）。
+ */
+function jinyu_page_cache_rules(string $key): array
+{
+    $raw = (string) jinyu_companion_get_option($key, '');
+    if ('' === trim($raw)) {
+        return [];
+    }
+    $out = [];
+    foreach (preg_split('/\r\n|\r|\n/', $raw) ?: [] as $line) {
+        $line = trim((string) $line);
+        if ('' === $line || 0 === strpos($line, '#')) {
+            continue;
+        }
+        $out[] = $line;
+    }
+    return $out;
+}
+
+/**
+ * 逗号 / 空格分隔的参数名 → 小写数组。
+ */
+function jinyu_page_cache_param_names(string $key): array
+{
+    $raw = (string) jinyu_companion_get_option($key, '');
+    if ('' === trim($raw)) {
+        return [];
+    }
+    $out = [];
+    foreach (preg_split('/[,\s]+/', trim($raw)) ?: [] as $p) {
+        $p = strtolower(trim((string) $p));
+        if ('' !== $p) {
+            $out[] = $p;
+        }
+    }
+    return $out;
+}
+
+/**
+ * 归一化 URI：剔除「忽略参数」，剩余参数按键排序，使参数顺序不同也命中同一份缓存。
+ */
+function jinyu_page_cache_canonical_uri(): string
+{
+    [$path, $params] = jinyu_page_cache_uri_parts();
+    $ignore = jinyu_page_cache_param_names('page_cache_ignore_params');
+    if ($ignore) {
+        foreach (array_keys($params) as $k) {
+            if (in_array(strtolower((string) $k), $ignore, true)) {
+                unset($params[$k]);
+            }
+        }
+    }
+    ksort($params);
+    $qs = $params ? http_build_query($params) : '';
+    return $path . ('' !== $qs ? '?' . $qs : '');
+}
+
+/**
+ * 单条路径规则匹配：精确相等，或以规则为目录前缀（/go 命中 /go/123，不命中 /google）。
+ * 规则以 * 结尾时按前缀通配。
+ */
+function jinyu_page_cache_path_match(string $path, string $rule): bool
+{
+    $rule = trim($rule);
+    if ('' === $rule) {
+        return false;
+    }
+    if ('*' === substr($rule, -1)) {
+        $rule = substr($rule, 0, -1);
+    }
+    $r = rtrim($rule, '/');
+    if ('' === $r) {
+        return false;
+    }
+    return $path === $r || 0 === strpos($path, $r . '/');
+}
+
+/**
+ * 例外判定：命中排除路径或排除参数时，本次请求既不读缓存也不写缓存。
+ *
+ * serve（init）与 capture（template_redirect）共用同一判定，保证读写一致 ——
+ * 否则会出现「读了不该读的缓存」或「写了永远读不到的缓存」。
+ */
+function jinyu_page_cache_is_excluded(): bool
+{
+    [$path, $params] = jinyu_page_cache_uri_parts();
+
+    foreach (jinyu_page_cache_rules('page_cache_exclude_paths') as $rule) {
+        if (jinyu_page_cache_path_match(rtrim($path, '/'), $rule)) {
+            return true;
+        }
+    }
+
+    $skip = jinyu_page_cache_param_names('page_cache_exclude_params');
+    if ($skip) {
+        foreach (array_keys($params) as $k) {
+            if (in_array(strtolower((string) $k), $skip, true)) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 /**
@@ -81,6 +210,7 @@ function jinyu_page_cache_serve(): void
     // 搜索页不缓存：serve 端早于 WP 查询（is_search() 不可用），按 URI 特征判定；
     // 每个搜索词一个 URI，缓存只会膨胀且命中意义不大。
     if (jinyu_page_cache_is_search_uri()) return;
+    if (jinyu_page_cache_is_excluded()) return;
 
     $html = get_transient(jinyu_page_cache_key());
     if ($html !== false) {
@@ -115,6 +245,7 @@ function jinyu_page_cache_capture(): void
     // 这些响应体不该进整页缓存：404 / feed / 预览 / robots / trackback / 搜索
     if (is_404() || is_feed() || is_preview() || is_robots() || is_trackback() || is_search()) return;
     if (jinyu_page_cache_is_search_uri()) return;
+    if (jinyu_page_cache_is_excluded()) return;
 
     ob_start(function ($html) {
         if (strlen($html) < 500) return $html;

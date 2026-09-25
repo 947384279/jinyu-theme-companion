@@ -244,7 +244,7 @@ function jinyu_sl_settings_pane(): void {
 			?>
 			<div class="jyc-sl-card<?php echo $wide ? ' jyc-sl-card-wide' : ''; ?>" style="--pc:<?php echo esc_attr( $pc ); ?>;--pc-l:<?php echo esc_attr( jinyu_sl_hex_rgba( $pc, 0.34 ) ); ?>;--pc-t:<?php echo esc_attr( jinyu_sl_hex_rgba( $pc, 0.13 ) ); ?>">
 				<div class="jyc-sl-card-hd">
-					<span class="jyc-sl-badge" aria-hidden="true"><?php echo esc_html( $prov->icon() ); ?></span>
+					<span class="jyc-sl-badge" aria-hidden="true"><?php echo jinyu_sl_icon_markup( $prov->icon() ); ?></span>
 					<div class="jyc-sl-card-tx">
 						<div class="jyc-sl-name"><?php echo esc_html( $prov->label() ); ?></div>
 						<div class="jyc-sl-id"><?php echo esc_html( $prov->id() ); ?></div>

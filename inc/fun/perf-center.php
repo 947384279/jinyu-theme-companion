@@ -54,7 +54,6 @@ function jyc_perf_get_options(): array {
 		'disable_pingback'       => 1, // 禁用 pingback 自引用
 		'disable_wp_org_api'     => 1, // 屏蔽 WordPress.org 外部 API（更新/翻译/主题检查，国内极慢）
 		'hide_admin_bar_front'   => 0, // 前台对非管理员隐藏 admin bar（按需开启）
-		'html_minify'            => 1, // 压缩前台 HTML 输出（去除空白/注释）
 		'dns_preconnect'        => 1, // 关键域名 DNS 预连接（CDN 域名，加速首屏建连）
 		'comment_lazyload'      => 0, // 评论懒加载（按需加载更多，减少长文首屏 DOM）
 		'iframe_lazy'           => 1, // iframe 懒加载（视频/嵌入延后到视口）
@@ -151,13 +150,6 @@ function jyc_perf_toggle_meta(): array {
 
 			'group' => 'front',
 			'desc'  => __( '未登录 / 非管理员访问前台时不再显示 WordPress 管理条，减少一处前台 CSS/JS 注入。管理员在后台与前台均不受影响。', 'jinyu-theme-companion' ),
-
-		],
-		'html_minify'            => [
-			'label' => __( '压缩前台 HTML 输出', 'jinyu-theme-companion' ),
-
-			'group' => 'front',
-			'desc'  => __( '去除整页 HTML 的标签间空白与注释（仅前台完整文档，跳过后台/接口，且 <script>/<style>/<pre>/<textarea> 等原始块不被折叠）。首屏体积更小；出现极端排版问题时可关闭。', 'jinyu-theme-companion' ),
 
 		],
 		'dns_preconnect'        => [
@@ -489,7 +481,10 @@ function jyc_perf_status(): array {
 	global $wpdb;
 
 	$autoload = (int) $wpdb->get_var(
-		"SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE autoload = 'yes'"
+		// WP 6.6+ autoload 列为 on/off/auto/auto-on/auto-off，须用兼容 IN 列表（复用 db-optimize 的 helper），
+		// 写死 'yes' 会把「Autoload 体积」指标统计成 0。
+		'SELECT SUM(LENGTH(option_value)) FROM ' . $wpdb->options . ' WHERE '
+		. ( function_exists( 'jinyu_autoload_sql_in' ) ? jinyu_autoload_sql_in() : "autoload IN ('yes','on','auto','auto-on')" )
 	);
 
 	$transient_total = (int) $wpdb->get_var(
@@ -524,6 +519,22 @@ function jyc_perf_status(): array {
 		'active_plugins'    => count( $active_plugins ),
 		'heartbeat'         => empty( $o['disable_heartbeat'] ),
 	];
+}
+
+/**
+ * 渲染层专用的状态快照：同一请求内多次读取只查一次（概览磁贴与性能中心分区共用）。
+ *
+ * jyc_perf_status() 本身不缓存 —— 「一键优化」需要在同一请求里取前后对比（before/after），
+ * 缓存会让对比结果恒等而失去意义。
+ *
+ * @return array
+ */
+function jyc_perf_status_snapshot(): array {
+	static $cache = null;
+	if ( null === $cache ) {
+		$cache = jyc_perf_status();
+	}
+	return $cache;
 }
 
 /* ───────────────────────── 状态采集：OPcache 看板 ───────────────────────── */
@@ -778,9 +789,10 @@ function jyc_perf_clean_transients(): int {
 }
 
 /**
- * 优化有碎片的表（information_schema 里 Data_free > 0 的表）。
- * 仅手动触发；InnoDB 下 OPTIMIZE 等价于在线重建，安全但会短暂锁表，
- * 所以绝不挂在任何自动钩子上，只在用户点击按钮时执行。
+ * 维护有碎片的表（information_schema 里 Data_free > 0 的表）。
+ * 改用 ANALYZE TABLE 更新统计信息：InnoDB 下 OPTIMIZE 会重建整表并锁表，
+ * 大表/高流量站点点「优化」会卡死前台；ANALYZE 只刷新统计，几乎不锁表。
+ * 仅手动触发，绝不挂在任何自动钩子上。
  *
  * @return array{optimized:int, list:string[]}
  */
@@ -795,7 +807,7 @@ function jyc_perf_optimize_tables(): array {
 	foreach ( (array) $tables as $row ) {
 		// 表名来自 information_schema（系统目录），非用户输入，无注入面
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL
-		$res = $wpdb->query( $wpdb->prepare( 'OPTIMIZE TABLE %i', $row->t ) );
+		$res = $wpdb->query( $wpdb->prepare( 'ANALYZE TABLE %i', $row->t ) );
 		if ( false !== $res ) {
 			++$optimized;
 			$list[] = $row->t . '(' . jyc_perf_human( (float) $row->f ) . ')';
@@ -924,7 +936,7 @@ function jyc_perf_human_uptime( int $s ): string {
  * @return string HTML 片段
  */
 function jyc_perf_render_status_html(): string {
-	$s = jyc_perf_status();
+	$s = jyc_perf_status_snapshot();
 	$o = jyc_perf_opcache_stats();
 	$m = jyc_perf_memcached_stats();
 
@@ -1193,8 +1205,8 @@ function jyc_perf_ajax_flush(): void {
 			$msg = implode( __( '；', 'jinyu-theme-companion' ), array_filter( jyc_perf_flush_caches(), 'strlen' ) );
 	}
 
-		wp_send_json_success( [ 'msg' => $msg ] );
-	}
+	wp_send_json_success( [ 'msg' => $msg ] );
+}
 
 /** 仅保存开关与数值配置（不跑清理/优化）。与「一键应用推荐优化」解耦，避免改动被吞。 */
 function jyc_perf_ajax_save(): void {
@@ -1324,7 +1336,7 @@ function jyc_perf_render_pane(): void {
 	$opts    = jyc_perf_get_options();
 	$nonce   = wp_create_nonce( 'jinyu_companion_nonce' );
 	$toggles = jyc_perf_toggle_meta();
-	$st      = jyc_perf_status();
+	$st      = jyc_perf_status_snapshot();
 	$oc_on   = ! empty( $st['object_cache'] );
 	?>
 	<div class="jperf-wrap">

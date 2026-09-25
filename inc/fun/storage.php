@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // 与历史私有插件 wordpress-plugin-jinyu 的互斥由「调用方 require 处守卫」保证（见其主文件），不在本文件内做。
 
 /**
- * 对象存储接入（又拍云 / 七牛 / 阿里云 OSS / 腾讯云 COS）
+ * 对象存储接入（又拍云 / 阿里云 OSS / 腾讯云 COS / 华为云 OBS / 七牛云 Kodo）
  * ------------------------------------------------------------------
  * - 统一抽象：Jinyu_Storage_Adapter 接口，业务层零改动换云。
  * - 阿里云 OSS / 腾讯云 COS / 七牛 Kodo 全部 S3 协议兼容 → Jinyu_Storage_S3（AWS SigV4）。
@@ -135,8 +135,80 @@ class Jinyu_Storage_Factory {
 }
 
 /* ───────────────────────────────────────────────────────────
+ * S3 厂商识别与预设
+ * 仅用于「给出更精准的配置校验提示」与「路径式寻址回退判定」，
+ * 不影响签名算法本身（签名始终按 AWS SigV4）。
+ * ─────────────────────────────────────────────────────────── */
+
+/**
+ * 根据 endpoint 推断 S3 厂商，用于 Region 格式校验与寻址风格选择。
+ * @return string oss|cos|obs|qiniu|aws|minio|generic
+ */
+function jinyu_storage_detect_s3_vendor( $endpoint ) {
+	$e = strtolower( trim( preg_replace( '#^https?://#i', '', (string) $endpoint ) ) );
+	$e = rtrim( $e, '/' );
+	if ( strpos( $e, 'aliyuncs.com' ) !== false ) {
+		return 'oss';
+	}
+	if ( strpos( $e, 'myqcloud.com' ) !== false ) {
+		return 'cos';
+	}
+	if ( strpos( $e, 'qiniucs.com' ) !== false || strpos( $e, 'qiniu' ) !== false ) {
+		return 'qiniu';
+	}
+	if ( strpos( $e, 'myhuaweicloud.com' ) !== false ) {
+		return 'obs';
+	}
+	if ( strpos( $e, 'amazonaws.com' ) !== false ) {
+		return 'aws';
+	}
+	if ( strpos( $e, 'minio' ) !== false ) {
+		return 'minio';
+	}
+	return 'generic';
+}
+
+/**
+ * 各 S3 厂商的预设（仅用于校验提示与文档，不自动改写用户配置）。
+ */
+function jinyu_storage_s3_vendor_presets() {
+	return array(
+		'oss'     => array(
+			'label'          => '阿里云 OSS',
+			'region_regex'   => '/^oss-[a-z]+-[0-9]$/',
+			'region_example' => 'oss-cn-hangzhou',
+		),
+		'cos'     => array(
+			'label'          => '腾讯云 COS',
+			'region_regex'   => '/^[a-z0-9-]+$/',
+			'region_example' => 'ap-shanghai',
+		),
+		'obs'     => array(
+			'label'          => '华为云 OBS',
+			'region_regex'   => '/^[a-z0-9-]+$/',
+			'region_example' => 'cn-north-4',
+		),
+		'qiniu'   => array(
+			'label'          => '七牛云 Kodo',
+			'region_regex'   => '/^[a-z0-9-]+$/',
+			'region_example' => 'cn-east-1',
+		),
+		'aws'     => array(
+			'label'          => 'AWS S3',
+			'region_regex'   => '/^[a-z0-9-]+$/',
+			'region_example' => 'ap-southeast-1',
+		),
+		'generic' => array(
+			'label'          => '其他 S3 兼容',
+			'region_regex'   => '/^[a-z0-9-]+$/',
+			'region_example' => 'your-region',
+		),
+	);
+}
+
+/* ───────────────────────────────────────────────────────────
  * S3 兼容适配器（AWS Signature V4）
- * 覆盖：阿里云 OSS / 腾讯云 COS / 七牛云 Kodo / 华为 OBS 等
+ * 覆盖：阿里云 OSS / 腾讯云 COS / 华为云 OBS / 七牛云 Kodo 等
  * ─────────────────────────────────────────────────────────── */
 class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 	private $cfg;
@@ -145,14 +217,46 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 		$this->cfg = $cfg;
 	}
 
+	/**
+	 * 是否走「路径式寻址」（endpoint/{bucket}/{key}）而非「虚拟主机式」（{bucket}.endpoint/{key}）。
+	 * - endpoint 中显式写了 {bucket} 占位 → 路径式（用户意图明确）
+	 * - 已知只支持路径式的网关（七牛 S3 网关、MinIO）→ 路径式
+	 * 其余（阿里云 OSS / 腾讯云 COS / 华为 OBS / AWS）→ 虚拟主机式（原行为，保持不变）
+	 */
+	private function is_path_style() {
+		$endpoint = trim( (string) ( $this->cfg['endpoint'] ?? '' ) );
+		if ( strpos( $endpoint, '{bucket}' ) !== false ) {
+			return true;
+		}
+		$vendor = jinyu_storage_detect_s3_vendor( $this->cfg['endpoint'] ?? '' );
+		return in_array( $vendor, array( 'qiniu', 'minio' ), true );
+	}
+
 	private function host() {
-		$bucket   = trim( $this->cfg['bucket'] ?? '' );
-		$endpoint = trim( $this->cfg['endpoint'] ?? '' );
-		return $bucket . '.' . preg_replace( '#^https?://#i', '', $endpoint );
+		// 必做低风险修复：endpoint 末尾斜杠未 trim 会拼成「bucket.endpoint.com//key」导致 400。
+		$endpoint = rtrim( preg_replace( '#^https?://#i', '', trim( (string) ( $this->cfg['endpoint'] ?? '' ) ) ), '/' );
+		if ( $this->is_path_style() ) {
+			return $endpoint;
+		}
+		$bucket = trim( (string) ( $this->cfg['bucket'] ?? '' ) );
+		return $bucket . '.' . $endpoint;
 	}
 
 	private function base() {
 		return 'https://' . $this->host();
+	}
+
+	/**
+	 * 把对象 key 转成实际请求路径（含 bucket 段当且仅当路径式）。
+	 * 同时负责逐段 rawurlencode，避免 key 含中文/空格时签名与请求不一致。
+	 */
+	private function request_path( $key ) {
+		$key = ltrim( (string) $key, '/' );
+		if ( $this->is_path_style() ) {
+			$bucket = trim( (string) ( $this->cfg['bucket'] ?? '' ) );
+			$key    = $bucket . '/' . $key;
+		}
+		return $this->uri( $key );
 	}
 
 	private function uri( $key ) {
@@ -239,7 +343,7 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 			return false;
 		}
 		$ct      = $this->guess_type( $local );
-		$uri     = $this->uri( $key );
+		$uri     = $this->request_path( $key );
 		$headers = $this->sign( 'PUT', $uri, $body, array( 'Content-Type' => $ct ) );
 		$res     = wp_remote_request(
 			$this->base() . $uri,
@@ -270,7 +374,7 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 				continue;
 			}
 			$ct      = $this->guess_type( $local );
-			$uri     = $this->uri( $key );
+			$uri     = $this->request_path( $key );
 			$headers = $this->sign( 'PUT', $uri, $body, array( 'Content-Type' => $ct ) );
 			$ch      = curl_init();
 			curl_setopt_array(
@@ -297,7 +401,7 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 	}
 
 	public function get( $key ) {
-		$uri     = $this->uri( $key );
+		$uri     = $this->request_path( $key );
 		$headers = $this->sign( 'GET', $uri, '' );
 		$res     = wp_remote_get(
 			$this->base() . $uri,
@@ -317,7 +421,7 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 	}
 
 	public function delete( $key ) {
-		$uri     = $this->uri( $key );
+		$uri     = $this->request_path( $key );
 		$headers = $this->sign( 'DELETE', $uri, '' );
 		$res     = wp_remote_request(
 			$this->base() . $uri,
@@ -372,7 +476,8 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 				$qsa[] = rawurlencode( $k ) . '=' . rawurlencode( $v );
 			}
 			$query = implode( '&', $qsa );
-			$uri   = '/';
+			// 路径式寻址：桶名是路径首段（GET /{bucket}?list-type=2）；虚拟主机式：GET /?list-type=2
+			$uri   = $this->is_path_style() ? ( '/' . trim( (string) ( $this->cfg['bucket'] ?? '' ) ) ) : '/';
 			$host  = $this->host();
 
 			$amzdate   = gmdate( 'Ymd\THis\Z' );
@@ -792,12 +897,38 @@ function jinyu_storage_validate_cfg( $cfg ) {
 			implode( '、', $missing )
 		);
 	}
+	// 厂商级 Region 格式校验：OSS 必须带 oss- 前缀等，避免签名区域与桶实际区域不符导致 403。
+	$vendor  = jinyu_storage_detect_s3_vendor( $cfg['endpoint'] ?? '' );
+	$presets = jinyu_storage_s3_vendor_presets();
+	$rule    = $presets[ $vendor ] ?? $presets['generic'];
+	$region  = trim( (string) ( $cfg['region'] ?? '' ) );
+	if ( $region !== '' && $rule['region_regex'] !== '' && ! preg_match( $rule['region_regex'], $region ) ) {
+		return sprintf(
+			/* translators: 1: 厂商名 2: 格式说明 3: 示例 */
+			__( '%1$s 的 Region 格式不正确：应为「%2$s」（示例：%3$s）', 'jinyu-theme-companion' ),
+			$rule['label'],
+			( $vendor === 'oss' ) ? 'oss-地域-编号（必须含 oss- 前缀）' : '地域标识（小写字母、数字、连字符）',
+			$rule['region_example']
+		);
+	}
 	return true;
 }
 
 /* ───────────────────────────────────────────────────────────
  * 加速域名 URL 重写（仅前台；优先级 5 先于主题 cdn_url）
  * ─────────────────────────────────────────────────────────── */
+if ( ! function_exists( 'jinyu_storage_rewrite_active' ) ) {
+	/**
+	 * 前台附件 URL 是否重写为加速域名。
+	 * 由「一键替换为 CDN 链接」(apply) 开启、「复原为本地链接」(unapply) 暂停——
+	 * 暂停只关重写，已填的域名配置保留，恢复无需重新填写。
+	 * 键不存在（旧数据 / 新装）视为开启，向后兼容「填了域名即生效」的旧语义。
+	 */
+	function jinyu_storage_rewrite_active(): bool {
+		return jinyu_companion_is_checked( 'storage_rewrite', true );
+	}
+}
+
 add_filter(
 	'wp_get_attachment_url',
 	function ( $url ) {
@@ -805,8 +936,8 @@ add_filter(
 			return $url;
 		}
 		$cfg = jinyu_storage_config();
-		// 加速域名填写即生效：未填则不重写（附件仍走本地 uploads）；已填即视为启用，无需额外开关。
-		if ( empty( $cfg['provider'] ) || empty( $cfg['domain'] ) ) {
+		// 加速域名填写且重写开关开启才生效：任一不满足则不重写（附件仍走本地 uploads）。
+		if ( empty( $cfg['provider'] ) || empty( $cfg['domain'] ) || ! jinyu_storage_rewrite_active() ) {
 			return $url;
 		}
 		$base = wp_upload_dir()['baseurl'];
@@ -835,6 +966,12 @@ add_action(
 		if ( ! jinyu_is_storage_enabled() ) {
 			return;
 		}
+		// 未开启 CDN（即未点击「一键替换为 CDN 链接」/ storage_rewrite 未激活）时，
+		// 不上传新附件到云：自动同步上云的唯一收益是供 CDN 回源访问，前端链接仍走本地时
+		// 同步既无效又白耗上传带宽。用户选择自管推送时，此路完全静默。
+		if ( ! jinyu_storage_rewrite_active() ) {
+			return;
+		}
 		$cfg = jinyu_storage_config();
 		$ad  = Jinyu_Storage_Factory::make( $cfg );
 		if ( ! $ad ) {
@@ -857,8 +994,13 @@ add_action(
 		}
 		$basedir = wp_upload_dir()['basedir'];
 		$items   = array();
+		$excluded_exts = jinyu_storage_excluded_exts();
 		foreach ( array_unique( $files ) as $f ) {
 			if ( is_file( $f ) ) {
+				$ext = strtolower( pathinfo( $f, PATHINFO_EXTENSION ) );
+				if ( in_array( $ext, $excluded_exts, true ) ) {
+					continue;
+				}
 				$rel = wp_normalize_path( ltrim( str_replace( $basedir, '', $f ), '/' ) );
 				$items[] = array( 'local' => $f, 'key' => $prefix . $rel );
 			}
@@ -917,19 +1059,26 @@ function jinyu_storage_table() {
 }
 
 function jinyu_storage_install_table() {
+	// 表结构版本号：改表结构时 bump 此值触发重建（写入 jinyu_storage_dbver option）
+	if ( ! defined( 'JINYU_STORAGE_DB_VER' ) ) {
+		define( 'JINYU_STORAGE_DB_VER', '1' );
+	}
+
 	static $exists = null;
 	if ( $exists ) {
 		return; // 本请求内已确认表存在，跳过昂贵的 dbDelta（批处理每 2.5s 调一次）
 	}
+	$exists = true; // 先置位防重入（下方清理函数与本函数不会互相递归）
+
+	// 版本守卫：持久 option（autoload=yes 进 alloptions，命中零 SQL），与 tracking/notify 同一约定。
+	// 改表结构时 bump JINYU_STORAGE_DB_VER 触发重建。
+	if ( get_option( 'jinyu_storage_dbver' ) === JINYU_STORAGE_DB_VER ) {
+		jinyu_storage_maybe_cleanup_tasks();
+		return;
+	}
+
 	global $wpdb;
 	$table   = jinyu_storage_table();
-	// 先廉价探测：表已存在则本请求内不再触发 dbDelta（全表结构比对 + 潜在 ALTER）
-	if ( null === $exists ) {
-		$exists = (bool) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
-		if ( $exists ) {
-			return;
-		}
-	}
 	$charset = $wpdb->get_charset_collate();
 	$sql     = "CREATE TABLE IF NOT EXISTS $table (
 		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -946,27 +1095,166 @@ function jinyu_storage_install_table() {
 	) $charset;";
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 	dbDelta( $sql );
-	$exists = true;
+	// autoload 保持默认 yes：进 alloptions 预加载（object cache 命中），守卫读取零 SQL
+	update_option( 'jinyu_storage_dbver', JINYU_STORAGE_DB_VER );
+
+	jinyu_storage_maybe_cleanup_tasks();
+}
+
+/**
+ * 任务表清理：已完成/已失败的任务行（含 LONGTEXT 文件清单）7 天后删除，
+ * 防止任务表无限膨胀。用 24h transient 节流（数据维护而非建表，flush 后多发几次 DELETE 无害）。
+ * 仅在存储 AJAX 调用链上触发（install_table 的调用方），前台渲染零成本。
+ */
+function jinyu_storage_maybe_cleanup_tasks(): void {
+	if ( get_transient( 'jinyu_storage_tasks_cleaned' ) ) {
+		return;
+	}
+	set_transient( 'jinyu_storage_tasks_cleaned', 1, DAY_IN_SECONDS );
+	global $wpdb;
+	$wpdb->query(
+		"DELETE FROM " . jinyu_storage_table() . "
+		 WHERE status IN ('done','failed')
+		   AND COALESCE(updated_at, created_at) < DATE_SUB(NOW(), INTERVAL 7 DAY)"
+	);
 }
 
 add_action( 'after_switch_theme', 'jinyu_storage_install_table' );
 
+/**
+ * 把用户填写的逗号 / 换行 / 空格分隔列表解析为小写去重数组。
+ * 对后缀同时去除前导点（允许 .ext 或 ext 两种写法）。
+ */
+function jinyu_storage_parse_list( $raw ) {
+	$raw = (string) $raw;
+	// 统一分隔符：换行 / 空白 / 英文逗号(,) / 中文逗号(，) 均可，避免用户填错导致整段失效
+	$parts = preg_split( '/[\s,，]+/u', $raw, -1, PREG_SPLIT_NO_EMPTY );
+	$out   = array();
+	foreach ( $parts as $p ) {
+		$p = trim( (string) $p );
+		$p = ltrim( $p, '.' );
+		if ( $p !== '' ) {
+			$out[] = strtolower( $p );
+		}
+	}
+	return array_values( array_unique( $out ) );
+}
+
+/**
+ * 永不同步的文件后缀（优先级最高，叠加在默认白名单之上）。
+ * = 内置安全黑名单 + 用户在设置里额外排除的后缀。
+ */
+function jinyu_storage_excluded_exts() {
+	$blocked = array(
+		'svg', // 矢量含脚本风险，默认不推
+		// 服务端脚本
+		'php', 'phtml', 'phar', 'py', 'pl', 'rb', 'cgi', 'asp', 'aspx', 'jsp',
+		// 配置
+		'htaccess', 'web.config', 'user.ini',
+	);
+	$user = jinyu_storage_parse_list( jinyu_companion_get_option( 'storage_exclude_exts', '' ) );
+	return array_values( array_unique( array_merge( $blocked, $user ) ) );
+}
+
+/**
+ * 用户配置中需整体排除的目录名（按路径片段匹配，命中即跳过该目录全部文件）。
+ */
+function jinyu_storage_excluded_dirs() {
+	return jinyu_storage_parse_list( jinyu_companion_get_option( 'storage_exclude_dirs', '' ) );
+}
+
+/**
+ * 扫描 uploads 下需要同步的本地文件列表（全量）。
+ *
+ * 用途：仅用于「全量上传到云端」按钮的【首次迁移】场景——把已有本地图库
+ * 整体搬上云。日常新增附件由 add_attachment 钩子自动同步，个别文件可用
+ * 「同步指定资源」，因此本函数很少被再次调用，重复调用即代表重新全量扫描。
+ *
+ * 过滤规则：
+ *  - 默认推：图片 / 字体 / CSS / JS
+ *  - 勾选「同步进阶静态资源」才推：音视频 / 文档 / 压缩包 / 数据文件
+ *  - 永远不推（内置黑名单）：svg / 服务端脚本 / 配置文件 / 隐藏文件 / 临时文件
+ *  - 用户「排除目录」「排除后缀」叠加在最上层，优先级最高
+ *
+ * 注意：本函数只负责"列出要传哪些"，不做云端比对。推送时是否跳过已存在文件
+ * （增量同步）由 jinyu_storage_process_one() 的 push 分支决定（当前为全量重传，
+ * 见该函数内注释）。
+ *
+ * @return array 相对路径列表，如 ['2026/09/x.jpg', ...]
+ */
 function jinyu_storage_scan_uploads() {
 	$basedir = wp_upload_dir()['basedir'];
 	$list    = array();
 	if ( ! is_dir( $basedir ) ) {
 		return $list;
 	}
+
+	// 默认始终同步：前端核心静态资源（图片 / 字体 / 样式脚本）
+	$default_allowed = array(
+		// 图片
+		'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'tiff', 'tif', 'ico',
+		// 字体
+		'woff', 'woff2', 'ttf', 'otf', 'eot',
+		// 样式 / 脚本
+		'css', 'js',
+	);
+	// 需用户勾选才同步：非媒体静态资源
+	$extra_allowed = array(
+		// 音视频
+		'mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'opus',
+		'mp4', 'webm', 'mov', 'avi', 'wmv', 'mkv', 'm4v', 'ogv', 'flv',
+		// 文档 / 办公
+		'pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx',
+		'odt', 'ods', 'odp', 'rtf', 'txt', 'csv',
+		// 压缩包
+		'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz',
+		// 数据 / 标记
+		'json', 'xml', 'yaml', 'yml',
+	);
+
+	$allowed = array_flip( $default_allowed );
+	if ( jinyu_companion_is_checked( 'storage_sync_extra' ) ) {
+		foreach ( $extra_allowed as $e ) {
+			$allowed[ $e ] = true;
+		}
+	}
+	// 排除目录（按路径片段）与用户额外排除后缀，优先级高于白名单
+	$excluded_dirs = jinyu_storage_excluded_dirs();
+	$excluded_exts = jinyu_storage_excluded_exts();
+	foreach ( $excluded_exts as $e ) {
+		unset( $allowed[ $e ] );
+	}
+
 	$rii = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $basedir, FilesystemIterator::SKIP_DOTS ) );
 	foreach ( $rii as $f ) {
 		if ( $f->isDir() ) {
 			continue;
 		}
-		$rel    = wp_normalize_path( ltrim( str_replace( $basedir, '', $f->getPathname() ), '/' ) );
-		$list[] = $rel;
+		$name = $f->getFilename();
+		// 隐藏文件 / 目录（. 开头）一律排除
+		if ( strpos( $name, '.' ) === 0 ) {
+			continue;
+		}
+		// 临时 / 备份 / 编辑残留排除
+		if ( preg_match( '/(\.(tmp|part|bak|swp)|~)$/i', $name ) ) {
+			continue;
+		}
+		$rel = wp_normalize_path( ltrim( str_replace( $basedir, '', $f->getPathname() ), '/' ) );
+		// 排除目录：路径中任意一级目录名命中即跳过
+		if ( $excluded_dirs ) {
+			foreach ( explode( '/', $rel ) as $seg ) {
+				if ( in_array( strtolower( $seg ), $excluded_dirs, true ) ) {
+					continue 2;
+				}
+			}
+		}
+		$ext = strtolower( $f->getExtension() );
+		if ( isset( $allowed[ $ext ] ) ) {
+			$list[] = $rel;
+		}
 	}
-		return $list;
-	}
+	return $list;
+}
 
 /* ───────────────────────────────────────────────────────────
  * 服务端批处理核心（AJAX 与 CLI 自愈共用）
@@ -1013,12 +1301,28 @@ function jinyu_storage_process_one( $type ) {
 				$items[] = array( 'local' => $local, 'key' => $prefix . $rel );
 			}
 		}
+		/**
+		 * 全量重传（当前行为， intentionally 全量）：
+		 * 本分支不做"云端是否已存在该文件"的比对，直接把整批文件 PUT 上云。
+		 * 这是有意为之——「全量上传到云端」按钮的定位是【首次迁移】，正常使用中
+		 * 只点一次；之后日常增量由"新附件自动同步"和"同步指定资源"覆盖，该按钮
+		 * 几乎不再被调用，因此每次都重传全部文件是可接受的代价。
+		 *
+		 * 若日后需要"增量只传新增/变化"（跳过云端已存在的文件），判断方式应为：
+		 *   1) 上传前对每批 key 调一次"存在性/元数据"接口（Upyun 可用 HEAD 或
+		 *      list 批量比对），取回云端对象的 size / etag(md5)；
+		 *   2) 仅当「本地 size 与云端不一致」或「云端不存在」时才 PUT；
+		 *      （更严谨可比对内容 MD5，但需上传时把本地 md5 写入自定义元数据，
+		 *       否则同名同大小但内容已编辑的文件会被误判为未变化而跳过）
+		 *   3) 注意 HEAD/比对本身也消耗 API 次数，文件量很大时增量逻辑的开销未必
+		 *      低于全量重传——故在"全量按钮只用于首次迁移"前提下暂不实现。
+		 */
 		// 批内并行上传（并发上限 16），与 AJAX 处理器一致
 		$results = $ad->put_multi( $items, 16 );
 		foreach ( $items as $k => $it ) {
 			if ( empty( $results[ $k ] ) ) {
 				$errors++;
-			} elseif ( jinyu_companion_is_checked( 'storage_delete_local' ) ) {
+			} elseif ( jinyu_companion_is_checked( 'storage_delete_local' ) && jinyu_is_storage_enabled() && jinyu_storage_rewrite_active() ) {
 				@unlink( $it['local'] );
 			}
 		}
@@ -1170,7 +1474,7 @@ add_action(
 		foreach ( $items as $k => $it ) {
 			if ( empty( $results[ $k ] ) ) {
 				$errors++;
-			} elseif ( jinyu_companion_is_checked( 'storage_delete_local' ) ) {
+			} elseif ( jinyu_companion_is_checked( 'storage_delete_local' ) && jinyu_is_storage_enabled() && jinyu_storage_rewrite_active() ) {
 				@unlink( $it['local'] );
 			}
 		}
@@ -1472,8 +1776,76 @@ add_action(
 	}
 );
 
+/**
+ * 把文章正文/摘要中的附件 URL 在「本地 uploads」与「加速域名」之间整批改写。
+ * 用前缀级 REPLACE（与运行时 wp_get_attachment_url 过滤器同构），只命中含该前缀的行，
+ * 幂等：重复点击不会嵌套。用于「一键替换 / 复原」按钮真正改写已落库的正文链接，
+ * 而不仅是运行时开关（运行时开关管不到 post_content 里写死的 <img src>）。
+ *
+ * @param string $from 旧前缀（含结尾斜杠），如 https://site/wp-content/uploads/
+ * @param string $to   新前缀（含结尾斜杠），如 https://cdn.example.com/wp-content/
+ * @return int 受影响行数
+ */
+if ( ! function_exists( 'jinyu_storage_rewrite_content_links' ) ) {
+	function jinyu_storage_rewrite_content_links( $from, $to ) {
+		global $wpdb;
+		$from = (string) $from;
+		$to   = (string) $to;
+		if ( '' === $from || $from === $to ) {
+			return 0;
+		}
+		$like = '%' . $wpdb->esc_like( $from ) . '%';
+		$n    = 0;
+		foreach ( array( 'post_content', 'post_excerpt' ) as $col ) {
+			$cnt = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE {$wpdb->posts} SET {$col} = REPLACE({$col}, %s, %s) WHERE {$col} LIKE %s",
+					$from,
+					$to,
+					$like
+				)
+			);
+			if ( false !== $cnt ) {
+				$n += (int) $cnt;
+			}
+		}
+		return $n;
+	}
+}
+
+/**
+ * 把「加速域名」双向同步到主题侧的 JINYU_OPT 选项。
+ *
+ * 关键根因：前台图片的 CDN 重写（主题 inc/fun/media.php 的 jinyu_webp_storage_cdn_url /
+ * jinyu_img_to_webp_url 等）读的是**主题自家 jinyu_options** 里的 storage_domain / storage_prefix，
+ * 而非 companion 的 jinyu_companion_settings。两者是两份独立副本，长期漂移：
+ * 仅清 companion 那份，前台毫无变化（即「复原为本地链接点了没用」的真因）。
+ * 因此 apply / unapply 必须同时写主题选项，按钮才能成为真正的前端控制源。
+ *
+ * @param string $domain 加速域名（空串 = 停用）
+ * @param string $prefix 存储前缀（companion 设置里的 storage_prefix）
+ */
+if ( ! function_exists( 'jinyu_storage_sync_theme_domain' ) ) {
+	function jinyu_storage_sync_theme_domain( $domain, $prefix = '' ) {
+		$opt_key = defined( 'JINYU_OPT' ) ? JINYU_OPT : 'jinyu_options';
+		$opts    = get_option( $opt_key, array() );
+		if ( ! is_array( $opts ) ) {
+			$opts = array();
+		}
+		$domain = trim( (string) $domain );
+		if ( $domain !== '' && ! preg_match( '#^https?://#i', $domain ) ) {
+			$domain = 'https://' . $domain;
+		}
+		// 仅改动这两个键，敏感字段（storage_secret 等）原样保留。
+		$opts['storage_domain'] = $domain;
+		$p = trim( (string) $prefix, '/' );
+		$opts['storage_prefix'] = $p !== '' ? $p . '/' : '';
+		update_option( $opt_key, $opts );
+	}
+}
+
 /* ───────────────────────────────────────────────────────────
- * AJAX：一键改加速域名（保存 storage_domain + 清缓存）
+ * AJAX：一键改加速域名（保存 storage_domain + 清缓存 + 改写正文链接 + 同步主题选项）
  * ─────────────────────────────────────────────────────────── */
 add_action(
 	'wp_ajax_jinyu_storage_apply_domain',
@@ -1483,21 +1855,51 @@ add_action(
 			wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
 		}
 		$domain = isset( $_POST['storage_domain'] ) ? trim( (string) $_POST['storage_domain'] ) : '';
-		if ( $domain !== '' && ! preg_match( '#^https?://#i', $domain ) ) {
+		$s                   = jinyu_companion_get_settings();
+		$old_domain          = isset( $s['storage_domain'] ) ? trim( (string) $s['storage_domain'] ) : '';
+		// 输入框为空时回退已保存的域名（复原暂停后再开启的场景，配置保留所以无需重填）；两者皆空才拒绝。
+		if ( $domain === '' ) {
+			$domain = $old_domain;
+		}
+		if ( $domain === '' ) {
+			wp_send_json_error( __( '请先在上方填写加速域名', 'jinyu-theme-companion' ) );
+		}
+		if ( ! preg_match( '#^https?://#i', $domain ) ) {
 			$domain = 'https://' . $domain;
 		}
-		$s                     = jinyu_companion_get_settings();
-		$s['storage_domain']   = $domain;
+		$s['storage_domain']  = $domain;
+		$s['storage_rewrite'] = '1'; // 一键替换 = 开启 URL 重写
 		jinyu_companion_save_settings( $s );
+		if ( $domain !== '' ) {
+			$base         = rtrim( wp_upload_dir()['baseurl'], '/' ) . '/';
+			$prefix       = trim( (string) ( $s['storage_prefix'] ?? '' ), '/' );
+			$cdn_marker   = rtrim( $domain, '/' ) . '/' . ( $prefix !== '' ? $prefix . '/' : '' );
+			// 先把旧域名残留的正文链接归位本地，再整体切到新域名，避免切换后留下孤儿旧 CDN 链接。
+			if ( $old_domain !== '' && $old_domain !== $domain ) {
+				$old_cdn = rtrim( $old_domain, '/' ) . '/' . ( $prefix !== '' ? $prefix . '/' : '' );
+				jinyu_storage_rewrite_content_links( $old_cdn, $base );
+			}
+			jinyu_storage_rewrite_content_links( $base, $cdn_marker );
+		}
+		// 同步主题侧选项：前台 CDN 重写实际由主题读 jinyu_options 驱动。
+		jinyu_storage_sync_theme_domain( $domain, $s['storage_prefix'] ?? '' );
 		if ( function_exists( 'jinyu_cache_flush' ) ) {
 			jinyu_cache_flush();
 		}
-		wp_send_json_success( __( '加速域名已更新并刷新缓存，附件链接已切换', 'jinyu-theme-companion' ) );
+		// 必须清 Memcached：jinyu_options 是 autoload 选项，被对象缓存缓存，
+		// 不清则改完 DB 前台仍读旧 CDN（这正是早期「点了没用」的缓存陷阱）。
+		if ( function_exists( 'jyc_perf_flush_memcached' ) ) {
+			jyc_perf_flush_memcached();
+		}
+		if ( function_exists( 'jyc_perf_flush_page_cache' ) ) {
+			jyc_perf_flush_page_cache();
+		}
+		wp_send_json_success( __( '加速域名已更新并刷新缓存，正文与附件链接已切换', 'jinyu-theme-companion' ) );
 	}
 );
 
 /* ───────────────────────────────────────────────────────────
- * AJAX：停用加速域名（回退本地 uploads + 清缓存）——图片异常时一键止血
+ * AJAX：停用加速域名（回退本地 uploads + 清缓存 + 反向改写正文链接）——图片异常时一键止血
  * ─────────────────────────────────────────────────────────── */
 add_action(
 	'wp_ajax_jinyu_storage_unapply_domain',
@@ -1506,12 +1908,30 @@ add_action(
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
 		}
-		$s                     = jinyu_companion_get_settings();
-		$s['storage_domain']   = '';
+		$s          = jinyu_companion_get_settings();
+		$old_domain = isset( $s['storage_domain'] ) ? trim( (string) $s['storage_domain'] ) : '';
+		if ( $old_domain !== '' ) {
+			$base        = rtrim( wp_upload_dir()['baseurl'], '/' ) . '/';
+			$prefix      = trim( (string) ( $s['storage_prefix'] ?? '' ), '/' );
+			$cdn_marker  = rtrim( $old_domain, '/' ) . '/' . ( $prefix !== '' ? $prefix . '/' : '' );
+			jinyu_storage_rewrite_content_links( $cdn_marker, $base );
+		}
+		// 只暂停 URL 重写，已填的加速域名保留——恢复无需重新填写，再点「一键替换」即可。
+		$s['storage_rewrite'] = '0';
 		jinyu_companion_save_settings( $s );
+		// 同步主题侧选项（关键）：前台 CDN 重写读的是主题 jinyu_options，不清它前台不会回退。
+		jinyu_storage_sync_theme_domain( '' );
 		if ( function_exists( 'jinyu_cache_flush' ) ) {
 			jinyu_cache_flush();
 		}
-		wp_send_json_success( __( '已停用加速域名，附件链接回退本地并刷新缓存', 'jinyu-theme-companion' ) );
+		// 必须清 Memcached：jinyu_options 是 autoload 选项，被对象缓存缓存，
+		// 不清则改完 DB 前台仍读旧 CDN（这正是早期「点了没用」的缓存陷阱）。
+		if ( function_exists( 'jyc_perf_flush_memcached' ) ) {
+			jyc_perf_flush_memcached();
+		}
+		if ( function_exists( 'jyc_perf_flush_page_cache' ) ) {
+			jyc_perf_flush_page_cache();
+		}
+		wp_send_json_success( __( '已暂停加速域名重写（域名配置保留），正文与附件链接回退本地并刷新缓存；恢复请再点「一键替换为 CDN 链接」', 'jinyu-theme-companion' ) );
 	}
 );

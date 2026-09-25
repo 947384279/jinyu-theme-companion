@@ -49,6 +49,11 @@ function jinyu_baidu_submit(int $post_id): void
         'sslverify' => (bool) apply_filters('jinyu_baidu_push_ssl_verify', true),
     ]);
     update_post_meta($post_id, 'jinyu_baidu_push_status', 1);
+
+    // 留痕：非阻塞请求读不到响应，记为「已提交（异步）」。
+    if (function_exists('jinyu_push_log_add')) {
+        jinyu_push_log_add('百度主动推送', __('发布推送', 'jinyu-theme-companion'), 1, 'sent', (string) wp_parse_url($post_url, PHP_URL_PATH));
+    }
 }
 
 // 门控键与设置面板保持一致：面板把百度接口地址存为 baidu_submit_token（已废弃的 baidu_auto_submit 从不写入）。

@@ -21,6 +21,16 @@ if ( ! defined( 'JINYU_SL_COOKIE' ) ) {
 	define( 'JINYU_SL_COOKIE', 'jinyu_sl_state' );
 }
 
+if ( ! function_exists( 'jinyu_sl_icon_markup' ) ) {
+	/**
+	 * 平台徽标输出：以 `<svg` 开头的为内置可信 SVG（simple-icons 路径），原样输出；
+	 * 其余（历史纯文本）按普通文本转义，避免把 HTML 当内容回显。
+	 */
+	function jinyu_sl_icon_markup( string $icon ): string {
+		return 0 === strpos( $icon, '<svg' ) ? $icon : esc_html( $icon );
+	}
+}
+
 require_once __DIR__ . '/crypto.php';
 require_once __DIR__ . '/class-base.php';
 require_once __DIR__ . '/class-github.php';

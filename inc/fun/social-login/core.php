@@ -185,13 +185,13 @@ function jinyu_oauth_shortcode(): string {
 	$out   = '<div class="jinyu-oauth-btns">';
 	foreach ( $platforms as $p => $info ) {
 		$url = add_query_arg( 'platform', $p, $start );
-		// 直接输出徽标文字（Q/G/码/A），圆形底色由主题按平台类（jinyu-oauth-gitee 等）提供，不依赖 FontAwesome
+		// 输出内置品牌 SVG（simple-icons 路径，currentColor），圆形底色由主题按平台类（jinyu-oauth-gitee 等）提供，不依赖 FontAwesome
 		$out .= sprintf(
 			'<a class="jinyu-oauth-btn jinyu-oauth-%1$s" href="%2$s" title="%3$s 登录" aria-label="%3$s 登录">%4$s</a>',
 			esc_attr( $p ),
 			esc_url( $url ),
 			esc_attr( $info['label'] ),
-			esc_html( $info['icon'] )
+			jinyu_sl_icon_markup( $info['icon'] )
 		);
 	}
 	$out .= '</div>';
@@ -449,8 +449,9 @@ function jinyu_sl_find_or_create( string $platform, array $ud, bool $logged_in )
 		if ( $existing ) {
 			return $existing;
 		}
-		// 2) 可信邮箱且站内已存在：绑定到该账号（防邮箱伪造接管：仅 verified/签名来源）
-		if ( ! empty( $ud['email'] ) ) {
+		// 2) 站内已存在同邮箱且邮箱经平台验证：绑定到该账号（防邮箱伪造接管）。
+		//    email_verified 由 provider 在拉取用户信息时保证（仅取平台标记为 verified 的邮箱）。
+		if ( ! empty( $ud['email'] ) && ! empty( $ud['email_verified'] ) ) {
 			$mail_uid = (int) email_exists( $ud['email'] );
 			if ( $mail_uid ) {
 				update_user_meta( $mail_uid, jinyu_sl_oauth_id_key( $platform ), $ud['id'] );
@@ -531,6 +532,9 @@ function jinyu_sl_create_oauth_user( string $platform, array $ud ): int|WP_Error
 	if ( is_wp_error( $uid ) ) {
 		return $uid;
 	}
+	// 密码为随机串（用户不知情、无法用它登录），打标记供解绑时防锁号判断；
+	// 用户在用户中心成功改密后，主题侧会清除该标记（数据契约：meta 键 jinyu_sl_no_password）。
+	update_user_meta( $uid, 'jinyu_sl_no_password', 1 );
 	wp_update_user(
 		[
 			'ID'            => $uid,
@@ -542,6 +546,50 @@ function jinyu_sl_create_oauth_user( string $platform, array $ud ): int|WP_Error
 	update_user_meta( $uid, jinyu_sl_oauth_id_key( $platform ), $ud['id'] );
 	jinyu_sl_save_avatar( $uid, $platform, $ud['avatar'] ?? '' );
 	return $uid;
+}
+
+/* ==========================================================================
+ * 用户中心解绑（AJAX，登录态）
+ * ======================================================================== */
+add_action( 'wp_ajax_jinyu_sl_unbind', 'jinyu_sl_ajax_unbind' );
+function jinyu_sl_ajax_unbind(): void {
+	check_ajax_referer( 'jinyu_sl_unbind', 'nonce' );
+
+	if ( ! jinyu_oauth_enabled() ) {
+		wp_send_json_error( [ 'msg' => __( '第三方登录功能已关闭。', 'jinyu-theme-companion' ) ], 403 );
+	}
+
+	$uid = get_current_user_id();
+	$platform = sanitize_key( wp_unslash( $_POST['platform'] ?? '' ) );
+	$providers = jinyu_sl_providers();
+	if ( ! $uid || ! isset( $providers[ $platform ] ) ) {
+		wp_send_json_error( [ 'msg' => __( '参数无效。', 'jinyu-theme-companion' ) ], 400 );
+	}
+
+	$id_key = jinyu_sl_oauth_id_key( $platform );
+	if ( '' === (string) get_user_meta( $uid, $id_key, true ) ) {
+		wp_send_json_error( [ 'msg' => __( '该平台尚未绑定。', 'jinyu-theme-companion' ) ], 400 );
+	}
+
+	// 防锁号：解绑后须仍有登录途径——其他平台绑定，或用户已设自己的密码。
+	// OAuth 自动建号的用户密码为随机串（jinyu_sl_no_password 标记），不可据此视为可登录。
+	$others = 0;
+	foreach ( array_keys( $providers ) as $p ) {
+		if ( $p !== $platform && '' !== (string) get_user_meta( $uid, jinyu_sl_oauth_id_key( $p ), true ) ) {
+			$others++;
+		}
+	}
+	if ( 0 === $others && get_user_meta( $uid, 'jinyu_sl_no_password', true ) ) {
+		wp_send_json_error(
+			[ 'msg' => __( '此账号未设置密码，解绑后将无法登录。请先在上方设置密码，或绑定其他平台后再解绑。', 'jinyu-theme-companion' ) ],
+			409
+		);
+	}
+
+	delete_user_meta( $uid, $id_key );
+	delete_user_meta( $uid, jinyu_sl_oauth_avatar_key( $platform ) );
+
+	wp_send_json_success( [ 'msg' => __( '解绑成功。', 'jinyu-theme-companion' ) ] );
 }
 
 /* ==========================================================================

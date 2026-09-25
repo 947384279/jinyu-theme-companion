@@ -41,7 +41,7 @@ function jinyu_captcha_generate(): string
     $chars = jinyu_captcha_chars();
     $max   = strlen($chars) - 1;
     $code  = '';
-    for ($i = 0; $i < 4; $i++) {
+    for ($i = 0; $i < 5; $i++) {
         $code .= $chars[random_int(0, $max)];
     }
 
@@ -155,8 +155,9 @@ function jinyu_captcha_markup(string $scene): string
     ?>
     <div class="jinyu-captcha-row" data-jinyu-captcha data-scene="<?php echo esc_attr($scene); ?>"
          data-jinyu-captcha-src="<?php echo esc_url($base); ?>">
-      <img class="jinyu-captcha-img" alt="<?php esc_attr_e('验证码', 'jinyu-theme-companion'); ?>" hidden>
+      <img class="jinyu-captcha-img" alt="<?php esc_attr_e('验证码图片，看不清可点击刷新', 'jinyu-theme-companion'); ?>" hidden>
       <button type="button" class="jinyu-captcha-refresh" data-jinyu-captcha-refresh
+              title="<?php esc_attr_e('刷新验证码', 'jinyu-theme-companion'); ?>"
               aria-label="<?php esc_attr_e('刷新验证码', 'jinyu-theme-companion'); ?>">
         <i class="fa-solid fa-rotate" aria-hidden="true"></i>
       </button>
@@ -194,7 +195,8 @@ function jinyu_captcha_svg(string $code): string
 {
     static $palette = ['#2563eb', '#7c3aed', '#db2777', '#0891b2', '#059669', '#d97706'];
 
-    $w = 112;
+    $len = strlen($code);
+    $w = 14 + $len * 24 + 10;
     $h = 42;
     $parts = [];
 

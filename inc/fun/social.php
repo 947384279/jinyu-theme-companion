@@ -109,12 +109,13 @@ function jinyu_get_following_terms(int $uid): array
 /* ----------------------------- 站内通知 ----------------------------- */
 function jinyu_notify_install()
 {
-    global $wpdb;
-    $table = $wpdb->prefix . 'jinyu_notify';
-    // 幂等：表已存在则跳过
-    if ($wpdb->get_var("SHOW TABLES LIKE '$table'") === $table) {
+    // 版本守卫：持久 option（不怕 object cache flush_all），命中零 SQL 直返。
+    // 改表结构时 bump 值触发重建。
+    if (get_option('jinyu_notify_dbver') === '1') {
         return;
     }
+    global $wpdb;
+    $table = $wpdb->prefix . 'jinyu_notify';
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     $charset = $wpdb->get_charset_collate();
     dbDelta("
@@ -133,6 +134,8 @@ function jinyu_notify_install()
           KEY created_at (created_at)
         ) {$charset};
     ");
+    // autoload 默认 yes：进 alloptions 预加载（object cache 命中），守卫读取零 SQL
+    update_option('jinyu_notify_dbver', '1');
 }
 
 function jinyu_add_notification(int $user_id, string $type, string $title, string $content = '', string $link = '', int $actor_id = 0): int
@@ -226,13 +229,5 @@ function jinyu_notify_comment_reply($comment_id, $comment)
 
 /* ----------------------------- 安装钩子 ----------------------------- */
 add_action('after_switch_theme', 'jinyu_notify_install');
-// 兜底：切主题动作若因缓存/顺序错过，前台访问 12h 内补建一次
-add_action('wp_footer', 'jinyu_notify_install_footer', 1);
-function jinyu_notify_install_footer()
-{
-    if (get_transient('jinyu_notify_check')) {
-        return;
-    }
-    set_transient('jinyu_notify_check', 1, 12 * HOUR_IN_SECONDS);
-    jinyu_notify_install();
-}
+// 原 wp_footer + 12h transient 兜底已删：版本 option 永久持久（不怕 flush_all），
+// 且插件激活钩子（register_activation_hook）已直接建表，无需前台阶段跑 dbDelta。

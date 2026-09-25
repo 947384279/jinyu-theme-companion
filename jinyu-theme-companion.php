@@ -6,7 +6,7 @@
  *              three-part structure, this plugin takes over all functional capabilities (SEO, structured
  *              data, social, related posts, shortcodes, cache, anti-spam, index ping, and more) so the
  *              theme stays a pure presentation layer. All outbound features are off by default.
- * Version:     1.0.4
+ * Version:     1.1.0
  * Author:      金玉主题作者
  * Author URI:  https://www.qicaiyun.top
  * License:     GPL-2.0-or-later
@@ -29,7 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 主题缺失时优雅降级，不会白屏。文本域统一使用字面量 'jinyu-theme-companion'。
  * ------------------------------------------------------------------------ */
 if ( ! defined( 'JINYU_CUR_VER' ) ) {
-	define( 'JINYU_CUR_VER', '1.0.4' );
+	define( 'JINYU_CUR_VER', '1.1.0' );
 }
 
 /* 插件自有路径常量：模块（shortcode-ui / poster 等）一律引用插件自身资源，
@@ -132,14 +132,19 @@ add_action( 'after_setup_theme', static function (): void {
 
 	// SEO / 结构化数据 / 索引推送
 	require_once __DIR__ . '/inc/seo.php';
+	// 微信 JS-SDK 分享：复用 seo.php 已输出的 og:* meta 作为分享数据，零冗余。
+	require_once __DIR__ . '/inc/fun/wechat-share.php';
 	require_once __DIR__ . '/inc/seo-jsonld.php';
 	require_once __DIR__ . '/inc/fun/category-seo.php';
 	require_once __DIR__ . '/inc/fun/post-seo.php';
 	require_once __DIR__ . '/inc/fun/llms.php';
-	require_once __DIR__ . '/inc/fun/indexnow.php';
-	require_once __DIR__ . '/inc/fun/baidu-push.php';
+// 推送记录：IndexNow / 百度每次提交的留痕，供后台「推送记录」卡片回溯
+require_once __DIR__ . '/inc/fun/push-log.php';
+require_once __DIR__ . '/inc/fun/indexnow.php';
+require_once __DIR__ . '/inc/fun/baidu-push.php';
+	require_once __DIR__ . '/inc/fun/bulk-push.php';
 	require_once __DIR__ . '/inc/fun/no-category.php';
-	// 站点验证元标签（Google/Bing/Baidu/Yandex/360）+ 图片 alt 补全
+	// 站点验证元标签（Google/Bing/Baidu/Yandex/360）+ 图片 SEO（alt/尺寸补全、体检）
 	require_once __DIR__ . '/inc/fun/verification.php';
 	require_once __DIR__ . '/inc/fun/img-alt.php';
 
@@ -160,10 +165,13 @@ add_action( 'after_setup_theme', static function (): void {
 	// 评论与互动
 	require_once __DIR__ . '/inc/fun/comment-notify.php';
 	require_once __DIR__ . '/inc/fun/anti-spam.php';
+	require_once __DIR__ . '/inc/fun/comment-cleanup.php';
 
 	// 性能 / 系统
 	require_once __DIR__ . '/inc/fun/speculation.php';
 	require_once __DIR__ . '/inc/fun/page-cache.php';
+	// HTTP 传输层体检（压缩 / 静态资源缓存 / HTML 缓存头 / HTTP3）：只在点击体检时发请求。
+	require_once __DIR__ . '/inc/fun/transport-check.php';
 	require_once __DIR__ . '/inc/fun/db-optimize.php';
 	// 性能优化中心（自主题 perf.php 迁入）：OPcache/Memcached 看板、
 	// 性能开关、缓存清理、一键优化。渲染挂在设置面板「性能中心」分区。
@@ -171,7 +179,9 @@ add_action( 'after_setup_theme', static function (): void {
 	require_once __DIR__ . '/inc/fun/stats.php';
 	require_once __DIR__ . '/inc/fun/email.php';
 	require_once __DIR__ . '/inc/ajax/poster.php';
-require_once __DIR__ . '/inc/admin/settings.php';
+	// 设置面板：概览磁贴数据层（依赖 perf-center / stats，须在其后加载）
+	require_once __DIR__ . '/inc/admin/overview.php';
+	require_once __DIR__ . '/inc/admin/settings.php';
 } );
 
 /* --------------------------------------------------------------------------

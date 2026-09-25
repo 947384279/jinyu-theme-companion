@@ -102,5 +102,30 @@ function jinyu_poster_generate()
 
     $url = str_replace($upload['basedir'], $upload['baseurl'], $file);
     set_transient($cache_key, ['url' => $url, 'file' => $file], HOUR_IN_SECONDS);
+
+    // 顺带清理：每天最多扫一次，删除 7 天前的旧海报 PNG（文件名按文章固定，正常只覆盖；此处兜底防长期堆积）
+    if ( false === get_transient( 'jinyu_poster_swept' ) ) {
+        jinyu_poster_sweep_old();
+        set_transient( 'jinyu_poster_swept', 1, DAY_IN_SECONDS );
+    }
+
     wp_send_json_success(['url' => $url]);
+}
+
+/**
+ * 清理过期的文章分享海报 PNG（uploads 根目录下 jinyu-poster-<post_id>.png）。
+ * 仅删除修改时间超过 7 天的文件，避免误删近期仍在用的缓存图。
+ */
+function jinyu_poster_sweep_old(): void {
+    $upload = wp_upload_dir();
+    $dir    = $upload['basedir'] ?? '';
+    if ( '' === $dir || ! is_dir( $dir ) ) {
+        return;
+    }
+    $cut = time() - WEEK_IN_SECONDS;
+    foreach ( glob( $dir . '/jinyu-poster-*.png' ) ?: [] as $f ) {
+        if ( is_file( $f ) && filemtime( $f ) < $cut ) {
+            @unlink( $f );
+        }
+    }
 }

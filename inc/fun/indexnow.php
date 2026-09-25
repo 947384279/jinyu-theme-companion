@@ -128,4 +128,9 @@ function jinyu_indexnow_submit( int $post_id, WP_Post $post, bool $update ): voi
 		'blocking'  => false,
 		'sslverify' => true,
 	] );
+
+	// 留痕：非阻塞请求读不到响应，记为「已提交（异步）」。
+	if ( function_exists( 'jinyu_push_log_add' ) ) {
+		jinyu_push_log_add( 'IndexNow', __( '发布推送', 'jinyu-theme-companion' ), 1, 'sent', wp_parse_url( $url, PHP_URL_PATH ) ? (string) wp_parse_url( $url, PHP_URL_PATH ) : '' );
+	}
 }

@@ -17,6 +17,7 @@ $options = [
 	'jinyu_companion_flush_rewrite',
 	'jinyu_companion_storage_migrated',
 	'jinyu_page_cache_epoch',
+	'jinyu_companion_push_log',
 ];
 
 /* 通知表由 comment-notify 模块定义，常量表名以实际 DB 为准 */

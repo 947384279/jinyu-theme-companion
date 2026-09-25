@@ -66,13 +66,14 @@ function jinyu_stats_track()
         set_transient('jinyu_stats_checked', 1, HOUR_IN_SECONDS * 12);
     }
 
-    $wpdb->query($wpdb->prepare("INSERT INTO $tbl (stat_date, pv, uv) VALUES (%s, 1, 1) ON DUPLICATE KEY UPDATE pv=pv+1", $today));
+	// PV 每次 +1；UV 仅在「今日尚未打 UV Cookie」时 +1。
+	// 首访客：INSERT 时 uv 初始化为 0，下方按 Cookie 缺失 +1 → 计为 1（不再重复 +1，修原每日首访 uv=2 的 bug）。
+	$wpdb->query($wpdb->prepare("INSERT INTO $tbl (stat_date, pv, uv) VALUES (%s, 1, 0) ON DUPLICATE KEY UPDATE pv=pv+1", $today));
 
-    // UV 去重：Cookie 已在 wp 钩子（响应头发送前）写入，此处仅按 Cookie 判定是否计数
-    $uv_key = 'jinyu_uv_' . $today;
-    if (!isset($_COOKIE[$uv_key])) {
-        $wpdb->query($wpdb->prepare("UPDATE $tbl SET uv=uv+1 WHERE stat_date=%s", $today));
-    }
+	$uv_key = 'jinyu_uv_' . $today;
+	if (!isset($_COOKIE[$uv_key])) {
+		$wpdb->query($wpdb->prepare("UPDATE $tbl SET uv=uv+1 WHERE stat_date=%s", $today));
+	}
 }
 
 // UV Cookie 必须在响应头发送前写入：shutdown 阶段头已发送，setcookie 必失败（headers already sent）。
@@ -121,6 +122,9 @@ add_action('wp_dashboard_setup', function(){
 add_action('wp_ajax_jinyu_stats', 'jinyu_stats_ajax');
 function jinyu_stats_ajax()
 {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( 'forbidden', 403 );
+    }
     global $wpdb;
     $tbl = $wpdb->prefix . 'jinyu_stats';
     $row = $wpdb->get_row($wpdb->prepare("SELECT SUM(pv) as pv, SUM(uv) as uv FROM %i", $tbl));

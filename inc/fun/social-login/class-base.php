@@ -38,7 +38,7 @@ abstract class Jinyu_OAuth_Provider
 		return '#3c4045';
 	}
 
-	/** 徽标文字（首字母/汉字，如 Q/G/码/A；不依赖外部图标库） */
+	/** 平台徽标：内置品牌 SVG（simple-icons 路径，currentColor），不依赖外部图标库 */
 	abstract public function icon(): string;
 
 	/**
@@ -183,10 +183,12 @@ abstract class Jinyu_OAuth_Provider
 	/** 归一化用户信息，补齐缺省字段，统一为字符串。 */
 	protected function normalize_user( array $u ): array {
 		return [
-			'id'       => (string) ( $u['id'] ?? '' ),
-			'nickname' => (string) ( $u['nickname'] ?? '' ),
-			'avatar'   => (string) ( $u['avatar'] ?? '' ),
-			'email'    => (string) ( $u['email'] ?? '' ),
+			'id'             => (string) ( $u['id'] ?? '' ),
+			'nickname'       => (string) ( $u['nickname'] ?? '' ),
+			'avatar'         => (string) ( $u['avatar'] ?? '' ),
+			'email'          => (string) ( $u['email'] ?? '' ),
+			// 邮箱是否经平台验证：仅取平台标记为 verified 的邮箱才为 true，供 core 防邮箱伪造接管。
+			'email_verified' => ! empty( $u['email_verified'] ),
 		];
 	}
 }
