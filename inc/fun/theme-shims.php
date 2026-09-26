@@ -41,17 +41,21 @@ if ( ! function_exists( 'jinyu_cache_set' ) ) {
 		return (bool) set_transient( $key, $val, $ttl );
 	}
 }
+/**
+ * 兼容别名：内容变更后的缓存失效（用户可见的历史入口，保留签名 void）。
+ *
+ * 真实实现在 page-cache.php 的 jinyu_companion_cache_flush()（插件独占，主题不可覆盖）。
+ * 本别名仅作降级别名 —— 老主题可能已定义同名 jinyu_cache_flush()，此处删守卫会 fatal；
+ * 保留守卫是为了不炸，但失效链本身走插件实现，主题版无法劫持。
+ *
+ * 返回 void 是为了维持历史签名；调用方请勿依赖其返回值。
+ * 需要「清理条目数」请直接调 jinyu_companion_cache_flush()。
+ */
 if ( ! function_exists( 'jinyu_cache_flush' ) ) {
-	/**
-	 * 内容变更后的缓存失效：整页缓存（代际失效）+ llms.txt 输出缓存。
-	 * 不再是空操作 —— 否则插件独立运行时发布/更新文章最长 TTL 内一直是旧页面。
-	 */
 	function jinyu_cache_flush(): void {
-		if ( function_exists( 'jinyu_page_cache_flush' ) ) {
-			jinyu_page_cache_flush();
+		if ( function_exists( 'jinyu_companion_cache_flush' ) ) {
+			jinyu_companion_cache_flush();
 		}
-		delete_transient( 'jinyu_llms_index_cache' );
-		delete_transient( 'jinyu_llms_full_cache' );
 	}
 }
 

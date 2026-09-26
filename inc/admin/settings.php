@@ -812,6 +812,40 @@ function jinyu_companion_settings_page_html(): void {
 										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '启用整页缓存', 'jinyu-theme-companion' ); ?></div>
 											<div class="jyc-fdesc"><?php echo esc_html__( '为未登录访客缓存整页 HTML，显著提升匿名访问性能。', 'jinyu-theme-companion' ); ?></div></div>
 									</div>
+									<?php
+									// 整页缓存后端状态：目录不可用时明确写出来。
+									// 否则「开关已开但缓存从未生效」是静默的，用户无从察觉。
+									$jpc = function_exists( 'jinyu_page_cache_status' ) ? jinyu_page_cache_status() : null;
+									if ( $jpc && $jpc['enabled'] ) :
+										$jpc_ready = (bool) $jpc['ready'];
+										$jpc_last  = $jpc['last_write'] > 0
+											? human_time_diff( $jpc['last_write'] ) . __( '前', 'jinyu-theme-companion' )
+											: __( '刚刚', 'jinyu-theme-companion' );
+										?>
+										<div style="margin-top:8px;font-size:12px;line-height:1.7;<?php echo $jpc_ready ? 'color:#1f7a3d' : 'color:#b3261e'; ?>">
+											<?php if ( $jpc_ready ) : ?>
+												<?php
+												                                printf(
+                                    /* translators: 1: 缓存文件数；2: 最近写入时间 */
+                                    esc_html__( '缓存目录就绪：%1$s 个缓存文件，最近写入 %2$s。', 'jinyu-theme-companion' ),
+                                    number_format_i18n( (int) $jpc['files'] ),
+                                    esc_html( $jpc_last )
+                                );
+                                ?>
+                                <div style="margin:10px 0 4px;color:#5b6472;font-size:12px;line-height:1.7">
+                                    <?php
+                                    // 内含 <code> 标记，输出处不做转义（与 jinyu_page_cache_hint 一致）
+                                    if ( function_exists( 'jinyu_page_cache_etag_hint' ) ) {
+                                        echo jinyu_page_cache_etag_hint();
+                                    }
+                                    ?>
+                                </div>
+											<?php else : ?>
+												<strong><?php esc_html_e( '整页缓存未生效', 'jinyu-theme-companion' ); ?></strong>
+												<?php echo jinyu_page_cache_hint(); // 内含 esc_html 处理过的路径，非转义输出 ?>
+											<?php endif; ?>
+										</div>
+									<?php endif; ?>
 									<div class="jyc-fl" style="margin-top:6px"><?php echo esc_html__( '缓存有效期', 'jinyu-theme-companion' ); ?>
 										<div class="jyc-slider-wrap">
 											<input type="range" name="page_cache_ttl" min="60" max="86400" step="60" value="<?php echo esc_attr( $page_cache_ttl ); ?>" id="jyc-ttlRange">

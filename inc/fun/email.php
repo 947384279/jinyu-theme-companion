@@ -69,6 +69,8 @@ add_action('wp_ajax_jinyu_test_smtp', function () {
 add_action('wp_ajax_jinyu_clear_cache', function () {
     check_ajax_referer('jinyu_companion_settings', 'jinyu_companion_nonce');
     if (!current_user_can('manage_options')) wp_send_json_error(__('权限不足', 'jinyu-theme-companion'));
-    $n = function_exists('jinyu_cache_flush') ? jinyu_cache_flush() : 0;
+    // 走插件独占的失效入口（jinyu_companion_cache_flush 返回清理条目数；
+    // 旧别名 jinyu_cache_flush 签名是 void，拿不到计数）。
+    $n = function_exists('jinyu_companion_cache_flush') ? jinyu_companion_cache_flush() : 0;
     wp_send_json_success(sprintf(__('已清理 %d 条缓存', 'jinyu-theme-companion'), (int) $n));
 });

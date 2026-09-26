@@ -1883,8 +1883,8 @@ add_action(
 		}
 		// 同步主题侧选项：前台 CDN 重写实际由主题读 jinyu_options 驱动。
 		jinyu_storage_sync_theme_domain( $domain, $s['storage_prefix'] ?? '' );
-		if ( function_exists( 'jinyu_cache_flush' ) ) {
-			jinyu_cache_flush();
+		if ( function_exists( 'jinyu_companion_cache_flush' ) ) {
+			jinyu_companion_cache_flush();
 		}
 		// 必须清 Memcached：jinyu_options 是 autoload 选项，被对象缓存缓存，
 		// 不清则改完 DB 前台仍读旧 CDN（这正是早期「点了没用」的缓存陷阱）。
@@ -1921,8 +1921,8 @@ add_action(
 		jinyu_companion_save_settings( $s );
 		// 同步主题侧选项（关键）：前台 CDN 重写读的是主题 jinyu_options，不清它前台不会回退。
 		jinyu_storage_sync_theme_domain( '' );
-		if ( function_exists( 'jinyu_cache_flush' ) ) {
-			jinyu_cache_flush();
+		if ( function_exists( 'jinyu_companion_cache_flush' ) ) {
+			jinyu_companion_cache_flush();
 		}
 		// 必须清 Memcached：jinyu_options 是 autoload 选项，被对象缓存缓存，
 		// 不清则改完 DB 前台仍读旧 CDN（这正是早期「点了没用」的缓存陷阱）。

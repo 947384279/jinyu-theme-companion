@@ -97,7 +97,7 @@ function jinyu_llms_serve(): void {
 	header( 'X-Robots-Tag: index, follow' );
 
 	// 输出缓存：AI 爬虫抓取 /llms-full.txt 曾每次触发全量文章查询 + HTML→MD 转换（CPU 尖峰）。
-	// 内容变更由 jinyu_cache_flush()（save_post 等钩子）清掉，TTL 仅兜底。
+	// 内容变更由 jinyu_companion_cache_flush()（save_post 等钩子）清掉，TTL 仅兜底。
 	$cache_key = 'full' === $mode ? 'jinyu_llms_full_cache' : 'jinyu_llms_index_cache';
 	$cached    = get_transient( $cache_key );
 	if ( is_string( $cached ) && '' !== $cached ) {

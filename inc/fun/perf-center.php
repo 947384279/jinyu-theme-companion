@@ -868,14 +868,22 @@ function jyc_perf_flush_page_cache(): string {
 	// 本插件整页缓存（文件静态页）：epoch 版本号翻转即全量失效。
 	if ( function_exists( 'jinyu_page_cache_flush' ) ) {
 		jinyu_page_cache_flush();
-		$msgs[] = __( '整页缓存已清空', 'jinyu-theme-companion' );
+
+		// 顺带回报后端可用性：缓存目录不可用时「已清空」只是清了个空目录，
+		// 不说清楚的话用户会以为缓存生效了，实际每次访问都在重跑 WordPress。
+		$pc = function_exists( 'jinyu_page_cache_status' ) ? jinyu_page_cache_status() : [];
+		if ( ! empty( $pc['enabled'] ) && empty( $pc['ready'] ) ) {
+			$msgs[] = __( '整页缓存已清空（但缓存目录不可用，缓存未生效）', 'jinyu-theme-companion' );
+		} else {
+			$msgs[] = __( '整页缓存已清空', 'jinyu-theme-companion' );
+		}
 	}
 
-	// 主题内容缓存（transient / 对象缓存组）：先清它，否则点「清除整页缓存」
-	// 只清了第三方插件、主题缓存原样留存，造成「点了没反应」的假象。
-	if ( function_exists( 'jinyu_cache_flush' ) ) {
-		$n      = jinyu_cache_flush();
-		$msgs[] = sprintf( __( '主题内容缓存已清空（%d 项）', 'jinyu-theme-companion' ), $n );
+	// 片段缓存（transient / 对象缓存组）：走插件独占失效入口，主题定义的同义函数无法劫持，
+	// 否则点「清除整页缓存」只清了第三方插件、本插件片段缓存原样留存，造成「点了没反应」的假象。
+	if ( function_exists( 'jinyu_companion_cache_flush' ) ) {
+		$n      = jinyu_companion_cache_flush();
+		$msgs[] = sprintf( __( '片段缓存已清空（%d 项）', 'jinyu-theme-companion' ), $n );
 	}
 
 	// 第三方整页缓存插件
