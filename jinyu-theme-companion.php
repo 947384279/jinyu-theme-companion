@@ -6,7 +6,7 @@
  *              three-part structure, this plugin takes over all functional capabilities (SEO, structured
  *              data, social, related posts, shortcodes, cache, anti-spam, index ping, and more) so the
  *              theme stays a pure presentation layer. All outbound features are off by default.
- * Version:     1.1.0
+ * Version:     1.2.1
  * Author:      金玉主题作者
  * Author URI:  https://www.qicaiyun.top
  * License:     GPL-2.0-or-later
@@ -29,7 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 主题缺失时优雅降级，不会白屏。文本域统一使用字面量 'jinyu-theme-companion'。
  * ------------------------------------------------------------------------ */
 if ( ! defined( 'JINYU_CUR_VER' ) ) {
-	define( 'JINYU_CUR_VER', '1.1.0' );
+	define( 'JINYU_CUR_VER', '1.2.1' );
 }
 
 /* 插件自有路径常量：模块（shortcode-ui / poster 等）一律引用插件自身资源，

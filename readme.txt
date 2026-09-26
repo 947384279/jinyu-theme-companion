@@ -6,7 +6,7 @@ Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.2.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,16 @@ Client secrets are encrypted (AES-256-CBC with HMAC) in your site's own database
 
 == Changelog ==
 
+= 1.2.1 =
+* New: Page cache now stores to disk (`wp-content/cache/jinyu/page/`) instead of transients. Transients fall back to `wp_options` on servers without Memcached or Redis, which costs an extra query on every read, writes a large option row on every miss, and risks OOM via autoload. The disk backend needs no extension and no cache daemon: zero SQL, zero resident memory.
+* New: Page-cache keys include the version segment, the site's `blog_id`, and a normalized URI — so Multisite and multiple sites on one machine stay isolated (a site can no longer be served another site's page), and the cache dimension can be extended later by bumping the version without any migration.
+* New: Conditional requests — a cache hit now sends an ETag and `Cache-Control: public, max-age=600`, and a matching `If-None-Match` returns 304 with no body. Useful when a reverse proxy or CDN sits in front of the site.
+* New: Cache-directory diagnostics — if the directory cannot be created or written, the plugin no longer degrades silently. Settings show the exact reason and a copy-paste fix command (correct ownership for the PHP-FPM user), and the admin surfaces a one-time reminder per day.
+* New: Non-HTML responses are excluded from caching. Anonymous REST, oEmbed, `_jsonp`, `doing_wp_cron`, `xmlrpc.php` and `admin-ajax.php` are no longer stored as HTML and served back with a Content-Type that does not match the body.
+* New: Flushing is now owned by the plugin — `jinyu_companion_cache_flush()` is the single entry point. The legacy `jinyu_cache_flush()` remains as a fallback alias so themes that already define their own copy do not fatal.
+* Tweak: no cache read or write while WordPress is installing or upgrading, so a half-built page can never be frozen into a cache file.
+* Tweak: if a response has already started, a hit degrades to plain content output instead of discarding the cache entry.
+
 = 1.1.0 =
 * New: HTTP transport check on the Front-end Acceleration pane — measures what the plugin cannot configure itself: text compression (HTML vs static assets, checked separately), static-asset cache lifetime, HTML cache headers, and HTTP/3 support. Nothing is requested until you press "Run check"; results are cached for 10 minutes.
 * New: Page-cache exclusion rules — "Do not cache these paths" (one per line, directory-prefix and wildcard matching, `#` comments), "Ignored query parameters" (removed from the cache key so one page serves every campaign parameter; defaults to the common utm_* / gclid / fbclid set), and "Do not cache when these parameters are present" (for dynamic or personalized pages).
@@ -105,6 +115,9 @@ Client secrets are encrypted (AES-256-CBC with HMAC) in your site's own database
 * Initial public release, extracted from the Jinyu theme: SEO / structured data / index ping / social follow and messages / related posts / series / moments / automatic internal linking / shortcodes / anti-spam / page cache / database optimization / mail / posters.
 
 == Upgrade Notice ==
+
+= 1.2.1 =
+Page cache moves to a disk backend and gains conditional requests (ETag / 304), Multisite isolation, and cache-directory diagnostics. If caching was enabled, existing content is served from disk; nothing to configure. Note that a 304 response requires your web server to forward the conditional-request header to PHP — on Nginx add `fastcgi_param HTTP_IF_NONE_MATCH $http_if_none_match;` to the server block. Without it caching still works, you only lose the bandwidth saving. (Apache usually needs no change.)
 
 = 1.1.0 =
 Adds the HTTP transport check and page-cache exclusion rules. Existing page-cache settings are preserved; the new "ignored parameters" default only raises the hit rate, it never changes which pages are cached.
