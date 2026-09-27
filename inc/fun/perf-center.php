@@ -982,9 +982,10 @@ function jyc_perf_render_status_html(): string {
 		return $row;
 	};
 
-	$op_hit = $o ? $o['hit_rate'] : null;
+	// SAPI 未启用 opcache 时 jyc_perf_opcache_stats() 只回 ['enabled'=>false]，键不存在。
+	$op_hit = $o ? ( $o['hit_rate'] ?? null ) : null;
 	$mc_ok  = ( $m && ! empty( $m['reachable'] ) );
-	$mc_hit = $mc_ok ? $m['hit_rate'] : null;
+	$mc_hit = $mc_ok ? ( $m['hit_rate'] ?? null ) : null;
 	$mver   = $mc_ok ? (string) ( $m['version'] ?? '' ) : '';
 	$mtag   = '' !== $mver ? 'v' . $mver : ( null === $m ? __( '未安装', 'jinyu-theme-companion' ) : __( '不可达', 'jinyu-theme-companion' ) );
 
@@ -1175,8 +1176,8 @@ function jyc_perf_ajax_optimize(): void {
 	// 命中率：清缓存后会明显回落，单独给前后对比
 	$hit = static function ( $oc, $mc ): array {
 		return [
-			'opcache'   => $oc ? (float) $oc['hit_rate'] : null,
-			'memcached' => ( $mc && ! empty( $mc['reachable'] ) ) ? (float) $mc['hit_rate'] : null,
+			'opcache'   => $oc ? (float) ( $oc['hit_rate'] ?? 0 ) : null,
+			'memcached' => ( $mc && ! empty( $mc['reachable'] ) ) ? (float) ( $mc['hit_rate'] ?? 0 ) : null,
 		];
 	};
 
