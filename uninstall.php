@@ -62,8 +62,51 @@ function jinyu_companion_uninstall_site( array $options, array $tables ): void {
 		    OR option_name LIKE '\_transient\_timeout\_jy\_captcha\_%'"
 	);
 
+	/* 图片水印的残留清理：
+	 * 1) 附件上的水印签名 meta，删掉插件后就是没人认识的空字段；
+	 * 2) 水印限流与批量任务的 transient（限流键是 jyc_wm_rl_，不在上面的通用前缀里）；
+	 * 3) uploads 里的 xxx-jywmo.* 孤儿备份——按设计它们只是水印前的原图替身，
+	 *    插件卸载后没有任何东西再引用它们，留着就是纯占地方。 */
+	$wpdb->delete( $wpdb->postmeta, [ 'meta_key' => '_jinyu_wm_sig' ], [ '%s' ] );
+	$wpdb->delete( $wpdb->postmeta, [ 'meta_key' => '_jinyu_wm_files' ], [ '%s' ] );
+	$wpdb->query(
+		"DELETE FROM {$wpdb->options}
+		 WHERE option_name LIKE '\_transient\_jyc\_wm\_rl\_%'
+		    OR option_name LIKE '\_transient\_timeout\_jyc\_wm\_rl\_%'
+		    OR option_name LIKE '\_transient\_jinyu\_wm\_task\_%'
+		    OR option_name LIKE '\_transient\_timeout\_jinyu\_wm\_task\_%'"
+	);
+	jinyu_companion_uninstall_wm_files();
+
 	foreach ( $tables as $table ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- 表名来自本文件硬编码，非用户输入
 		$wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
+	}
+}
+
+/**
+ * 清掉 uploads 目录里水印留下的 -jywmo 备份孤儿文件。
+ * 只删本插件造的文件（文件名形如 xxx-jywmo.jpg），且限定在 uploads 之内。
+ */
+function jinyu_companion_uninstall_wm_files(): void {
+	$dir = ( defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : '' ) . '/uploads';
+	if ( '' === $dir || ! is_dir( $dir ) || ! function_exists( 'glob' ) ) {
+		return;
+	}
+	// 年 / 月分目录最多再深两层，够覆盖绝大多数站点
+	$patterns = [
+		$dir . '/*-jywmo.*',
+		$dir . '/*/*-jywmo.*',
+		$dir . '/*/*/*-jywmo.*',
+	];
+	$seen     = [];
+	foreach ( $patterns as $pattern ) {
+		foreach ( (array) glob( $pattern ) as $path ) {
+			if ( ! is_file( $path ) || isset( $seen[ $path ] ) ) {
+				continue;
+			}
+			$seen[ $path ] = true;
+			@unlink( $path );
+		}
 	}
 }
