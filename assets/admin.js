@@ -21,7 +21,9 @@
 		smtp: document.getElementById('pane-smtp'),
 		storage: document.getElementById('pane-storage'),
 		social: document.getElementById('pane-social'),
-		wechat: document.getElementById('pane-wechat')
+		wechat: document.getElementById('pane-wechat'),
+		io: document.getElementById('pane-io'),
+		media: document.getElementById('pane-media')
 	};
 
 	function showPane(name) {
@@ -417,7 +419,8 @@ if (nav) {
 		['no_category_enable', '去除 /category/'], ['ld_json_enable', 'JSON-LD'],
 		['auto_link_enable', '自动内链'], ['indexnow_enable', 'IndexNow'], ['page_cache_enable', '整页缓存'],
 		['speculation_enable', 'Speculation 预取'], ['img_alt_enable', '图片 alt 补全'], ['close_comments_old', '旧文关评'],
-		['storage_auto_upload', '附件自动上云'], ['storage_delete_local', '推送后删本地']
+		['storage_auto_upload', '附件自动上云'], ['storage_delete_local', '推送后删本地'],
+	['img_wm_enable', '图片水印']
 	];
 	function computeOverview() {
 		var on = 0;
@@ -1562,5 +1565,576 @@ if (nav) {
 			if (window.jycToast) { window.jycToast('已恢复为默认回调地址'); }
 		});
 	}
+
+	/* 配置备份：拖放上传区。点击/拖入都落到同一个隐藏 file input；
+	   选了文件切 multipart，纯粘贴文本保持默认编码。 */
+	var form = document.getElementById('jyc-form');
+	var ioFile = document.getElementById('jyc-import-file');
+	var ioDrop = document.getElementById('jyc-drop');
+	var ioBox = document.getElementById('jyc-drop-file');
+	var ioName = document.getElementById('jyc-drop-name');
+	var ioSize = document.getElementById('jyc-drop-size');
+	var ioClear = document.getElementById('jyc-drop-clear');
+
+	function ioHumanSize(bytes) {
+		if (bytes < 1024) { return bytes + ' B'; }
+		if (bytes < 1048576) { return (bytes / 1024).toFixed(1) + ' KB'; }
+		return (bytes / 1048576).toFixed(2) + ' MB';
+	}
+
+	function ioApplyFile(file) {
+		if (!file) { return; }
+		if (ioName) { ioName.textContent = file.name; }
+		if (ioSize) { ioSize.textContent = ioHumanSize(file.size); }
+		if (ioBox) { ioBox.hidden = false; }
+		if (ioDrop) { ioDrop.hidden = true; }
+		if (form) { form.setAttribute('enctype', 'multipart/form-data'); }
+	}
+
+	function ioResetFile() {
+		if (ioFile) { ioFile.value = ''; }
+		if (ioBox) { ioBox.hidden = true; }
+		if (ioDrop) { ioDrop.hidden = false; }
+		if (form) { form.setAttribute('enctype', 'application/x-www-form-urlencoded'); }
+	}
+
+	if (form && ioFile) {
+		ioFile.addEventListener('change', function () {
+			if (this.value) { ioApplyFile(this.files && this.files[0]); } else { ioResetFile(); }
+		});
+	}
+	if (ioDrop && ioFile) {
+		ioDrop.addEventListener('click', function () { ioFile.click(); });
+		ioDrop.addEventListener('keydown', function (e) {
+			if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ioFile.click(); }
+		});
+		['dragenter', 'dragover'].forEach(function (ev) {
+			ioDrop.addEventListener(ev, function (e) { e.preventDefault(); ioDrop.classList.add('is-drag'); });
+		});
+		['dragleave', 'dragend'].forEach(function (ev) {
+			ioDrop.addEventListener(ev, function () { ioDrop.classList.remove('is-drag'); });
+		});
+		ioDrop.addEventListener('drop', function (e) {
+			e.preventDefault();
+			ioDrop.classList.remove('is-drag');
+			var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+			if (!file) { return; }
+			if (!/\.json$/i.test(file.name) && file.type !== 'application/json') {
+				if (window.jycToast) { window.jycToast('仅支持 .json 备份文件'); }
+				return;
+			}
+			try {
+				var dt = new DataTransfer();
+				dt.items.add(file);
+				ioFile.files = dt.files;
+			} catch (err) { /* 老内核无 DataTransfer：仅回显，提交时仍走原 input */ }
+			ioApplyFile(file);
+		});
+	}
+	if (ioClear) {
+		ioClear.addEventListener('click', function (e) { e.stopPropagation(); ioResetFile(); });
+	}
+
+	/* 导出含凭据模式：勾选风险确认后，下载链接切到完整备份 URL 并换警示态 */
+	var ioFullCk = document.getElementById('jyc-export-full');
+	var ioExpBtn = document.getElementById('jyc-export-btn');
+	if (ioFullCk && ioExpBtn && ioExpBtn.dataset.hrefSafe && ioExpBtn.dataset.hrefFull) {
+		ioFullCk.addEventListener('change', function () {
+			if (this.checked) {
+				ioExpBtn.setAttribute('href', ioExpBtn.dataset.hrefFull);
+				ioExpBtn.textContent = '下载完整备份（含凭据）';
+				ioExpBtn.classList.add('jyc-export-full-mode');
+				ioExpBtn.classList.remove('jyc-btn-soft');
+			} else {
+				ioExpBtn.setAttribute('href', ioExpBtn.dataset.hrefSafe);
+				ioExpBtn.textContent = '下载 JSON 备份';
+				ioExpBtn.classList.remove('jyc-export-full-mode');
+				ioExpBtn.classList.add('jyc-btn-soft');
+			}
+		});
+	}
+
+	/* ================= 图片水印：实时预览 / 九宫格 / 批量任务 =================
+	 * 预览在浏览器端按与引擎同源的参数绘制（字号=短边比例、边距、九宫格、不透明度），
+	 * 保存前即可看到实际效果；批量走 start → step 轮询，进度存用户级 transient。 */
+	var wmCanvas = document.getElementById('jyc-wmCanvas');
+	var wmPosInput = document.getElementById('jyc-wmPos');
+	var wmGrid = document.getElementById('jyc-wmGrid');
+	var wmSizesBox = document.getElementById('jyc-wmSizes');
+	var wmPane = document.getElementById('pane-media');
+
+	function wmVal(name, def) {
+		var el = document.querySelector('[name="' + name + '"]');
+		if (!el || el.value === null || el.value === '') { return def; }
+		return el.value;
+	}
+	function wmDraw() {
+		if (!wmCanvas || !wmCanvas.getContext) { return; }
+		var text = wmVal('img_wm_text', '');
+		var want = parseInt(wmVal('img_wm_size', '18'), 10) || 18;
+		/* 与引擎 normalize_hex() 同一套归一化：#abc / #aabbcc / 非法值→白。
+		 * 预览必须和线上画出来一致，否则用户照着预览调完，保存后颜色又变样。 */
+		var fillHex = (function () {
+			var raw = String(wmVal('img_wm_color', '#ffffff') || '').trim().replace(/^#/, '').toLowerCase();
+			if (raw.length === 3) { raw = raw[0] + raw[0] + raw[1] + raw[1] + raw[2] + raw[2]; }
+			return /^[0-9a-f]{6}$/.test(raw) ? '#' + raw : '#ffffff';
+		})();
+		var margin = parseFloat(wmVal('img_wm_margin', '0.02')) || 0.02;
+		var opacity = parseInt(wmVal('img_wm_opacity', '60'), 10) || 60;
+		var pos = parseInt(wmVal('img_wm_pos', '9'), 10) || 9;
+		var ctx = wmCanvas.getContext('2d');
+
+		/* 位图分辨率跟随容器 CSS 宽度 × 设备像素比：
+		 * 写死 1200×800 在高 DPI 屏上会发虚、在窄栏里又浪费像素。
+		 * 上限 1600 兼顾「够清晰」与「别让一次重绘太久」。 */
+		var cssW = wmCanvas.clientWidth || 720;
+		var dpr = Math.min(window.devicePixelRatio || 1, 2);
+		var bw = Math.round(Math.max(360, Math.min(cssW * dpr, 1600)));
+		if (wmCanvas.width !== bw) {
+			wmCanvas.width = bw;
+			wmCanvas.height = Math.round(bw * 2 / 3); // 与 CSS aspect-ratio 3/2 保持一致
+		}
+		var iw = wmCanvas.width, ih = wmCanvas.height, short = Math.min(iw, ih);
+
+		// 底图用模拟照片：浅 / 深底都有大色块，水印对比度一眼可辨
+		var g = ctx.createLinearGradient(0, 0, iw, ih);
+		g.addColorStop(0, '#dfe7f5'); g.addColorStop(0.55, '#9db1cf'); g.addColorStop(1, '#f4f7fc');
+		ctx.fillStyle = g; ctx.fillRect(0, 0, iw, ih);
+		ctx.fillStyle = 'rgba(255,255,255,0.5)';
+		ctx.fillRect(Math.round(iw * 0.08), Math.round(ih * 0.1), Math.round(iw * 0.38), Math.round(ih * 0.45));
+		ctx.fillStyle = 'rgba(28,96,243,0.16)';
+		ctx.fillRect(Math.round(iw * 0.56), Math.round(ih * 0.46), Math.round(iw * 0.36), Math.round(ih * 0.36));
+
+		/* 与引擎同源的自适应上限：Jinyu_Watermark::MAX_SHORT_RATIO。
+		 * 面板填的是固定 px，预览必须如实反映「小图会被收缩」，否则预览和线上不一致。 */
+		var cap = Math.floor(short * 0.18);
+		var size = Math.max(8, Math.min(want, cap));
+		var pad = Math.round(short * margin);
+		ctx.font = '600 ' + size + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif';
+		var tw = ctx.measureText(text).width || size * text.length;
+		var th = Math.round(size * 1.35);
+		var col = pos % 3, row = Math.floor((pos - 1) / 3);
+		/* col = pos%3 ∈ {1,2,0} = 左/中/右（0 是右列：3/6/9 取模余 0）。
+		 * 旧代码写成 3===col 判右列，恒假 → 右列三个全画在中间，与引擎 position() 不一致。 */
+		var x = (1 === col) ? pad : (0 === col ? Math.max(0, iw - tw - pad) : Math.round((iw - tw) / 2));
+		var y = (0 === row) ? pad : (2 === row ? Math.max(0, ih - th - pad) : Math.round((ih - th) / 2));
+		ctx.globalAlpha = Math.max(0.1, Math.min(1, opacity / 100));
+		ctx.lineJoin = 'round';
+		ctx.lineWidth = Math.max(1, Math.round(size / 22));
+		ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+		ctx.strokeText(text, x, y + size);
+		ctx.fillStyle = fillHex;
+		ctx.fillText(text, x, y + size);
+		ctx.globalAlpha = 1;
+
+		// 把「填的值」和「实际画的值」分开说明，用户才知道小图为什么变小了
+		var hint = document.getElementById('jyc-wmSizeHint');
+		if (hint) {
+			hint.textContent = size < want
+				? '实际绘制 ' + size + 'px（已按小图上限收缩，设定 ' + want + 'px）'
+				: '实际绘制 ' + size + 'px';
+		}
+	}
+
+	if (wmGrid && wmPosInput) {
+		wmGrid.querySelectorAll('.jyc-wm-cell').forEach(function (cell) {
+			cell.addEventListener('click', function () {
+				wmGrid.querySelectorAll('.jyc-wm-cell').forEach(function (o) {
+					o.classList.remove('jyc-on');
+					o.setAttribute('aria-checked', 'false');
+				});
+				cell.classList.add('jyc-on');
+				cell.setAttribute('aria-checked', 'true');
+				wmPosInput.value = cell.getAttribute('data-pos');
+				wmDraw();
+			});
+		});
+	}
+	if (wmPane) {
+		wmPane.querySelectorAll('[name="img_wm_text"], [name="img_wm_size"], [name="img_wm_margin"], [name="img_wm_opacity"]').forEach(function (el) {
+			el.addEventListener('input', wmDraw);
+		});
+	}
+	/* 文字颜色：取色器 + hex 输入框双向同步。取色器 input/change 都绑（部分内核只在
+	 * change 提交）；hex 框手输合法值即回填取色器并重绘预览，非法值失焦时回显当前值。 */
+	(function () {
+		var color = document.getElementById('jyc-wmColor');
+		var hex = document.getElementById('jyc-wmColorHex');
+		if (!color || !hex) { return; }
+		function norm(v) {
+			var raw = String(v || '').trim().replace(/^#/, '').toLowerCase();
+			if (raw.length === 3) { raw = raw[0] + raw[0] + raw[1] + raw[1] + raw[2] + raw[2]; }
+			return /^[0-9a-f]{6}$/.test(raw) ? '#' + raw : null;
+		}
+		function fromColor() { hex.value = color.value; wmDraw(); }
+		color.addEventListener('input', fromColor);
+		color.addEventListener('change', fromColor);
+		hex.addEventListener('input', function () {
+			var c = norm(hex.value);
+			if (c) { color.value = c; wmDraw(); }
+		});
+		hex.addEventListener('change', function () {
+			var c = norm(hex.value);
+			if (c) { hex.value = c; } else { hex.value = color.value; }
+			wmDraw();
+		});
+	})();
+	// 尺寸勾选沿用面板统一的「圆点」视觉：隐藏 input 不动，只同步 .jyc-dot 状态
+	if (wmSizesBox) {
+		wmSizesBox.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+			cb.addEventListener('change', function () {
+				var dot = cb.parentNode.querySelector('.jyc-dot');
+				if (dot) { dot.classList.toggle('jyc-on', cb.checked); }
+			});
+		});
+	}
+	/* 视口变化 / 切回本分区时重绘：canvas 宽度变了，位图也要跟着重建。
+	 * rAF 节流，避免 resize 拖动时连续重建位图。 */
+	var wmRaf = 0;
+	function wmSchedule() {
+		if (wmRaf) { return; }
+		wmRaf = window.requestAnimationFrame(function () { wmRaf = 0; wmDraw(); });
+	}
+	window.addEventListener('resize', wmSchedule);
+	Array.prototype.forEach.call(document.querySelectorAll('#jyc-nav .jyc-nav-item[data-mod="media"]'), function (n) {
+		n.addEventListener('click', function () { wmRaf = 0; wmDraw(); });
+	});
+	wmDraw();
+
+	var wmTask = { running: false, mode: null, timer: null, retries: 0 };
+	function wmEls() {
+		return {
+			prog: document.getElementById('jyc-wmProg'),
+			fill: document.getElementById('jyc-wmFill'),
+			msg: document.getElementById('jyc-wmMsg')
+		};
+	}
+	/* 运行中把当前模式（加 / 去）的按钮就地变「停止任务」，其余禁用，避免两个任务并行。 */
+	function wmLock(on, mode) {
+		Array.prototype.forEach.call(document.querySelectorAll('.jyc-wm-btn'), function (b) {
+			var mine = on && b.getAttribute('data-mode') === mode;
+			b.disabled = on && !mine;
+			b.textContent = mine ? '停止任务' : (b.getAttribute('data-label') || b.textContent);
+		});
+	}
+	function wmRender(d, prefix) {
+		var e = wmEls();
+		if (e.prog) { e.prog.hidden = false; }
+		if (e.fill && d.total) { e.fill.style.width = Math.min(100, Math.round(d.done / d.total * 100)) + '%'; }
+		if (e.msg) { e.msg.textContent = (prefix ? prefix + '：' : '') + (d.message || (d.done + '/' + d.total)); }
+	}
+	function wmAbort() {
+		if (wmTask.timer) { clearTimeout(wmTask.timer); wmTask.timer = null; }
+		wmTask.running = false;
+		wmLock(false, wmTask.mode);
+		wmTask.mode = null;
+	}
+	function wmFetch(fd, onOk) {
+		var aurl = (typeof ajaxurl !== 'undefined') ? ajaxurl : '';
+		fetch(aurl, { method: 'POST', body: fd, credentials: 'same-origin' })
+			.then(function (r) { return r.json(); })
+			.then(function (res) {
+				wmTask.retries = 0;
+				if (!wmTask.running) { return; }
+				onOk(res);
+			})
+			.catch(function () {
+				if (!wmTask.running) { return; }
+				wmTask.retries++;
+				// 单次失败不断链：待处理清单与进度都在 transient，重试同一动作即可续跑
+				if (wmTask.retries >= 3) {
+					jycToast('请求连续失败，任务已暂停；再点一次即可继续');
+					wmAbort(); return;
+				}
+				wmTask.timer = setTimeout(function () { wmFetch(fd, onOk); }, 2000);
+			});
+	}
+	function wmStep() {
+		var fd = new FormData(document.getElementById('jyc-form'));
+		fd.append('action', 'jinyu_companion_wm_step');
+		wmFetch(fd, function (res) {
+			if (!wmTask.running) { return; }
+			if (!(res && res.success)) {
+				jycToast((res && res.data) ? String(res.data) : '任务失败');
+				wmAbort(); return;
+			}
+			var d = res.data || {};
+			wmRender(d);
+			if ('done' === d.status) {
+				jycToast(d.errors > 0 ? (d.message || '完成，但有失败项') : (d.message || '任务完成'));
+				wmAbort();
+				window.jycWmStats(null);
+				return;
+			}
+			wmTask.timer = setTimeout(wmStep, 600);
+		});
+	}
+	/* 统一入口：空闲 = 启动任务；该任务运行中 = 停止。scope 为 ids 时读「自选附件」输入框。 */
+	window.jycWmAction = function (btn) {
+		if (wmTask.running) { wmAbort(); jycToast('任务已停止，未处理的图片下次可继续'); return; }
+		var mode = btn.getAttribute('data-mode') || 'apply';
+		var scope = btn.getAttribute('data-wm') || 'all';
+		var form = document.getElementById('jyc-form');
+		if (!form) { return; }
+		var fd = new FormData(form);
+		fd.append('action', 'jinyu_companion_wm_start');
+		fd.set('mode', mode);
+		if ('ids' === scope) {
+			var ta = document.getElementById('jyc-wmIds');
+			var ids = (ta ? ta.value : '').split(/[\s,;\n]+/).filter(Boolean);
+			if (!ids.length) { jycToast('请先填写附件 ID（逗号或空格分隔）'); if (ta) { ta.focus(); } return; }
+			fd.set('ids', ids.join(','));
+		}
+		wmTask.running = true; wmTask.mode = mode; wmTask.retries = 0;
+		wmLock(true, mode);
+		var e = wmEls();
+		if (e.prog) { e.prog.hidden = false; }
+		if (e.msg) { e.msg.textContent = '正在准备任务…'; }
+		wmFetch(fd, function (res) {
+			if (!wmTask.running) { return; }
+			if (!(res && res.success)) {
+				jycToast((res && res.data) ? String(res.data) : '任务失败');
+				wmAbort(); return;
+			}
+			if (!res.data.total) { jycToast('没有需要处理的新图片'); wmAbort(); return; }
+			wmStep();
+		});
+	};
+	window.jycWmStats = function (btn) {
+		var form = document.getElementById('jyc-form');
+		if (!form) { return; }
+		var fd = new FormData(form);
+		fd.append('action', 'jinyu_companion_wm_stats');
+		var old = btn ? btn.textContent : '';
+		if (btn) { btn.textContent = '统计中…'; }
+		fetch((typeof ajaxurl !== 'undefined') ? ajaxurl : '', { method: 'POST', body: fd, credentials: 'same-origin' })
+			.then(function (r) { return r.json(); })
+			.then(function (res) {
+				var d = (res && res.success) ? res.data : null;
+				var txt = document.getElementById('jyc-wmStatTxt');
+				if (txt) {
+					txt.textContent = '媒体库图片 ' + (d ? d.total : '—') + ' 张，已加水印 ' + (d ? d.done : '—') + ' 张';
+				}
+				var st = document.getElementById('jyc-wmState');
+				if (st && d) {
+					st.className = 'jyc-opstate ' + (d.enabled ? 'is-on' : 'is-off');
+					st.textContent = d.editor ? (d.enabled ? '引擎可用 · 已启用' : '引擎可用 · 未启用') : '环境不支持图像处理';
+				}
+			})
+			.catch(function () { jycToast('统计刷新失败'); })
+			.then(function () { if (btn) { btn.textContent = old; } });
+	};
+	// 页面加载即检测未完成任务：有则自动续跑（关闭页面 / 切走再回来不丢进度）
+	(function () {
+		var form = document.getElementById('jyc-form');
+		if (!form) { return; }
+		var fd = new FormData(form);
+		fd.append('action', 'jinyu_companion_wm_status');
+		fetch((typeof ajaxurl !== 'undefined') ? ajaxurl : '', { method: 'POST', body: fd, credentials: 'same-origin' })
+			.then(function (r) { return r.json(); })
+			.then(function (res) {
+				var d = (res && res.success) ? res.data : null;
+				if (!d || 'running' !== d.status) { return; }
+				var mode = d.mode === 'remove' ? 'remove' : 'apply';
+				wmTask.running = true; wmTask.mode = mode; wmTask.retries = 0;
+				wmLock(true, mode);
+				wmRender(d, '检测到未完成的' + (mode === 'remove' ? '还原' : '加水印') + '任务，已自动继续');
+				wmStep();
+			})
+			.catch(function () {});
+	})();
+
+	/* ---------------- 悬浮保存（脏检测浮条） ----------------
+	 * 与主题「有未保存的更改」同一套交互：改动即提示，保存走 admin-ajax 不刷新页面，
+	 * 失败保留脏状态并提示，绝不静默吞掉。
+	 * 收集口径直接取 FormData —— 与整表保存同源，不存在第二套序列化实现。
+	 */
+	(function () {
+		var form = document.getElementById('jyc-form');
+		if (!form) { return; }
+
+		/* 控制域不参与脏比较：它们只决定「提交哪套动作 / 落到哪个分区 / 走哪条通道」，
+		 * 改它们不代表用户改了配置，纳入比较会把「点了下导入确认框」误判成未保存。 */
+		var SKIP = /^(jinyu_companion_nonce|jinyu_companion_save|jinyu_companion_ajax|jyc_active_pane|jyc_import|jyc_import_file|jyc_import_text|jyc_import_confirm|action|jyc_import_submit)$/;
+
+		var bar = document.getElementById('jyc-dirtybar');
+		var cntEl = document.getElementById('jyc-db-count');
+		var saveBtn = document.getElementById('jyc-db-save');
+		var discBtn = document.getElementById('jyc-db-discard');
+		var saving = false, restoring = false, pending = 0;
+
+		function collect() {
+			var o = {}, fd = new FormData(form);
+			fd.forEach(function (v, k) { if (!SKIP.test(k)) { o[k] = v; } });
+			return o;
+		}
+		/* 差异计数：键缺失当作空串比较，未勾选的复选框在 FormData 里直接缺席，必须能比出来。
+		 * 键集必须去重 —— 直接 concat 两份键名会让「仅在单边出现的新键」被计两次。 */
+		function diffCount(a, b) {
+			var seen = {}, n = 0;
+			Object.keys(a).concat(Object.keys(b)).forEach(function (k) {
+				if (seen[k]) { return; }
+				seen[k] = 1;
+				if ((a[k] || '') !== (b[k] || '')) { n++; }
+			});
+			return n;
+		}
+
+		var snap = JSON.stringify(collect());
+		var saved = snap;
+
+		/* 字段 → 分区索引：从 DOM 位置反查，避免手写「95 个字段 → 12 个分区」的映射表（必然漂移）。
+		 * 只为快照里真实存在且能定位到 .jyc-pane 的字段建索引。 */
+		var groups = {};
+		(function () {
+			var base = JSON.parse(snap);
+			Object.keys(base).forEach(function (k) {
+				var el = form.querySelector('[name="' + k + '"]');
+				if (!el || !el.closest) { return; }
+				var pane = el.closest('.jyc-pane');
+				if (!pane || !pane.id) { return; }
+				if (!groups[pane.id]) { groups[pane.id] = {}; }
+				groups[pane.id][k] = base[k];
+			});
+		}());
+
+		function refresh() {
+			if (restoring) { return; }
+			var cur = collect(), n = diffCount(cur, JSON.parse(snap));
+			if (n > 0) {
+				bar.classList.add('jyc-db-on');
+				bar.hidden = false;
+				if (cntEl) { cntEl.textContent = n; cntEl.hidden = false; }
+			} else {
+				bar.classList.remove('jyc-db-on');
+				if (cntEl) { cntEl.hidden = true; }
+			}
+			// 分区角标：逐分区只比该分区自己的字段，改 A 分区不会给 B 分区打点
+			Object.keys(groups).forEach(function (pid) {
+				var pane = document.getElementById(pid);
+				var nav = pane && document.querySelector('.jyc-nav-item[data-mod="' + pid.replace(/^pane-/, '') + '"]');
+				if (!nav) { return; }
+				var sub = {};
+				Object.keys(groups[pid]).forEach(function (k) { sub[k] = cur[k]; });
+				nav.classList.toggle('is-modified', diffCount(sub, groups[pid]) > 0);
+			});
+		}
+
+		function markDirty() {
+			if (pending) { return; }
+			pending = 1;
+			requestAnimationFrame(function () { pending = 0; refresh(); });
+		}
+
+		// input/change 覆盖原生控件；click(capture) 兜底自定义控件（九宫格选位、颜色 chip 等）
+		// 写隐藏 input 后不派发事件的情况，否则那些改动永远不会被识别为「脏」。
+		['input', 'change', 'click'].forEach(function (t) {
+			form.addEventListener(t, markDirty, true);
+		});
+
+		/* 放弃更改的回填基准：优先「上次保存」的状态 —— 初始状态在「改完又改回来且已保存过」
+		 * 的场景下会误伤用户手动改回的值。上次保存里没有的键说明当时该控件就是空的
+		 * （未勾选的复选框 / 未选中的单选项在 FormData 里直接缺席），按空值还原。
+		 * 只在初始化时算一次，保存成功后跟着 saved 一起更新。 */
+		var baseline = {};
+		function rebuildBaseline() {
+			var base = JSON.parse(saved);
+			baseline = {};
+			form.querySelectorAll('input, select, textarea').forEach(function (el) {
+				var k = el.getAttribute('name');
+				if (!k || SKIP.test(k)) { return; }
+				baseline[k] = Object.prototype.hasOwnProperty.call(base, k) ? base[k] : '';
+			});
+		}
+		rebuildBaseline();
+
+		/* 放弃更改：把表单回填到基准状态，并让自定义控件的可见部分跟着回滚。 */
+		function discard() {
+			restoring = true;
+			var prev = baseline, changed = [];
+			form.querySelectorAll('input, select, textarea').forEach(function (el) {
+				var k = el.getAttribute('name');
+				if (!k || SKIP.test(k) || !Object.prototype.hasOwnProperty.call(prev, k)) { return; }
+				var v = prev[k], before = el.type === 'checkbox' ? el.checked : el.value;
+				if (el.type === 'checkbox') { el.checked = (el.value === v) || (v === 'on' && !el.value); }
+				else if (el.type === 'radio') { el.checked = (el.value === v); }
+				else { el.value = v; }
+				var after = el.type === 'checkbox' ? el.checked : el.value;
+				if (String(before) !== String(after)) { changed.push(el); }
+			});
+			// 让自定义控件的可见部分跟着回滚（隐藏域已回填，这里补派发一次 change 触发其 UI 同步）
+			changed.forEach(function (el) { if (el.type !== 'hidden') { el.dispatchEvent(new Event('change', { bubbles: true })); } });
+			restoring = false;
+			markDirty();
+			jycToast('已放弃未保存的更改');
+		}
+
+		function saveNow() {
+			if (saving) { return; }
+			saving = true;
+			var fd = new FormData(form);
+			fd.append('action', 'jinyu_companion_save');
+			// 专属标志位：区分「测试连接 / 优化数据库」等同表单提交的 admin-ajax 请求
+			fd.append('jinyu_companion_ajax', '1');
+			var busy = saveBtn || document.querySelector('.jyc-top-actions .jyc-btn-primary');
+			var oldTxt = busy ? busy.textContent : '';
+			if (busy) { busy.disabled = true; busy.textContent = busy.getAttribute('data-loading') || '保存中…'; }
+			function idle() {
+				saving = false;
+				if (busy) { busy.disabled = false; busy.textContent = oldTxt; }
+			}
+			// 网络层失败（超时 / 500 拦截页）无法判定落库结果，退回整页提交这条永远可用的老路径，
+			// 而不是把用户改动留在页面上却没写进库。
+			function fallback(msg) {
+				idle();
+				jycToast(msg, 3200);
+				form.submit();
+			}
+			fetch((typeof ajaxurl !== 'undefined') ? ajaxurl : '', { method: 'POST', body: fd, credentials: 'same-origin' })
+				.then(function (r) { return r.text(); })
+				.then(function (txt) {
+					var res = null;
+					try { res = JSON.parse(txt); } catch (e) { res = null; }
+					idle();
+					if (!res) { fallback('保存失败，已回退为整页提交'); return; }
+					if (!res.success) { jycToast(res.msg || '保存失败', 3200); return; }
+					saved = JSON.stringify(collect());
+					rebuildBaseline();
+					snap = saved;
+					markDirty();
+					jycToast(res.msg || '设置已保存', 2400);
+				})
+				.catch(function () { fallback('保存失败，已回退为整页提交'); });
+		}
+
+		if (bar) {
+			if (saveBtn) { saveBtn.addEventListener('click', saveNow); }
+			if (discBtn) { discBtn.addEventListener('click', discard); }
+			// 未保存就离开：与 WP 核心一致地拦一次，避免整页提交刷新时丢失改动
+			window.addEventListener('beforeunload', function (e) {
+				if (bar.hidden || !bar.classList.contains('jyc-db-on')) { return; }
+				e.preventDefault();
+				e.returnValue = '';
+				return '';
+			});
+		}
+
+		// Ctrl/⌘+S：只在真的有改动时拦截，否则放给浏览器「保存网页」
+		document.addEventListener('keydown', function (e) {
+			if (!(e.ctrlKey || e.metaKey) || 's' !== String(e.key).toLowerCase()) { return; }
+			if (!bar || bar.hidden || !bar.classList.contains('jyc-db-on')) { return; }
+			e.preventDefault();
+			saveNow();
+		});
+
+		// 顶栏保存按钮 / 无 JS 降级：拦截整页提交，改走 ajax。
+		// 排除导入按钮（name=jyc_import，整表单动作按钮），它必须走原生提交。
+		form.addEventListener('submit', function (e) {
+			var sub = e.submitter || e.target;
+			if (sub && ('jyc_import' === sub.getAttribute('name') || 'jyc-import-submit' === sub.id)) { return; }
+			e.preventDefault();
+			saveNow();
+		});
+	}());
 
 })();

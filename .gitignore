@@ -13,3 +13,5 @@ _build.js
 _shot_*.png
 _theme_ref/
 settings-preview.html
+# 本地运维脚本（不进公开仓库）
+预览与脚本/

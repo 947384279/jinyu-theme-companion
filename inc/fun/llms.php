@@ -57,11 +57,11 @@ function jinyu_llms_full_maybe_flush(): void {
 // 主题已启用时也能立即生效：按版本号做一次重写规则刷新（之后不再重复刷新）
 add_action( 'init', 'jinyu_llms_maybe_flush', 20 );
 function jinyu_llms_maybe_flush(): void {
-	if ( get_option( 'jinyu_llms_rewrite_ver' ) === JINYU_CUR_VER ) {
+	if ( get_option( 'jinyu_llms_rewrite_ver' ) === JINYU_COMPANION_VER ) {
 		return;
 	}
 	flush_rewrite_rules();
-	update_option( 'jinyu_llms_rewrite_ver', JINYU_CUR_VER );
+	update_option( 'jinyu_llms_rewrite_ver', JINYU_COMPANION_VER );
 }
 
 // 主题启用/切换时刷新重写规则，使 ^llms\.txt$ 生效

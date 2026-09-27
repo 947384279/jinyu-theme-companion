@@ -35,7 +35,10 @@ interface Jinyu_Storage_Adapter {
 /* ───────────────────────────────────────────────────────────
  * 并行上传辅助（curl_multi，带并发上限）
  * ─────────────────────────────────────────────────────────── */
-function jinyu_curl_headers( $assoc ) {
+/* 全局函数名必须唯一：历史私有插件 wordpress-plugin-jinyu/inc/fun/storage.php 已有同名
+ * jinyu_curl_headers()，两插件同时加载时会「Cannot redeclare function」整站 500。
+ * 本插件（公开插件）侧统一加 jinyu_companion_ 前缀。 */
+function jinyu_companion_curl_headers( $assoc ) {
 	$out = array();
 	foreach ( (array) $assoc as $k => $v ) {
 		$out[] = $k . ': ' . $v;
@@ -382,7 +385,7 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 				array(
 					CURLOPT_URL            => $this->base() . $uri,
 					CURLOPT_CUSTOMREQUEST  => 'PUT',
-					CURLOPT_HTTPHEADER     => jinyu_curl_headers( $headers ),
+					CURLOPT_HTTPHEADER     => jinyu_companion_curl_headers( $headers ),
 					CURLOPT_POSTFIELDS     => $body,
 					CURLOPT_RETURNTRANSFER => true,
 					CURLOPT_SSL_VERIFYPEER => jinyu_storage_ssl_verify(),

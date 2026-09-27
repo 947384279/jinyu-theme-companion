@@ -67,26 +67,9 @@ function jinyu_poster_generate()
         }
     }
 
-    $font = null;
-    // 海报标题多为中文：优先选 CJK 字体，拉丁字体（DejaVu/Liberation）只作最后兜底，
-    // 否则 Linux 服务器无中文字体时中文渲染成方块
-    $font_candidates = [
-        'C:/Windows/Fonts/msyh.ttc',            // 微软雅黑
-        'C:/Windows/Fonts/msyh.ttf',
-        'C:/Windows/Fonts/simsun.ttc',          // 宋体
-        '/System/Library/Fonts/PingFang.ttc',   // macOS 苹方
-        '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',   // Linux 文泉驿
-        '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
-        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc', // Noto CJK（Debian fonts-noto-cjk）
-        '/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc',
-        '/usr/share/fonts/truetype/arphic/uming.ttc',     // AR PL UMing
-        ABSPATH . 'wp-includes/fonts/opensans/OpenSans-Regular.ttf',
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
-    ];
-    foreach ($font_candidates as $c) {
-        if ($c && file_exists($c)) { $font = $c; break; }
-    }
+    // 海报标题多为中文：优先选 CJK 字体，否则 Linux 服务器无中文字体时中文渲染成方块。
+    // 字体候选列表的唯一真源在 watermark.php 的 jinyu_companion_find_font()，此处复用不另存一份。
+    $font = jinyu_companion_find_font();
     if (function_exists('imagettftext') && is_string($font) && file_exists($font)) {
         imagettftext($img, 28, 0, 50, 720, $title_c, $font, $post->post_title);
         imagettftext($img, 16, 0, 50, 850, $site_c, $font, get_bloginfo('name'));

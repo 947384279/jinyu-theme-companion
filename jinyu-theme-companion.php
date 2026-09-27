@@ -6,7 +6,7 @@
  *              three-part structure, this plugin takes over all functional capabilities (SEO, structured
  *              data, social, related posts, shortcodes, cache, anti-spam, index ping, and more) so the
  *              theme stays a pure presentation layer. All outbound features are off by default.
- * Version:     1.2.1
+ * Version:     1.2.2
  * Author:      金玉主题作者
  * Author URI:  https://www.qicaiyun.top
  * License:     GPL-2.0-or-later
@@ -25,11 +25,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /* --------------------------------------------------------------------------
- * 版本常量兜底：插件各模块对主题的调用均经 function_exists() 守卫，
- * 主题缺失时优雅降级，不会白屏。文本域统一使用字面量 'jinyu-theme-companion'。
+ * 版本常量：本插件自有，常量名一律用 JINYU_COMPANION_VER。
+ * 不可用 JINYU_CUR_VER —— 该常量由主题定义（取自 style.css 的 Version），
+ * 插件先于主题载入，抢先定义会让主题读到的版本号变成插件版本，造成版本漂移。
  * ------------------------------------------------------------------------ */
-if ( ! defined( 'JINYU_CUR_VER' ) ) {
-	define( 'JINYU_CUR_VER', '1.2.1' );
+if ( ! defined( 'JINYU_COMPANION_VER' ) ) {
+	define( 'JINYU_COMPANION_VER', '1.2.2' );
 }
 
 /* 插件自有路径常量：模块（shortcode-ui / poster 等）一律引用插件自身资源，
@@ -148,6 +149,16 @@ require_once __DIR__ . '/inc/fun/baidu-push.php';
 	require_once __DIR__ . '/inc/fun/verification.php';
 	require_once __DIR__ . '/inc/fun/img-alt.php';
 
+	// 图片水印引擎（上传时自动打 + 面板批量 / 媒体库自选），默认关闭，主题无关
+	// 用 file_exists 包裹：这两份文件属于较新的增量，尚未随主文件一起部署到存量站点时，
+	// 裸 require 会「Failed opening required」直接整站 500；缺文件时静默跳过即可。
+	if ( file_exists( __DIR__ . '/inc/fun/watermark.php' ) ) {
+		require_once __DIR__ . '/inc/fun/watermark.php';
+	}
+	if ( file_exists( __DIR__ . '/inc/ajax/media-batch.php' ) ) {
+		require_once __DIR__ . '/inc/ajax/media-batch.php';
+	}
+
 	// 社交：关注 / 取关 / 消息 / 未读（主题调用 jinyu_follow_user 等）
 	require_once __DIR__ . '/inc/fun/social.php';
 	// 验证码 + 登录失败计数（主题登录/评论调用 jinyu_captcha_*）
@@ -181,6 +192,8 @@ require_once __DIR__ . '/inc/fun/baidu-push.php';
 	require_once __DIR__ . '/inc/ajax/poster.php';
 	// 设置面板：概览磁贴数据层（依赖 perf-center / stats，须在其后加载）
 	require_once __DIR__ . '/inc/admin/overview.php';
+	// 设置导入 / 导出：在 settings.php 之前加载（面板与保存入口均调用其 jinyu_companion_io_* / _import_*）。
+	require_once __DIR__ . '/inc/admin/import-export.php';
 	require_once __DIR__ . '/inc/admin/settings.php';
 } );
 

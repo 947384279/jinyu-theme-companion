@@ -44,7 +44,7 @@ add_filter( 'mce_external_plugins', function ( $plugins ) {
 		return $plugins;
 	}
 	$sc_js = JINYU_COMPANION_DIR . 'assets/shortcodes.min.js';
-	$sc_ver = file_exists( $sc_js ) ? filemtime( $sc_js ) : JINYU_CUR_VER;
+	$sc_ver = file_exists( $sc_js ) ? filemtime( $sc_js ) : JINYU_COMPANION_VER;
 	$plugins['jinyu_shortcodes'] = JINYU_COMPANION_URL . 'assets/shortcodes.min.js?ver=' . $sc_ver;
 	return $plugins;
 } );
@@ -92,7 +92,7 @@ add_action( 'admin_print_footer_scripts', function () {
 // 块编辑器（Gutenberg）快捷入口：仅块编辑器加载，注入数据并注册侧栏面板
 add_action( 'enqueue_block_editor_assets', function () {
 	$gb_js = JINYU_COMPANION_DIR . 'assets/shortcodes-gb.min.js';
-	$ver = file_exists( $gb_js ) ? filemtime( $gb_js ) : JINYU_CUR_VER;
+	$ver = file_exists( $gb_js ) ? filemtime( $gb_js ) : JINYU_COMPANION_VER;
 	wp_enqueue_script(
 		'jinyu-shortcodes-gb',
 		JINYU_COMPANION_URL . 'assets/shortcodes-gb.min.js',

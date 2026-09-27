@@ -75,34 +75,82 @@ if ( ! function_exists( 'jinyu_companion_is_checked' ) ) {
 	}
 }
 
-// 一次性迁移：若配套设置中 SMTP 等键为空，且主题 jinyu_get_option 可用，
-// 则从主题 jinyu_options 把已存配置（含已透明解密的 SMTP 密码）回填到 companion 设置，
-// 使主题「导入 / 重置」不再影响插件配置。迁移仅执行一次（由 jinyu_companion_migrated 标记）。
-if ( ! function_exists( 'jinyu_companion_maybe_migrate' ) ) {
-	function jinyu_companion_maybe_migrate(): void {
-		if ( get_option( 'jinyu_companion_migrated' ) ) {
+// 一次性迁移：SMTP 配置从主题 jinyu_options 回填到 companion 独立设置（含授权码加密）。
+//
+// 【为什么挂在 init 而不是插件加载期】插件先于主题载入：加载期主题 functions.php 尚未执行，
+// jinyu_get_option() 根本不存在，早期版本在此处的迁移被 function_exists 判定静默跳过，
+// 表现为「SMTP 面板已迁到插件、但旧配置一个都没跟过来」。改到 init 阶段后主题必已就绪。
+// 迁移幂等：由 jinyu_companion_smtp_migrated 标记，仅执行一次；换主题/未装主题时自动跳过。
+if ( ! function_exists( 'jinyu_companion_maybe_migrate_smtp' ) ) {
+	/**
+	 * SMTP 配置项迁移：把主题侧已存的值回填到插件，并统一为插件的加密格式。
+	 *
+	 * 注意：回调不接收任何参数，必须以 accepted_args=0 注册——
+	 * add_action 默认 accepted_args=1，WP 会把 $value 透传给回调，
+	 * 与形参类型不匹配时直接 TypeError（整站 500）。
+	 */
+	function jinyu_companion_maybe_migrate_smtp(): void {
+		// 迁移版本：库中标记值小于该版本时重跑（修复存量脏数据用，例如历史上的「密文套密文」）。
+		$version = 2;
+		if ( (int) get_option( 'jinyu_companion_smtp_migrated', 0 ) >= $version ) {
 			return;
 		}
-		$s = jinyu_companion_get_settings();
-		if ( function_exists( 'jinyu_get_option' ) ) {
-			$keys    = array( 'smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'smtp_pwd', 'smtp_from' );
-			$changed = false;
-			foreach ( $keys as $k ) {
-				if ( empty( $s[ $k ] ) ) {
-					$v = jinyu_get_option( $k, '' );
-					if ( '' !== $v ) {
-						$s[ $k ] = $v;
-						$changed = true;
-					}
-				}
+		// 先置位：主题缺席时不必每次请求重试
+		update_option( 'jinyu_companion_smtp_migrated', $version );
+		if ( ! function_exists( 'jinyu_get_option' ) ) {
+			return; // 主题未启用，无可迁移数据
+		}
+
+		$s       = jinyu_companion_get_settings();
+		$changed = false;
+
+		// 标量配置项：仅在本插件尚无值时回填，不覆盖用户已在插件里改过的值。
+		// smtp_enable 决定「是否接管全站发信」，必须与主题时代的语义一致（主题 sdt 默认 0=不接管），
+		// 否则原先关闭 SMTP 的站点会在迁移后被强制改道。
+		$keys = array( 'smtp_enable', 'smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'smtp_from' );
+		foreach ( $keys as $k ) {
+			if ( ! empty( $s[ $k ] ) ) {
+				continue;
 			}
-			if ( $changed ) {
-				jinyu_companion_save_settings( $s );
+			$v = jinyu_get_option( $k, '' );
+			if ( null === $v || '' === $v ) {
+				continue;
+			}
+			$s[ $k ] = is_bool( $v ) ? ( $v ? '1' : '0' ) : (string) $v;
+			$changed = true;
+		}
+
+		// 授权码：统一落成插件用的 jinyu_enc2:: 密文。
+		// 为什么需要逐级剥离：主题 crypto 已不再把 smtp_pwd 列为敏感字段，读到的可能是
+		// 主题侧历史密文（jinyu_enc:: / jinyu_enc2::）；直接拿去再加密会形成「密文套密文」，
+		// 发信时只解开一层 → 拿到的仍是密文 → SMTP 535 认证失败。最多解 3 层防御异常数据。
+		$stored = isset( $s['smtp_pwd'] ) ? (string) $s['smtp_pwd'] : '';
+		if ( '' === $stored ) {
+			$stored = (string) jinyu_get_option( 'smtp_pwd', '' );
+		}
+		if ( '' !== $stored ) {
+			$plain  = $stored;
+			$layers = 0;
+			while ( preg_match( '#^jinyu_enc2?::#', $plain ) && $layers < 3 ) {
+				$plain = (string) jinyu_companion_decrypt( $plain );
+				$layers++;
+			}
+			// 解到最后仍是密文 → 数据已损坏（密钥变更过），宁可不动也不写坏值。
+			// $layers > 1 表示原值是嵌套密文；非 enc2 前缀表示明文或旧格式——两种情况都要重写。
+			$need_write = '' !== $plain
+				&& ! preg_match( '#^jinyu_enc2?::#', $plain )
+				&& ( $layers > 1 || 0 !== strpos( $stored, 'jinyu_enc2::' ) );
+			if ( $need_write ) {
+				$s['smtp_pwd'] = jinyu_companion_encrypt( $plain );
+				$changed       = true;
 			}
 		}
-		update_option( 'jinyu_companion_migrated', 1 );
+
+		if ( $changed ) {
+			jinyu_companion_save_settings( $s );
+		}
 	}
-	jinyu_companion_maybe_migrate();
+	add_action( 'init', 'jinyu_companion_maybe_migrate_smtp', 5, 0 );
 }
 
 // 是否安装了主流 SEO 插件（Yoast / Rank Math / AIOSEO / SEOPress / TSF）。

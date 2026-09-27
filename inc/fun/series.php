@@ -36,9 +36,9 @@ add_action('init', function () {
 
 // 新分类法注册后刷新一次重写规则，确保 /series/ 归档页可访问（仅在版本变更时执行一次）
 add_action('init', function () {
-    if (get_option('jinyu_series_flush') !== JINYU_CUR_VER) {
+    if (get_option('jinyu_series_flush') !== JINYU_COMPANION_VER) {
         flush_rewrite_rules();
-        update_option('jinyu_series_flush', JINYU_CUR_VER);
+        update_option('jinyu_series_flush', JINYU_COMPANION_VER);
     }
 }, 20);
 

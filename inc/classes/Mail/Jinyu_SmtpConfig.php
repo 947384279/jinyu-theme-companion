@@ -24,6 +24,11 @@ class Jinyu_SmtpConfig
      */
     public function apply($phpmailer): void
     {
+        // 「接管全站发信」未开启时不改道，让 wp_mail 走服务器默认 mail()；
+        // 测试邮件（testOverride）豁免此开关——需要先验证通道才谈得上是否启用。
+        if (self::$testOverride === null && ! jinyu_companion_is_checked('smtp_enable', true)) {
+            return;
+        }
         $cfg = self::$testOverride ?? $this->cfgFromDb();
         self::applyConfig($phpmailer, $cfg);
     }
@@ -39,7 +44,8 @@ class Jinyu_SmtpConfig
             'port'   => (int) jinyu_companion_get_option('smtp_port', 465),
             'secure' => jinyu_companion_get_option('smtp_secure', 'ssl'),
             'user'   => jinyu_companion_get_option('smtp_user', ''),
-            'pwd'    => jinyu_companion_get_option('smtp_pwd', ''),
+            // 授权码加密入库（与 storage_secret 同策略）；对历史明文 decrypt 原样返回，平滑过渡
+            'pwd'    => jinyu_companion_decrypt((string) jinyu_companion_get_option('smtp_pwd', '')),
             'from'   => jinyu_companion_get_option('smtp_from', ''),
             'from_name' => jinyu_companion_get_option('smtp_from_name', ''),
         ];

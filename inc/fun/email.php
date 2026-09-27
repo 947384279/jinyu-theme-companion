@@ -36,7 +36,7 @@ add_action('wp_ajax_jinyu_test_smtp', function () {
         'port'   => (int) jinyu_companion_get_option('smtp_port', 465),
         'secure' => jinyu_companion_get_option('smtp_secure', 'ssl'),
         'user'   => jinyu_companion_get_option('smtp_user', ''),
-        'pwd'    => jinyu_companion_get_option('smtp_pwd', ''),
+        'pwd'    => jinyu_companion_decrypt((string) jinyu_companion_get_option('smtp_pwd', '')),
         'from'   => jinyu_companion_get_option('smtp_from', ''),
         'from_name' => jinyu_companion_get_option('smtp_from_name', ''),
     ];

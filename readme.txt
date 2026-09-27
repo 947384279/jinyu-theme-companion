@@ -6,7 +6,7 @@ Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.2.1
+Stable tag: 1.2.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,14 @@ Client secrets are encrypted (AES-256-CBC with HMAC) in your site's own database
 
 == Changelog ==
 
+= 1.2.2 =
+* New: Floating save bar on the settings screen — the panel now tracks unsaved edits the way the theme does. A pill stays pinned to the bottom of the viewport while changes are pending, showing how many fields differ, marking the affected nav items, and offering Save / Discard. Ctrl (Cmd) + S saves and the browser warns before closing a tab with pending edits.
+* New: Settings save over `admin-ajax` (`wp_ajax_jinyu_companion_save`) instead of a full-page POST. Saving no longer reloads the page, loses scroll position, or re-renders untouched panes; the existing whitelist sanitising path is unchanged, and the classic full-page submit still works as a fallback.
+* New: Image watermark engine — one-time rendering at upload time (before the file reaches object storage) with a nine-point position grid, full-library or selected-attachment batch runs with progress, and a live preview built from the same parameters the engine uses. Renamed originals are kept as `*-jywmo.*` sidecars instead of a second copy on disk.
+* New: Media panel gains a watermark section with batch tooling; re-running a batch is idempotent and skipped where a signature is already registered.
+* Fix: compatibility with the WordPress 7.1 image editor, where `WP_Image_Editor::width()` / `height()` were removed — sizes now come from `get_size()`.
+* Fix: watermark pass no longer writes to a temporary path with a custom suffix; `WP_Image_Editor::get_output_format()` strips unknown extensions, which made the temporary file vanish mid-write.
+
 = 1.2.1 =
 * New: Page cache now stores to disk (`wp-content/cache/jinyu/page/`) instead of transients. Transients fall back to `wp_options` on servers without Memcached or Redis, which costs an extra query on every read, writes a large option row on every miss, and risks OOM via autoload. The disk backend needs no extension and no cache daemon: zero SQL, zero resident memory.
 * New: Page-cache keys include the version segment, the site's `blog_id`, and a normalized URI — so Multisite and multiple sites on one machine stay isolated (a site can no longer be served another site's page), and the cache dimension can be extended later by bumping the version without any migration.
@@ -115,6 +123,9 @@ Client secrets are encrypted (AES-256-CBC with HMAC) in your site's own database
 * Initial public release, extracted from the Jinyu theme: SEO / structured data / index ping / social follow and messages / related posts / series / moments / automatic internal linking / shortcodes / anti-spam / page cache / database optimization / mail / posters.
 
 == Upgrade Notice ==
+
+= 1.2.2 =
+Adds the floating save bar (no page reload when saving) and the image watermark engine. Watermarking is off by default and runs on new uploads only until you start a batch from the Media pane; original images are preserved as `*-jywmo.*` sidecars. Settings and existing metadata are unaffected.
 
 = 1.2.1 =
 Page cache moves to a disk backend and gains conditional requests (ETag / 304), Multisite isolation, and cache-directory diagnostics. If caching was enabled, existing content is served from disk; nothing to configure. Note that a 304 response requires your web server to forward the conditional-request header to PHP — on Nginx add `fastcgi_param HTTP_IF_NONE_MATCH $http_if_none_match;` to the server block. Without it caching still works, you only lose the bandwidth saving. (Apache usually needs no change.)
