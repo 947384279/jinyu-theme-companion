@@ -60,12 +60,12 @@ function jinyu_companion_apply_saved_settings(): void {
 	}
 
 	// 布尔开关：勾选存 '1'，未勾存 '0'
-	foreach ( [ 'seo_open', 'seo_content_h1_fix', 'twitter_card_enable', 'og_article_meta', 'llms_enable', 'auto_link_enable', 'indexnow_enable', 'close_comments_old', 'page_cache_enable', 'speculation_enable', 'img_alt_enable', 'img_dim_enable', 'ld_json_enable', 'no_category_enable', 'storage_auto_upload', 'storage_delete_local', 'storage_sync_extra', 'comment_notify_reply', 'comment_notify_blocked', 'comment_notify_approved', 'comment_freq_enable', 'wechat_share_enable', 'wechat_share_debug' ] as $k ) {
+	foreach ( [ 'seo_open', 'seo_content_h1_fix', 'twitter_card_enable', 'og_article_meta', 'llms_enable', 'auto_link_enable', 'indexnow_enable', 'close_comments_old', 'page_cache_enable', 'speculation_enable', 'img_alt_enable', 'img_dim_enable', 'ld_json_enable', 'no_category_enable', 'sitemap_enable', 'seo_keywords_enable', 'storage_auto_upload', 'storage_delete_local', 'storage_sync_extra', 'comment_notify_reply', 'comment_notify_blocked', 'comment_notify_approved', 'comment_freq_enable', 'wechat_share_enable', 'wechat_share_debug' ] as $k ) {
 		$settings[ $k ] = isset( $_POST[ $k ] ) ? '1' : '0';
 	}
 
 	// 去除 /category/ 前缀开关状态变化时需刷新重写规则（开启/关闭都要 flush 一次才能生效/还原）
-	$no_cat_changed = jinyu_companion_get_option( 'no_category_enable', '1' ) !== $settings['no_category_enable'];
+	$no_cat_changed = jinyu_companion_is_checked( 'no_category_enable', false ) !== ( '1' === ( $settings['no_category_enable'] ?? '' ) );
 
 	// 文本 / URL / 颜色
 	$settings['og_image']        = isset( $_POST['og_image'] ) ? esc_url_raw( wp_unslash( $_POST['og_image'] ) ) : '';
@@ -89,6 +89,10 @@ function jinyu_companion_apply_saved_settings(): void {
 	$settings['seo_desc']        = isset( $_POST['seo_desc'] ) ? sanitize_textarea_field( wp_unslash( $_POST['seo_desc'] ) ) : '';
 	// 结构化数据：组织 / 品牌 sameAs 链接（每行一个 URL）
 	$settings['entity_sameas']   = isset( $_POST['entity_sameas'] ) ? sanitize_textarea_field( wp_unslash( $_POST['entity_sameas'] ) ) : '';
+	// 组织 Logo：留空则依次回退主题自定义 Logo、站点图标
+	$settings['org_logo_url']    = isset( $_POST['org_logo_url'] ) ? esc_url_raw( wp_unslash( $_POST['org_logo_url'] ) ) : '';
+	// 作者身份档案：作者本人的站外主页，每行一个（同域 URL 会被自动剔除）
+	$settings['author_sameas']   = isset( $_POST['author_sameas'] ) ? sanitize_textarea_field( wp_unslash( $_POST['author_sameas'] ) ) : '';
 	$settings['baidu_submit_token'] = isset( $_POST['baidu_submit_token'] ) ? esc_url_raw( wp_unslash( $_POST['baidu_submit_token'] ) ) : '';
 	$settings['anti_spam_words'] = isset( $_POST['anti_spam_words'] ) ? sanitize_textarea_field( wp_unslash( $_POST['anti_spam_words'] ) ) : '';
 	$settings['style_color_primary'] = isset( $_POST['style_color_primary'] ) ? sanitize_hex_color( wp_unslash( $_POST['style_color_primary'] ) ) : '';
@@ -343,12 +347,14 @@ function jinyu_companion_settings_page_html(): void {
 	// 结构化数据 JSON-LD：总开关（默认开）+ 组织 sameAs 链接
 	$ld_json_enable = jinyu_companion_get_option( 'ld_json_enable', '1' );
 	$entity_sameas  = jinyu_companion_get_option( 'entity_sameas', '' );
+	$org_logo_url   = jinyu_companion_get_option( 'org_logo_url', '' );
+	$author_sameas  = jinyu_companion_get_option( 'author_sameas', '' );
 	$auto_link    = jinyu_companion_get_option( 'auto_link_enable', '0' );
 	$indexnow     = jinyu_companion_get_option( 'indexnow_enable', '0' );
 	$baidu_token  = jinyu_companion_get_option( 'baidu_submit_token', '' );
 	$captcha      = jinyu_companion_get_option( 'captcha_policy', 'smart' );
 	$spam_words   = jinyu_companion_get_option( 'anti_spam_words', '彩票,色情,赌博,代写,刷量' );
-	$close_old    = jinyu_companion_get_option( 'close_comments_old', '1' );
+	$close_old    = jinyu_companion_get_option( 'close_comments_old', '0' );
 	$close_days   = jinyu_companion_get_option( 'close_comments_days', 30 );
 	$freq_enable  = jinyu_companion_get_option( 'comment_freq_enable', '1' );
 	$freq_window  = jinyu_companion_get_option( 'comment_freq_window', 10 );
@@ -423,7 +429,7 @@ function jinyu_companion_settings_page_html(): void {
 	$verify_baidu  = jinyu_companion_get_option( 'verify_baidu', '' );
 	$verify_yandex = jinyu_companion_get_option( 'verify_yandex', '' );
 	$verify_360    = jinyu_companion_get_option( 'verify_360', '' );
-	$img_alt_enable     = jinyu_companion_get_option( 'img_alt_enable', '0' );
+	$img_alt_enable     = jinyu_companion_get_option( 'img_alt_enable', '1' );
 	$img_dim_enable     = jinyu_companion_get_option( 'img_dim_enable', '1' );
 
 	// TTL 人类可读（与前端 JS 同算法，避免首屏闪烁）
@@ -618,10 +624,10 @@ function jinyu_companion_settings_page_html(): void {
 							</div>
 
 							<div class="jyc-panel">
-								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg></span><?php echo esc_html__( '内置恒启能力', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '与主题模板深度集成，始终随主题运行', 'jinyu-theme-companion' ); ?></span></div>
+								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg></span><?php echo esc_html__( '内置恒启能力', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '插件常驻 · 无需配置', 'jinyu-theme-companion' ); ?></span></div>
 								<div class="jyc-panel-b">
 									<div class="jyc-muted" style="font-size:13px;line-height:1.9">
-										<?php echo esc_html__( '关注 / 消息系统 · 站点访问统计 · 相关文章 · 系列文章 · 快讯 (Moments) · 短代码与短代码 UI · 对象存储引擎。以上能力由主题模板直接调用，无需配置即可使用；若需整体停用，停用本插件即可（主题经 function_exists 守卫自动降级）。', 'jinyu-theme-companion' ); ?>
+										<?php echo esc_html__( '关注 / 消息系统 · 站点访问统计 · 相关文章 · 系列文章 · 快讯 (Moments) · 短代码与短代码 UI · 对象存储引擎。以上能力随插件常驻并自动启用，无需配置即可使用；若需整体停用，停用本插件即可。', 'jinyu-theme-companion' ); ?>
 									</div>
 								</div>
 							</div>
@@ -651,14 +657,42 @@ function jinyu_companion_settings_page_html(): void {
 											<div class="jyc-fdesc"><?php echo esc_html__( '输出 Twitter Card 标签，适配 X / 海外社交分享。', 'jinyu-theme-companion' ); ?></div></div>
 									</div>
 									<div class="jyc-frow">
+										<label class="jyc-switch"><input type="checkbox" name="sitemap_enable" <?php checked( jinyu_companion_is_checked( 'sitemap_enable', true ), true ); ?>><span class="jyc-track"></span></label>
+										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( 'XML 站点地图', 'jinyu-theme-companion' ); ?></div>
+											<div class="jyc-fdesc"><?php echo esc_html__( '在内核站点地图之上补足收录规则：剔除附件与密码保护文章，<lastmod> 取文章最后修改时间。已装 Yoast / Rank Math 等 SEO 插件时自动让位。', 'jinyu-theme-companion' ); ?></div></div>
+									</div>
+									<div class="jyc-frow">
+										<label class="jyc-switch"><input type="checkbox" name="seo_keywords_enable" <?php checked( jinyu_companion_is_checked( 'seo_keywords_enable', false ), true ); ?>><span class="jyc-track"></span></label>
+										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '输出 keywords 标签', 'jinyu-theme-companion' ); ?></div>
+											<div class="jyc-fdesc"><?php echo esc_html__( '输出 legacy 的 <meta name="keywords">。主流搜索引擎已不以此排序，默认关闭；有老式 SEO 需求时可打开。', 'jinyu-theme-companion' ); ?></div></div>
+									</div>
+									<div class="jyc-frow">
 										<label class="jyc-switch"><input type="checkbox" name="llms_enable" <?php checked( $llms, '1' ); ?>><span class="jyc-track"></span></label>
 										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( 'llms.txt 发现链接', 'jinyu-theme-companion' ); ?></div>
 											<div class="jyc-fdesc"><?php echo esc_html__( '在头部输出 llms.txt 发现链接，便于大模型站点理解。', 'jinyu-theme-companion' ); ?></div></div>
 									</div>
 									<div class="jyc-frow">
-										<label class="jyc-switch"><input type="checkbox" name="no_category_enable" <?php checked( jinyu_companion_get_option( 'no_category_enable', '1' ), '1' ); ?>><span class="jyc-track"></span></label>
+										<label class="jyc-switch"><input type="checkbox" name="no_category_enable" <?php checked( jinyu_companion_is_checked( 'no_category_enable', false ), true ); ?>><span class="jyc-track"></span></label>
 										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '去除 /category/ 前缀', 'jinyu-theme-companion' ); ?></div>
-											<div class="jyc-fdesc"><?php echo esc_html__( '分类链接不再带 /category/ 前缀（旧前缀链接 301 到新地址）；保存时自动刷新重写规则。', 'jinyu-theme-companion' ); ?></div></div>
+											<div class="jyc-fdesc"><?php echo esc_html__( '分类链接不再带 /category/ 前缀；开启前请确认文章固定链接规则不含分类名，否则旧文章地址会失效。', 'jinyu-theme-companion' ); ?></div></div>
+									</div>
+								</div>
+							</div>
+
+							<div class="jyc-panel">
+								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span><?php echo esc_html__( '爬虫放行清单', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '只读 · 与站点根 robots.txt 保持一致', 'jinyu-theme-companion' ); ?></span></div>
+								<div class="jyc-panel-b">
+									<div class="jyc-frow">
+										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( 'AI 爬虫（GEO）', 'jinyu-theme-companion' ); ?></div>
+											<div class="jyc-fdesc"><?php echo esc_html( implode( '、', jinyu_geo_ai_crawlers() ) ); ?></div></div>
+									</div>
+									<div class="jyc-frow">
+										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '社交抓取器', 'jinyu-theme-companion' ); ?></div>
+											<div class="jyc-fdesc"><?php echo esc_html( implode( '、', jinyu_geo_social_crawlers() ) ); ?></div></div>
+									</div>
+									<div class="jyc-frow">
+										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '说明', 'jinyu-theme-companion' ); ?></div>
+											<div class="jyc-fdesc"><?php echo esc_html__( '本站的 robots.txt 由站点根目录的文件提供（而非插件生成），插件侧不接管输出。本清单仅供随时核对：若你调整过 robots.txt，请让这里与实际内容保持一致。注意两种部署的差别——根目录有静态 robots.txt 时，Web 服务器直接返回它、插件改不动；若你的站点由 WordPress 生成 robots.txt，规则同样不由本插件输出。迁移或重建站点时，请照此内容原样写回新的 robots.txt，否则 AI 与社交抓取会被拦截。', 'jinyu-theme-companion' ); ?></div></div>
 									</div>
 								</div>
 							</div>
@@ -695,7 +729,7 @@ function jinyu_companion_settings_page_html(): void {
 											<span class="jyc-muted" style="font-size:12px"><?php echo esc_html__( 'Meta 开发者后台的 App ID，用于社区卡片调试与数据归属；不做海外分发可留空。', 'jinyu-theme-companion' ); ?></span>
 										</label>
 										<label class="jyc-fl"><?php echo esc_html__( 'Twitter 站点账号 (twitter:site)', 'jinyu-theme-companion' ); ?>
-											<input class="jyc-inp" type="text" name="twitter_site" value="<?php echo esc_attr( $tw_site ); ?>" placeholder="qicaiyun">
+											<input class="jyc-inp" type="text" name="twitter_site" value="<?php echo esc_attr( $tw_site ); ?>" placeholder="example.com">
 										</label>
 										<label class="jyc-fl"><?php echo esc_html__( 'Twitter 作者账号 (twitter:creator)', 'jinyu-theme-companion' ); ?>
 											<input class="jyc-inp" type="text" name="twitter_creator" value="<?php echo esc_attr( $tw_creator ); ?>" placeholder="<?php echo esc_attr__( '可留空', 'jinyu-theme-companion' ); ?>">
@@ -829,9 +863,27 @@ function jinyu_companion_settings_page_html(): void {
 										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '启用结构化数据 JSON-LD', 'jinyu-theme-companion' ); ?></div>
 											<div class="jyc-fdesc"><?php echo esc_html__( '输出 WebSite / Article / FAQ / HowTo 等结构化数据，提升搜索富摘要与 AI（GEO）可发现性。', 'jinyu-theme-companion' ); ?></div></div>
 									</div>
-									<?php // sameAs 已从 UI 收回（冷门字段，普通用户无感）；隐藏字段保住已存值不被整表提交清空，开发者可用 jinyu_seo_entity_sameas 过滤器注入。 ?>
-									<input type="hidden" name="entity_sameas" value="<?php echo esc_attr( $entity_sameas ); ?>">
-								</div>
+									<div class="jyc-frow">
+										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '组织 Logo 地址', 'jinyu-theme-companion' ); ?></div>
+											<div class="jyc-fdesc"><?php echo esc_html__( '填 Logo 图片绝对地址（建议 600×60 以上）。留空则依次回退「主题自定义 Logo」与「站点图标」，三者皆空则不输出，避免出现空的 logo 字段。', 'jinyu-theme-companion' ); ?></div></div>
+										</div>
+										<div class="jyc-frow">
+											<label class="jyc-fl" style="flex:1 1 320px"><?php echo esc_html__( 'Logo URL', 'jinyu-theme-companion' ); ?>
+												<input class="jyc-inp" type="url" name="org_logo_url" value="<?php echo esc_attr( $org_logo_url ); ?>" placeholder="https://example.com/logo.png" inputmode="url">
+											</label>
+										</div>
+										<div class="jyc-frow">
+											<label class="jyc-fl" style="flex:1 1 320px"><?php echo esc_html__( '作者身份档案（每行一个 URL）', 'jinyu-theme-companion' ); ?>
+												<textarea class="jyc-inp" name="author_sameas" rows="3" placeholder="https://github.com/yourname&#10;https://www.zhihu.com/people/yourname"><?php echo esc_textarea( $author_sameas ); ?></textarea>
+											</label>
+										</div>
+										<div class="jyc-frow">
+											<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '作者 sameAs 填写说明', 'jinyu-theme-companion' ); ?></div>
+												<div class="jyc-fdesc"><?php echo esc_html__( '这里填作者本人的站外身份页（GitHub / 知乎 / X 等）。指向本站自己的 URL 会被自动剔除——人与站同形，搜索与 AI 分不清作者和组织，等于白填。', 'jinyu-theme-companion' ); ?></div></div>
+										</div>
+										<?php // sameAs 已从 UI 收回（冷门字段，普通用户无感）；隐藏字段保住已存值不被整表提交清空，开发者可用 jinyu_seo_entity_sameas 过滤器注入。 ?>
+										<input type="hidden" name="entity_sameas" value="<?php echo esc_attr( $entity_sameas ); ?>">
+									</div>
 							</div>
 						</section>
 
@@ -1335,8 +1387,8 @@ function jinyu_companion_settings_page_html(): void {
 								<div class="jyc-panel-b">
 									<ul class="jyc-note-list">
 										<li><?php echo esc_html__( '账号：必须是「已微信认证的服务号」（个人订阅号无分享接口）。', 'jinyu-theme-companion' ); ?></li>
-										<li><?php echo esc_html__( 'JS 接口安全域名：在公众号后台填 qicaiyun.top（仅主域，不带 http/www），并上传验证文件到站点根目录。', 'jinyu-theme-companion' ); ?></li>
-										<li><?php echo esc_html__( 'IP 白名单：在公众号后台「基本配置」加入服务器出口 IP 175.24.138.28，否则获取 access_token 报 40164。', 'jinyu-theme-companion' ); ?></li>
+										<li><?php echo esc_html__( 'JS 接口安全域名：在公众号后台填你自己的域名主域（仅主域，不带 http/www），并上传验证文件到站点根目录。', 'jinyu-theme-companion' ); ?></li>
+										<li><?php echo esc_html__( 'IP 白名单：在公众号后台「基本配置」加入服务器出口 IP，否则获取 access_token 报 40164。', 'jinyu-theme-companion' ); ?></li>
 										<li><?php echo esc_html__( '分享图：直接复用「分享素材」里的 og:image（1200×630），微信好友卡会中心裁成方形缩略图。', 'jinyu-theme-companion' ); ?></li>
 									</ul>
 								</div>

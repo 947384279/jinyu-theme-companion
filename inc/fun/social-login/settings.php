@@ -109,7 +109,7 @@ function jinyu_sl_process_post(): void {
 		}
 	}
 
-	update_option( JINYU_SL_OPT, [ 'enable' => $enable, 'accounts' => $accounts, 'redirect_uri' => $ruri, 'allow_register' => $allow_register, 'role' => $role ] );
+	update_option( JINYU_SL_OPT, [ 'enable' => $enable, 'accounts' => $accounts, 'redirect_uri' => $ruri, 'allow_register' => $allow_register, 'role' => $role ], true );
 }
 
 /** 判定提交值是否为「已设置，留空保持不变」的掩码占位（••••••••…）。 */

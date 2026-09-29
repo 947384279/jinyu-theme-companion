@@ -289,7 +289,11 @@ function jinyu_seo_meta()
     }
 
     if ($desc) echo '<meta name="description" content="' . esc_attr($desc) . '">' . PHP_EOL;
-    if ($keys) echo '<meta name="keywords" content="' . esc_attr($keys) . '">' . PHP_EOL;
+    // <meta name="keywords"> 属 legacy 标签，主流引擎（含 Google/Bing）早已不作为排序依据。
+    // 默认关闭，仅保留有老式 SEO 需求的站点按需打开。
+    if ($keys && jinyu_companion_is_checked('seo_keywords_enable', false)) {
+        echo '<meta name="keywords" content="' . esc_attr($keys) . '">' . PHP_EOL;
+    }
 
     if (is_singular()) {
         $title = get_the_title();
@@ -416,9 +420,11 @@ function jinyu_llms_head_link()
     echo '<link rel="llms.txt" href="' . esc_url(home_url('/llms.txt')) . '">' . PHP_EOL;
 }
 
-// GEO 兜底：显式允许主流 AI 爬虫的规则已写入站点根静态 robots.txt（由 Web 服务器直出），
-// 故此处不再挂载 robots_txt 过滤器——虚拟 robots 已被静态文件架空、永不执行，挂载只会误
-// 导维护者以为 WP 控制 robots.txt。如需调整 AI 放行清单，直接改根目录 robots.txt。
+// GEO 兜底：显式允许主流 AI 爬虫与社交抓取器的规则，写在站点根目录的 robots.txt 里。
+// 故此处不挂载 robots_txt 过滤器—— robots.txt 若由 Web 服务器直出静态文件，WP 收不到该请求，
+// 虚拟 robots 与过滤器永不执行，挂载只会误导维护者以为 WP 控制着 robots.txt。
+// 放行清单在 inc/fun/geo-robots.php 有一份镜像（设置面板「SEO」页可读、可照此重建），
+// 两处必须同步维护；改规则请直接改根目录的 robots.txt，不要只改这里的注释。
 
 // 归档页（分类/标签/作者/日期/自定义文章类型）自定义标题，利于 SEO 与可读性。
 // 仅在主题内置 SEO 启用时生效（已安装 Yoast/RankMath 等插件时由插件接管标题）。

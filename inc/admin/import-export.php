@@ -59,6 +59,8 @@ if ( ! function_exists( 'jinyu_companion_io_spec' ) ) {
 			'twitter_creator'         => 'text',
 			'fb_app_id'               => 'text',
 			'entity_sameas'           => 'text',
+			'org_logo_url'            => 'url',
+			'author_sameas'           => 'text',
 			'seo_keywords'            => 'text',
 			'seo_desc'                => 'text',
 			'no_category_enable'      => 'bool',
@@ -490,7 +492,7 @@ if ( ! function_exists( 'jinyu_companion_import_social_login' ) ) {
 		}
 		$next['accounts'] = $accounts;
 
-		update_option( JINYU_SL_OPT, $next );
+		update_option( JINYU_SL_OPT, $next, true );
 		return array( 'changed' => true, 'accounts' => count( $accounts ) );
 	}
 }
@@ -634,7 +636,7 @@ if ( ! function_exists( 'jinyu_companion_handle_import' ) ) {
 		$incoming = isset( $decoded['settings'] ) && is_array( $decoded['settings'] ) ? $decoded['settings'] : $decoded;
 
 		// 导入前基线：用于判断本次是否触碰了需刷新重写规则 / 整页缓存的设置。
-		$no_cat_before = jinyu_companion_get_option( 'no_category_enable', '1' );
+		$no_cat_before = jinyu_companion_get_option( 'no_category_enable', '0' );
 		$cache_before  = jinyu_companion_get_option( 'page_cache_enable', '0' );
 
 		$stats = jinyu_companion_import_apply( $incoming );
@@ -662,7 +664,7 @@ if ( ! function_exists( 'jinyu_companion_handle_import' ) ) {
 		}
 
 		// 副作用：影响重写规则与整页缓存的设置变化，落库后必须同步，否则前台仍是旧行为。
-		if ( $no_cat_before !== jinyu_companion_get_option( 'no_category_enable', '1' ) ) {
+		if ( $no_cat_before !== jinyu_companion_get_option( 'no_category_enable', '0' ) ) {
 			flush_rewrite_rules();
 		}
 		if ( $cache_before !== jinyu_companion_get_option( 'page_cache_enable', '0' ) && function_exists( 'jinyu_companion_cache_flush' ) ) {

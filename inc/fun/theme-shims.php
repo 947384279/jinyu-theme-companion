@@ -131,10 +131,18 @@ if ( ! function_exists( 'jinyu_has_external_page_cache' ) ) {
 // 供海报生成 / Web Vitals 上报等匿名端点防滥用，不再是「恒放行」。
 if ( ! function_exists( 'jinyu_rate_limit_check' ) ) {
 	function jinyu_rate_limit_check( string $action, int $limit, int $window ): bool {
-		$raw_ip = (string) ( $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '' );
-		// 取 XFF 最右（末跳代理记录的客户端地址）而非最左（客户端可伪造），XFF 缺失退回真实 TCP 对端 REMOTE_ADDR。
-		$parts = array_map( 'trim', explode( ',', $raw_ip ) );
-		$ip    = trim( (string) end( $parts ) );
+		// 默认只信 TCP 对端 REMOTE_ADDR（不可伪造）。XFF 可被客户端任意伪造，
+		// 仅当站点确实部署了反向代理/CDN 并通过过滤器显式声明信任时才采信：
+		// add_filter( 'jinyu_rate_limit_trust_proxy', '__return_true' )。
+		$ip = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' );
+		if ( apply_filters( 'jinyu_rate_limit_trust_proxy', false ) ) {
+			$xff   = (string) ( $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '' );
+			$parts = array_map( 'trim', explode( ',', $xff ) );
+			$proxy_ip = trim( (string) end( $parts ) );
+			if ( '' !== $proxy_ip ) {
+				$ip = $proxy_ip; // 末跳代理记录的客户端地址
+			}
+		}
 		if ( '' === $ip ) {
 			return true; // 无法识别来源时放行，避免误杀
 		}

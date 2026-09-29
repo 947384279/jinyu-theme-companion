@@ -5,8 +5,8 @@ Contributors: qicaiyun
 Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
 Tested up to: 6.8
-Requires PHP: 7.4
-Stable tag: 1.2.2
+Requires PHP: 8.0
+Stable tag: 1.2.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -68,6 +68,15 @@ Client secrets are encrypted (AES-256-CBC with HMAC) in your site's own database
 (Add screenshots before release: settings page, related posts, message center, shortcode UI, and so on.)
 
 == Changelog ==
+
+= 1.2.3 =
+* Security: Storage pull/push tasks now reject path-traversal keys via a shared `jinyu_storage_safe_rel()` guard (no `..` segments), so a compromised bucket cannot write files outside the uploads directory.
+* Security: The poster endpoint no longer reveals draft/pending/private posts to anonymous visitors; non-public content requires login plus the `read_post` capability.
+* Security: Page cache bypasses visitors carrying `comment_author_*` cookies, so one commenter's name/e-mail can no longer be prefilled for another visitor.
+* Security: Hardened the no-category redirect (path whitelist + `wp_safe_redirect`), the SEO meta REST auth callback (`edit_post` per post), OAuth error messages (URL query strings with tokens are stripped), SMTP `secure` values (whitelist), and the anonymous lazy-comment endpoint (publish check + rate limit).
+* Fix: Remote storage prefix handling no longer strips the first character of object keys when the configured prefix is empty.
+* Fix: Replaced the deprecated `who=authors` user query; fixed null-access on empty stats rows, the JSON-LD HowTo `$post` scope, an uninitialized batch variable, and platform compatibility (no `GLOB_BRACE`, iframe sandbox without `allow-same-origin`).
+* Change: Requires PHP is now 8.0 to match the syntax actually used; on PHP 7.x the social-login module degrades gracefully with an admin notice instead of a fatal error.
 
 = 1.2.2 =
 * New: Floating save bar on the settings screen — the panel now tracks unsaved edits the way the theme does. A pill stays pinned to the bottom of the viewport while changes are pending, showing how many fields differ, marking the affected nav items, and offering Save / Discard. Ctrl (Cmd) + S saves and the browser warns before closing a tab with pending edits.

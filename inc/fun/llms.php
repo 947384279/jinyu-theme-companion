@@ -154,6 +154,39 @@ function jinyu_llms_serve(): void {
 		return $pages ? $pages[0] : null;
 	};
 
+	// 站点实体声明：置于文件前部，让 AI 在读到任何内容之前先认下
+	// 「站点是谁、作者是谁、怎么联系」，后续内容才能归到正确主体名下。
+	// 这不是 Google 排名因素，但对 GEO 场景的实体归属判断是必要信息——
+	// 缺了它，AI 只能靠正文推断作者，容易把署名与实体混为一谈。
+	$out .= '## 关于本站' . "\n\n";
+	$out .= '- 站点名称：' . $site_name . "\n";
+	$out .= '- 站点地址：' . $home . "\n";
+	$out .= '- 站点简介：' . ( $desc !== '' ? $desc : '-' ) . "\n";
+	foreach ( jinyu_jsonld_sameas_urls( (string) jinyu_companion_get_option( 'entity_sameas', '' ) ) as $jinyu_su ) {
+		$out .= '- 组织档案：' . $jinyu_su . "\n";
+	}
+	// 主笔作者：取值与文章页 author.sameAs 同源，避免「正文写得这个人」与「实体署名人」不一致。
+	$jinyu_owner = get_users( [
+		'number'      => 1,
+		'fields'      => 'ID',
+		'capability'  => 'edit_others_posts', // WP 5.9 起 'who=authors' 已废弃，改按能力查询
+		'orderby'     => 'registered',
+		'order'       => 'ASC',
+		'count_total' => false,
+	] );
+	if ( ! empty( $jinyu_owner ) ) {
+		$jinyu_owner_id = (int) $jinyu_owner[0];
+		$out .= '- 主笔作者：' . get_the_author_meta( 'display_name', $jinyu_owner_id )
+			. '（' . get_author_posts_url( $jinyu_owner_id ) . "）\n";
+		foreach ( jinyu_jsonld_sameas_urls( implode( "\n", [
+			(string) get_the_author_meta( 'user_url', $jinyu_owner_id ),
+			(string) jinyu_companion_get_option( 'author_sameas', '' ),
+		] ) ) as $jinyu_su ) {
+			$out .= '- 作者档案：' . $jinyu_su . "\n";
+		}
+	}
+	$out .= "\n";
+
 	// 热门文章（站点最具代表性的内容，按浏览量降序）
 	$out .= '## 热门文章' . "\n\n";
 	$hot  = function_exists( 'jinyu_get_hot_posts' )

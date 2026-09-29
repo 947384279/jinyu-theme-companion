@@ -638,6 +638,6 @@ function jinyu_sl_maybe_migrate(): void {
 	}
 	update_option(
 		JINYU_SL_OPT,
-		[ 'enable' => $old_enable, 'accounts' => $accounts ]
+		[ 'enable' => $old_enable, 'accounts' => $accounts ], true
 	);
 }

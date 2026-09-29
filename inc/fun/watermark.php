@@ -39,9 +39,13 @@ function jinyu_companion_find_font(): string {
 		}
 	}
 	// 兜底：扫描插件自带字体目录，让「把开源字体放进 assets/fonts/」真正生效。
+	// GLOB_BRACE 部分平台（musl/Alpine 编译的 PHP）不存在，缺常量时按扩展名逐一 glob，避免 fatal。
 	$font_dir = dirname( dirname( dirname( __FILE__ ) ) ) . '/assets/fonts';
 	if ( is_dir( $font_dir ) ) {
-		foreach ( glob( $font_dir . '/*.{ttf,ttc,otf,woff,woff2}', GLOB_BRACE ) as $ff ) {
+		$font_files = defined( 'GLOB_BRACE' )
+			? glob( $font_dir . '/*.{ttf,ttc,otf,woff,woff2}', GLOB_BRACE )
+			: array_merge( ... array_map( static fn( $ext ) => glob( $font_dir . '/*.' . $ext ) ?: array(), array( 'ttf', 'ttc', 'otf', 'woff', 'woff2' ) ) );
+		foreach ( (array) $font_files as $ff ) {
 			if ( $ff && is_file( $ff ) ) {
 				$cached = (string) $ff;
 				return $cached;
@@ -253,6 +257,7 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 					$probe = wp_get_image_editor( $png );
 					@unlink( $png );
 					if ( $probe instanceof WP_Image_Editor ) {
+						$cached = true;
 						return true;
 					}
 				} else {

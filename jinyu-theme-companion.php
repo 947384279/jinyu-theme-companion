@@ -6,7 +6,7 @@
  *              three-part structure, this plugin takes over all functional capabilities (SEO, structured
  *              data, social, related posts, shortcodes, cache, anti-spam, index ping, and more) so the
  *              theme stays a pure presentation layer. All outbound features are off by default.
- * Version:     1.2.2
+ * Version:     1.2.3
  * Author:      金玉主题作者
  * Author URI:  https://www.qicaiyun.top
  * License:     GPL-2.0-or-later
@@ -15,7 +15,7 @@
  * Domain Path: /languages
  * Requires at least: 6.2
  * Tested up to: 6.8
- * Requires PHP: 7.4
+ * Requires PHP: 8.0
  *
  * @package Jinyu_Theme_Companion
  */
@@ -30,7 +30,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 插件先于主题载入，抢先定义会让主题读到的版本号变成插件版本，造成版本漂移。
  * ------------------------------------------------------------------------ */
 if ( ! defined( 'JINYU_COMPANION_VER' ) ) {
-	define( 'JINYU_COMPANION_VER', '1.2.2' );
+	define( 'JINYU_COMPANION_VER', '1.2.3' );
 }
 
 /* 插件自有路径常量：模块（shortcode-ui / poster 等）一律引用插件自身资源，
@@ -52,9 +52,26 @@ if ( ! defined( 'JINYU' ) ) {
  * 必须在顶层加载（先于主题 functions.php），因为主题 user.php 用 if(!function_exists('jinyu_oauth_*'))
  * 提供降级桩，本模块须在主题运行前定义真实现，否则桩被采用、真实登录失效。
  * 与历史私有插件 wordpress-plugin-jinyu 互斥：双方均在 require 处用 function_exists 守卫，
- * 无论加载顺序如何，仅有一方定义 jinyu_oauth_enabled 等符号（PHP 8.5 编译期早绑定要求互斥置于 require 处）。 */
-if ( ! function_exists( 'jinyu_oauth_enabled' ) ) {
-	require_once __DIR__ . '/inc/fun/social-login/loader.php';
+ * 无论加载顺序如何，仅有一方定义 jinyu_oauth_enabled 等符号（PHP 8.5 编译期早绑定要求互斥置于 require 处）。
+ *
+ * PHP 版本守卫：本模块使用 PHP 8.0 联合类型语法（string|WP_Error 等），低版本下是编译期
+ * fatal 而非运行期错误。wp.org 按「Requires PHP: 8.0」拦截低版本安装；此处的运行时守卫
+ * 兜底手动上传 / 降级包等不受 wp.org 管控的场景：PHP 7.x 下跳过加载并提示，其余模块照常运行。
+ */
+if ( PHP_VERSION_ID >= 80000 ) {
+	if ( ! function_exists( 'jinyu_oauth_enabled' ) ) {
+		require_once __DIR__ . '/inc/fun/social-login/loader.php';
+	}
+} else {
+	add_action( 'admin_notices', static function (): void {
+		if ( ! current_user_can( 'update_core' ) ) {
+			return;
+		}
+		printf(
+			'<div class="notice notice-error"><p>%s</p></div>',
+			esc_html__( '「金玉主题配套插件」的第三方登录模块需要 PHP 8.0 及以上版本，当前 PHP 版本过低，该模块已停用；其余功能不受影响。', 'jinyu-theme-companion' )
+		);
+	} );
 }
 
 /* 激活即建表：通知表（jinyu_notify）/ 统计表不再只靠 after_switch_theme + footer 兜底，
@@ -136,9 +153,11 @@ add_action( 'after_setup_theme', static function (): void {
 	// 微信 JS-SDK 分享：复用 seo.php 已输出的 og:* meta 作为分享数据，零冗余。
 	require_once __DIR__ . '/inc/fun/wechat-share.php';
 	require_once __DIR__ . '/inc/seo-jsonld.php';
+	require_once __DIR__ . '/inc/seo-sitemap.php';
 	require_once __DIR__ . '/inc/fun/category-seo.php';
 	require_once __DIR__ . '/inc/fun/post-seo.php';
 	require_once __DIR__ . '/inc/fun/llms.php';
+	require_once __DIR__ . '/inc/fun/geo-robots.php';
 // 推送记录：IndexNow / 百度每次提交的留痕，供后台「推送记录」卡片回溯
 require_once __DIR__ . '/inc/fun/push-log.php';
 require_once __DIR__ . '/inc/fun/indexnow.php';

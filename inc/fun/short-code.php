@@ -90,7 +90,20 @@ add_shortcode( 'jinyu_login', $jinyu_login );
 
 // --- 评论可见 [jinyu_comment]...[/jinyu_comment] ---
 $jinyu_comment = function ($atts, $content = '') {
-	if ( comments_open() && is_user_logged_in() ) {
+	// 「评论可见」按语义校验：当前用户须在本篇文章下有已通过的评论，
+	// 仅登录不够（否则登录即解锁，与提示文案「请先登录并评论」不符）。
+	$uid = get_current_user_id();
+	$has_commented = $uid > 0
+		&& comments_open()
+		&& (int) get_comments(
+			[
+				'post_id' => get_the_ID(),
+				'user_id' => $uid,
+				'status'  => 'approve',
+				'count'   => true,
+			]
+		) > 0;
+	if ( $has_commented ) {
 		return do_shortcode( $content );
 	}
 	return '<div class="jinyu-comment-hide">'
@@ -378,7 +391,7 @@ add_shortcode( 'jinyu_video', function ( $atts ) {
 		return '<div class="jinyu-video jinyu-video-bili" style="position:relative;width:100%;padding-top:56.25%;">'
 			. '<iframe loading="lazy" style="position:absolute;width:100%;height:100%;left:0;top:0;border:0;border-radius:8px;" '
 			. 'src="' . esc_url( $src ) . '" scrolling="no" frameborder="no" allowfullscreen="true" '
-			. 'sandbox="allow-top-navigation allow-same-origin allow-forms allow-scripts"></iframe></div>';
+			. 'sandbox="allow-top-navigation allow-forms allow-scripts"></iframe></div>';
 	}
 	$out = '<video class="jinyu-video" src="' . esc_url( $url ) . '" controls style="width:100%;border-radius:8px;"';
 	if ( $atts['cover'] ) {

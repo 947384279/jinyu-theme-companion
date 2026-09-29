@@ -569,6 +569,7 @@ function jyc_perf_opcache_stats(): ?array {
 		'enabled'        => ! empty( $st['opcache_enabled'] ),
 		'cached_scripts' => (int) ( $stat['num_cached_scripts'] ?? 0 ),
 		'hit_rate'       => round( (float) ( $stat['opcache_hit_rate'] ?? 0 ), 1 ),
+		'hits'           => (int) ( $stat['num_hits'] ?? 0 ),
 		'misses'         => (int) ( $stat['num_misses'] ?? 0 ),
 		'memory_used'    => $used,
 		'memory_total'   => $total,
@@ -651,6 +652,17 @@ function jyc_perf_web_vitals_stats(): ?array {
 		$sum         = (float) ( $agg['sum'][ $k ] ?? 0 );
 		$out['avg'][ $k ] = $n > 0 ? round( $sum / $n, $k === 'cls' ? 3 : 0 ) : 0;
 		$out['max'][ $k ] = round( (float) ( $agg['max'][ $k ] ?? 0 ), $k === 'cls' ? 3 : 0 );
+	}
+	// 热门路径：按样本数降序取前 5（与下方「最慢路径」互补：一个看热度，一个看最慢）。
+	if ( ! empty( $agg['paths'] ) && is_array( $agg['paths'] ) ) {
+		$hot = $agg['paths'];
+		arsort( $hot );
+		foreach ( array_slice( $hot, 0, 5, true ) as $p => $pn ) {
+			$out['paths'][] = [
+				'path' => (string) $p,
+				'n'    => (int) $pn,
+			];
+		}
 	}
 	if ( ! empty( $agg['path_metrics'] ) && is_array( $agg['path_metrics'] ) ) {
 		$rows = [];
@@ -857,6 +869,210 @@ function jyc_perf_flush_memcached(): string {
 	return __( '对象缓存未启用（无 drop-in 也无 Memcached 扩展）', 'jinyu-theme-companion' );
 }
 
+/* ───────────────── 对象缓存 drop-in 部署 / 回滚 ───────────────── */
+
+const JINYU_OC_DROPIN_MARKER = 'JINYU_DROPIN_MARKER:jinyu-memcached-object-cache';
+
+/**
+ * 读取 wp-content/object-cache.php 状态。
+ *
+ * @return array{deployed:string|false, ext:bool, reachable:bool, can_deploy:bool, wp_using_ext:bool}
+ *               deployed: 'jinyu'=本插件部署 | 'foreign'=外部部署 | false=无
+ */
+function jyc_perf_object_cache_state(): array {
+	$target = WP_CONTENT_DIR . '/object-cache.php';
+	$exists = file_exists( $target );
+
+	$deployed = $exists
+		? ( jyc_perf_object_cache_is_jinyu( $target ) ? 'jinyu' : 'foreign' )
+		: false;
+
+	$ext       = class_exists( 'Memcached' );
+	$reachable = false;
+	if ( $ext ) {
+		$m = new Memcached( 'jyc-perf-probe' );
+		if ( ! $m->getServerList() ) {
+			$m->addServers( apply_filters( 'jyc_perf_memcached_servers', [ [ '127.0.0.1', 11211 ] ] ) );
+		}
+		$stats     = $m->getStats();
+		$reachable = ! empty( $stats );
+	}
+
+	return [
+		'deployed'      => $deployed,
+		'ext'           => $ext,
+		'reachable'     => $reachable,
+		'can_deploy'    => $ext && $reachable,
+		'wp_using_ext'  => wp_using_ext_object_cache(),
+	];
+}
+
+/** 该 object-cache.php 是否由本插件部署（靠文件头标记判定）。 */
+function jyc_perf_object_cache_is_jinyu( string $file ): bool {
+	$head = (string) file_get_contents( $file, false, null, 0, 2048 );
+	return false !== strpos( $head, JINYU_OC_DROPIN_MARKER );
+}
+
+/**
+ * 能力对比：扫描现有外部 drop-in，识别金玉版可额外提供、而对方缺失的能力。
+ *
+ * 各能力用「仅在生效代码中出现」的特征串判定（避开注释误判），金玉版模板恒包含全部。
+ *
+ * @return array{exists:bool, missing:array<string,string>, recommend:bool}
+ */
+function jyc_perf_object_cache_analyze_external(): array {
+	$caps = [
+		'local_cache'  => [ 'label' => __( '请求内本地缓存（避免同请求重复查询 Memcached）', 'jinyu-theme-companion' ), 'token' => 'add_to_internal(' ],
+		'get_multiple' => [ 'label' => __( '批量获取（wp_cache_get_multiple / getMulti）', 'jinyu-theme-companion' ), 'token' => 'getMulti(' ],
+		'cas'          => [ 'label' => __( 'CAS 乐观锁（高并发计数防竞争）', 'jinyu-theme-companion' ), 'token' => 'get_with_cas(' ],
+		'libketama'    => [ 'label' => __( '一致性哈希（多客户端分布一致）', 'jinyu-theme-companion' ), 'token' => 'OPT_LIBKETAMA_COMPATIBLE' ],
+		'suspend'      => [ 'label' => __( '缓存加法挂起（wp_suspend_cache_addition 兼容）', 'jinyu-theme-companion' ), 'token' => 'wp_suspend_cache_addition(' ],
+		'graceful'     => [ 'label' => __( 'Memcached 扩展缺失时优雅降级（不白屏）', 'jinyu-theme-companion' ), 'token' => "WPINC . '/cache.php'" ],
+		'get_stats'    => [ 'label' => __( '统计接口（getStats）', 'jinyu-theme-companion' ), 'token' => 'getStats(' ],
+		'counters'     => [ 'label' => __( '命中 / 未命中计数', 'jinyu-theme-companion' ), 'token' => '++$this->cache_hits' ],
+	];
+
+	$target = WP_CONTENT_DIR . '/object-cache.php';
+	if ( ! file_exists( $target ) || jyc_perf_object_cache_is_jinyu( $target ) ) {
+		return [ 'exists' => false, 'missing' => [], 'recommend' => false ];
+	}
+
+	$content = (string) file_get_contents( $target );
+	$missing = [];
+	foreach ( $caps as $k => $c ) {
+		if ( false === strpos( $content, $c['token'] ) ) {
+			$missing[ $k ] = $c['label'];
+		}
+	}
+	return [ 'exists' => true, 'missing' => $missing, 'recommend' => count( $missing ) > 0 ];
+}
+
+/** 备份现有 object-cache.php 为 object-cache.php.bak-<时间戳>，仅保留最近 3 份。成功返回备份路径，失败返回 false。 */
+function jyc_perf_object_cache_backup( string $target ) {
+	$dir = dirname( $target );
+	$bak = $target . '.bak-' . gmdate( 'Ymd-His' );
+	if ( ! @copy( $target, $bak ) ) {
+		return false;
+	}
+	$globs = glob( $dir . '/object-cache.php.bak-*' ) ?: [];
+	if ( count( $globs ) > 3 ) {
+		usort( $globs, static function ( $a, $b ) { return filemtime( $a ) <=> filemtime( $b ); } );
+		foreach ( array_slice( $globs, 0, count( $globs ) - 3 ) as $old ) {
+			@unlink( $old );
+		}
+	}
+	return $bak;
+}
+
+/**
+ * 部署：写入 wp-content/object-cache.php。
+ *
+ * @param bool $force  允许覆盖外部 drop-in（仅升级替换流程使用）。
+ * @param bool $backup 覆盖前是否先备份原文件。
+ */
+function jyc_perf_deploy_object_cache( $force = false, $backup = false ): array {
+	$msg_bak = ''; // 备份提示（无旧文件/无备份时保持空串，避免未初始化变量告警）
+	$tpl = __DIR__ . '/object-cache-dropin.tpl';
+	if ( ! is_readable( $tpl ) ) {
+		return [ 'ok' => false, 'msg' => __( '部署模板缺失（object-cache-dropin.tpl）', 'jinyu-theme-companion' ) ];
+	}
+	if ( ! class_exists( 'Memcached' ) ) {
+		return [ 'ok' => false, 'msg' => __( 'PECL Memcached 扩展不可用，无法部署', 'jinyu-theme-companion' ) ];
+	}
+	$target = WP_CONTENT_DIR . '/object-cache.php';
+	if ( file_exists( $target ) ) {
+		if ( jyc_perf_object_cache_is_jinyu( $target ) ) {
+			return [ 'ok' => true, 'msg' => __( '对象缓存已部署，无需重复', 'jinyu-theme-companion' ) ];
+		}
+		if ( ! $force ) {
+			return [ 'ok' => false, 'msg' => __( '已存在外部 object-cache.php，未覆盖以免破坏现有缓存', 'jinyu-theme-companion' ) ];
+		}
+		if ( $backup ) {
+			$bak = jyc_perf_object_cache_backup( $target );
+			if ( false === $bak ) {
+				return [ 'ok' => false, 'msg' => __( '备份原文件失败，已中止替换以确保安全', 'jinyu-theme-companion' ) ];
+			}
+			$msg_bak = '（已备份原文件：' . basename( $bak ) . '）';
+		} else {
+			$msg_bak = '';
+		}
+	}
+
+	$code = (string) file_get_contents( $tpl );
+	if ( false === @file_put_contents( $target, $code, LOCK_EX ) ) {
+		return [ 'ok' => false, 'msg' => __( '写入 wp-content/object-cache.php 失败，请检查目录写权限', 'jinyu-theme-companion' ) ];
+	}
+	return [ 'ok' => true, 'msg' => __( '已部署 object-cache.php，下次请求起 WordPress 启用 Memcached 对象缓存', 'jinyu-theme-companion' ) . $msg_bak ];
+}
+
+/** 回滚：仅删除本插件部署的 drop-in。 */
+function jyc_perf_remove_object_cache(): array {
+	$target = WP_CONTENT_DIR . '/object-cache.php';
+	if ( ! file_exists( $target ) ) {
+		return [ 'ok' => true, 'msg' => __( '未部署对象缓存', 'jinyu-theme-companion' ) ];
+	}
+	if ( ! jyc_perf_object_cache_is_jinyu( $target ) ) {
+		return [ 'ok' => false, 'msg' => __( '该 object-cache.php 非本插件部署，未删除', 'jinyu-theme-companion' ) ];
+	}
+	if ( ! @unlink( $target ) ) {
+		return [ 'ok' => false, 'msg' => __( '删除 object-cache.php 失败，请检查目录权限', 'jinyu-theme-companion' ) ];
+	}
+	return [ 'ok' => true, 'msg' => __( '已移除 object-cache.php，下次请求起恢复默认数据库缓存', 'jinyu-theme-companion' ) ];
+}
+
+/** 渲染 Memcached 面板内的部署控件（随状态看板一起刷新）。 */
+function jyc_perf_object_cache_control_html(): string {
+	$st   = jyc_perf_object_cache_state();
+	$html = '<div class="jperf-oc">';
+
+	if ( 'jinyu' === $st['deployed'] ) {
+		$html .= '<div class="jperf-oc-row">'
+			. '<span class="jperf-oc-badge on">' . esc_html__( '已部署（本插件管理）', 'jinyu-theme-companion' ) . '</span>'
+			. '<button type="button" class="jperf-btn jperf-btn-danger jperf-btn-sm" data-deploy="0">'
+			. '<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>'
+			. '<span>' . esc_html__( '移除 / 停用', 'jinyu-theme-companion' ) . '</span></button></div>';
+		$html .= '<p class="jperf-oc-note">' . esc_html__( 'WordPress 当前使用 Memcached 对象缓存。移除后下次请求恢复默认数据库缓存。', 'jinyu-theme-companion' ) . '</p>';
+	} elseif ( 'foreign' === $st['deployed'] ) {
+		$an    = jyc_perf_object_cache_analyze_external();
+		$html .= '<div class="jperf-oc-row"><span class="jperf-oc-badge">' . esc_html__( '已存在外部 object-cache.php', 'jinyu-theme-companion' ) . '</span></div>';
+		if ( ! empty( $an['missing'] ) ) {
+			$html .= '<p class="jperf-oc-note">' . esc_html__( '对比发现：金玉版可额外提供以下能力，当前外部文件未包含：', 'jinyu-theme-companion' ) . '</p>';
+			$html .= '<ul class="jperf-oc-caps">';
+			foreach ( $an['missing'] as $label ) {
+				$html .= '<li>' . esc_html( $label ) . '</li>';
+			}
+			$html .= '</ul>';
+		} else {
+			$html .= '<p class="jperf-oc-note">' . esc_html__( '功能与金玉版相当。替换为金玉版后可由本插件统一管理（支持一键回滚）。', 'jinyu-theme-companion' ) . '</p>';
+		}
+		$html .= '<div class="jperf-oc-row">'
+			. '<button type="button" class="jperf-btn jperf-btn-hero jperf-btn-sm" data-upgrade="1">'
+			. '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>'
+			. '<span>' . esc_html__( '升级替换为金玉版', 'jinyu-theme-companion' ) . '</span></button></div>';
+		$html .= '<div class="jperf-oc-confirm" hidden>'
+			. '<p class="jperf-oc-confirm-tip">' . esc_html__( '将用金玉版 object-cache.php 替换现有文件。替换前建议备份原文件以便随时还原。', 'jinyu-theme-companion' ) . '</p>'
+			. '<label class="jperf-oc-backup"><input type="checkbox" data-backup="1" checked> ' . esc_html__( '替换前备份原文件（推荐）', 'jinyu-theme-companion' ) . '</label>'
+			. '<div class="jperf-oc-confirm-btns">'
+			. '<button type="button" class="jperf-btn jperf-btn-hero jperf-btn-sm" data-upgrade-confirm="1">' . esc_html__( '确认升级', 'jinyu-theme-companion' ) . '</button>'
+			. '<button type="button" class="jperf-btn jperf-btn-sm" data-upgrade-cancel="1">' . esc_html__( '取消', 'jinyu-theme-companion' ) . '</button>'
+			. '</div></div>';
+	} elseif ( $st['can_deploy'] ) {
+		$html .= '<div class="jperf-oc-row"><button type="button" class="jperf-btn jperf-btn-hero jperf-btn-sm" data-deploy="1">'
+			. '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>'
+			. '<span>' . esc_html__( '部署对象缓存', 'jinyu-theme-companion' ) . '</span></button></div>';
+		$html .= '<p class="jperf-oc-note">' . esc_html__( '一键写入 object-cache.php，让 WordPress 直接使用 Memcached，无需手动配置。', 'jinyu-theme-companion' ) . '</p>';
+	} else {
+		$reason = $st['ext']
+			? esc_html__( '无法连接 Memcached 守护进程（127.0.0.1:11211）', 'jinyu-theme-companion' )
+			: esc_html__( '服务器未安装 PECL Memcached 扩展', 'jinyu-theme-companion' );
+		$html .= '<div class="jperf-oc-row"><span class="jperf-oc-badge off">' . esc_html__( '不支持部署', 'jinyu-theme-companion' ) . '</span></div>';
+		$html .= '<p class="jperf-oc-note">' . $reason . '</p>';
+	}
+
+	$html .= '</div>';
+	return $html;
+}
+
 /**
  * 清第三方整页缓存（WP Super Cache / W3 Total Cache 等，若有）。
  *
@@ -972,14 +1188,11 @@ function jyc_perf_render_status_html(): string {
 			. '<div class="jperf-rlbl">' . $sub . '</div></div></div>';
 	};
 
-	// 键值行；传入 $meter（百分比字符串）时追加内存占用细进度条。
+	// 统计格：标签在上、数值在下（2×2 网格）；传入 $meter（百分比字符串）时格内附内存占用细进度条。
 	$kv = static function ( string $name, string $val, string $meter = '' ): string {
-		$row = '<div class="jperf-kvrow"><span class="jperf-name">' . $name . '</span>'
-			. '<span class="jperf-val">' . $val . '</span></div>';
-		if ( '' !== $meter ) {
-			$row .= '<div class="jperf-meter"><i style="width:' . $meter . '"></i></div>';
-		}
-		return $row;
+		$bar = '' !== $meter ? '<div class="jperf-meter"><i style="width:' . $meter . '"></i></div>' : '';
+		return '<div class="jperf-cell"><span class="jperf-clabel">' . $name . '</span>'
+			. '<span class="jperf-cval">' . $val . '</span>' . $bar . '</div>';
 	};
 
 	// SAPI 未启用 opcache 时 jyc_perf_opcache_stats() 只回 ['enabled'=>false]，键不存在。
@@ -1009,43 +1222,56 @@ function jyc_perf_render_status_html(): string {
 
 	// OPcache 面板
 	$html .= '<div class="jperf-panel"><div class="jperf-panel-head">'
-		. '<svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>'
+		. '<span class="jperf-panel-ico"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg></span>'
 		. '<h3>' . esc_html__( 'OPcache 字节码缓存', 'jinyu-theme-companion' ) . '</h3><span class="jperf-tag">PHP ' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '</span></div>';
 	$html .= '<div class="jperf-gauge">';
 	$html .= $ring( $op_hit, 'var(--j-accent)', __( '命中率', 'jinyu-theme-companion' ) );
 	$html .= '<div class="jperf-kv">';
 	if ( null === $o ) {
-		$html .= '<div class="jperf-kvrow"><span class="jperf-name">' . esc_html__( '状态', 'jinyu-theme-companion' ) . '</span><span class="jperf-val">' . esc_html__( '未安装扩展', 'jinyu-theme-companion' ) . '</span></div>';
+		$html .= '<div class="jperf-cell jperf-cell-wide"><span class="jperf-clabel">' . esc_html__( '状态', 'jinyu-theme-companion' ) . '</span><span class="jperf-cval">' . esc_html__( '未安装扩展', 'jinyu-theme-companion' ) . '</span></div>';
 	} elseif ( empty( $o['enabled'] ) ) {
-		$html .= '<div class="jperf-kvrow"><span class="jperf-name">' . esc_html__( '状态', 'jinyu-theme-companion' ) . '</span><span class="jperf-val">' . esc_html__( '当前上下文未启用', 'jinyu-theme-companion' ) . '</span></div>';
+		$html .= '<div class="jperf-cell jperf-cell-wide"><span class="jperf-clabel">' . esc_html__( '状态', 'jinyu-theme-companion' ) . '</span><span class="jperf-cval">' . esc_html__( '当前上下文未启用', 'jinyu-theme-companion' ) . '</span></div>';
 	} else {
 		$html .= $kv( __( '缓存脚本', 'jinyu-theme-companion' ), number_format_i18n( $o['cached_scripts'] ) );
 		$html .= $kv( __( '内存占用', 'jinyu-theme-companion' ), jyc_perf_human( $o['memory_used'] ) . ' / ' . jyc_perf_human( $o['memory_total'] ) );
 		$html .= $kv( __( '内存使用率', 'jinyu-theme-companion' ), $o['mem_pct'] . '%', $o['mem_pct'] . '%' );
 		$html .= $kv( __( '浪费内存', 'jinyu-theme-companion' ), jyc_perf_human( $o['wasted'] ) );
 	}
-	$html .= '</div></div></div>';
+	// 底部数据栏：横向补充运行细节，不改动上方仪表区布局。
+	if ( $o && ! empty( $o['enabled'] ) ) {
+		$extra  = '<div class="jperf-extra">';
+		$extra .= '<span><i>' . esc_html__( '剩余内存', 'jinyu-theme-companion' ) . '</i><b>' . esc_html( jyc_perf_human( max( 0, $o['memory_total'] - $o['memory_used'] ) ) ) . '</b></span>';
+		$extra .= '<span><i>' . esc_html__( '累计命中', 'jinyu-theme-companion' ) . '</i><b>' . esc_html( number_format_i18n( $o['hits'] ) ) . '</b></span>';
+		$extra .= '<span><i>' . esc_html__( 'OOM 重启', 'jinyu-theme-companion' ) . '</i><b>' . esc_html( number_format_i18n( $o['oom_restarts'] ) ) . '</b></span>';
+		$extra .= '<span><i>' . esc_html__( '上次重置', 'jinyu-theme-companion' ) . '</i><b>' . esc_html( $o['last_restart'] > 0 ? sprintf( /* translators: %s: 相对时间 */ __( '%s前', 'jinyu-theme-companion' ), human_time_diff( $o['last_restart'], time() ) ) : __( '从未', 'jinyu-theme-companion' ) ) . '</b></span>';
+		$extra .= '</div>';
+		$html .= '</div></div>' . $extra . '</div>'; // 依次闭合 .jperf-kv、.jperf-gauge，数据栏在仪表行之后、面板之内
+	} else {
+		$html .= '</div></div></div>'; // 依次闭合 .jperf-kv、.jperf-gauge、.jperf-panel
+	}
 
 	// Memcached 面板
 	$html .= '<div class="jperf-panel"><div class="jperf-panel-head">'
-		. '<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>'
+		. '<span class="jperf-panel-ico"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span>'
 		. '<h3>' . esc_html__( 'Memcached 对象缓存', 'jinyu-theme-companion' ) . '</h3><span class="jperf-tag">' . esc_html( $mtag ) . '</span></div>';
 	$html .= '<div class="jperf-gauge">';
-	$html .= $ring( $mc_hit, 'var(--j-ink2)', __( '命中率', 'jinyu-theme-companion' ) );
+	$html .= $ring( $mc_hit, 'var(--j-accent)', __( '命中率', 'jinyu-theme-companion' ) );
 	$html .= '<div class="jperf-kv">';
 	if ( null === $m ) {
-		$html .= '<div class="jperf-kvrow"><span class="jperf-name">' . esc_html__( '状态', 'jinyu-theme-companion' ) . '</span><span class="jperf-val">' . esc_html__( '未安装扩展', 'jinyu-theme-companion' ) . '</span></div>';
+		$html .= '<div class="jperf-cell jperf-cell-wide"><span class="jperf-clabel">' . esc_html__( '状态', 'jinyu-theme-companion' ) . '</span><span class="jperf-cval">' . esc_html__( '未安装扩展', 'jinyu-theme-companion' ) . '</span></div>';
 		} elseif ( empty( $m['reachable'] ) ) {
 			$ext = (bool) wp_using_ext_object_cache();
 			$msg = $ext ? __( '未连接 Memcached（当前使用其他对象缓存后端）', 'jinyu-theme-companion' ) : __( '无法连接 127.0.0.1:11211', 'jinyu-theme-companion' );
-			$html .= '<div class="jperf-kvrow"><span class="jperf-name">' . esc_html__( '状态', 'jinyu-theme-companion' ) . '</span><span class="jperf-val">' . esc_html( $msg ) . '</span></div>';
+			$html .= '<div class="jperf-cell jperf-cell-wide"><span class="jperf-clabel">' . esc_html__( '状态', 'jinyu-theme-companion' ) . '</span><span class="jperf-cval">' . esc_html( $msg ) . '</span></div>';
 	} else {
 		$html .= $kv( __( '缓存条目', 'jinyu-theme-companion' ), number_format_i18n( $m['curr_items'] ) );
 		$html .= $kv( __( '内存占用', 'jinyu-theme-companion' ), jyc_perf_human( (float) $m['bytes'] ) . ' / ' . jyc_perf_human( (float) $m['limit'] ) );
 		$html .= $kv( __( '内存使用率', 'jinyu-theme-companion' ), $m['mem_pct'] . '%', $m['mem_pct'] . '%' );
 		$html .= $kv( __( '已运行', 'jinyu-theme-companion' ), jyc_perf_human_uptime( $m['uptime'] ) );
 	}
-	$html .= '</div></div></div>';
+	$html .= '</div></div>'; // 闭合 .jperf-kv 与 .jperf-gauge：部署控件横贯整卡宽度，不进统计格
+	$html .= jyc_perf_object_cache_control_html();
+	$html .= '</div>';
 	$html .= '</div>'; // 闭合 .jperf-panels：Web Vitals 区是全宽板块，不进监控双栏
 
 	// —— 真实用户 Web Vitals（近 7 天聚合）——
@@ -1057,6 +1283,68 @@ function jyc_perf_render_status_html(): string {
 	if ( null === $wv ) {
 		$html .= '<div class="jperf-wv-empty">' . esc_html__( '暂无样本。前端已采集 LCP / INP / CLS / FCP / TTFB，访客浏览后这里会出现真实均值。', 'jinyu-theme-companion' ) . '</div>';
 	} else {
+		$foot = sprintf( __( '基于 %s 次真实访问', 'jinyu-theme-companion' ), number_format_i18n( $wv['n'] ) );
+		if ( empty( $wv['fresh'] ) ) {
+			$foot .= __( '（窗口已过期，等待新样本）', 'jinyu-theme-companion' );
+		}
+		// 报告总评 hero 卡：置于 5 项指标之前，圆环分数 + 评级 + 指标分布，一眼给结论。
+		if ( null !== $wv_score ) {
+			$sr     = $wv_score['rate'];
+			$sbadge = 'good' === $sr ? __( '优秀', 'jinyu-theme-companion' ) : ( 'poor' === $sr ? __( '待提升', 'jinyu-theme-companion' ) : __( '一般', 'jinyu-theme-companion' ) );
+			$dist   = array( 'good' => 0, 'mid' => 0, 'poor' => 0 );
+			foreach ( $wvm as $k => $meta ) {
+				$dist[ jyc_perf_wv_rate( (float) $wv['avg'][ $k ], $meta ) ]++;
+			}
+			$n_all = count( $wvm );
+			$seg   = '';
+			foreach ( $dist as $r => $n ) {
+				if ( $n > 0 ) {
+					$seg .= '<i class="seg ' . $r . '" style="width:' . round( $n / $n_all * 100, 1 ) . '%"></i>';
+				}
+			}
+			// 最短板：与「良好阈值」偏离最大的一项（全项达标时取相对最接近阈值的那项）。
+			$weak_k = '';
+			$weak_r = -INF;
+			foreach ( $wvm as $k => $meta ) {
+				$r = ( (float) $wv['avg'][ $k ] ) / (float) $meta['good'];
+				if ( $r > $weak_r ) {
+					$weak_r = $r;
+					$weak_k = $k;
+				}
+			}
+			$wv_val = $wvm[ $weak_k ]['ms']
+				? number_format_i18n( (int) $wv['avg'][ $weak_k ] ) . ' ms'
+				: (string) $wv['avg'][ $weak_k ];
+			$concl = ( $dist['mid'] + $dist['poor'] ) > 0
+				/* translators: 1: 达标项数, 2: 总项数, 3: 指标标签, 4: 当前均值, 5: 良好阈值 */
+				? sprintf( __( '%1$d / %2$d 项达标 · 最短板 %3$s（%4$s，良好线 %5$s）', 'jinyu-theme-companion' ), $dist['good'], $n_all, $wvm[ $weak_k ]['label'], $wv_val, $wvm[ $weak_k ]['good'] . ( $wvm[ $weak_k ]['ms'] ? ' ms' : '' ) )
+				: sprintf( __( '%d 项全部达标 · 真实用户访问体验处于良好区间', 'jinyu-theme-companion' ), $n_all );
+			$html .= '<div class="jperf-wv-score rate-' . $sr . '">'
+				. '<div class="jperf-score-ring"><div class="jperf-ring"><svg viewBox="0 0 108 108">'
+				. '<circle class="jperf-track" cx="54" cy="54" r="46"/>'
+				. '<circle class="jperf-bar" cx="54" cy="54" r="46" data-pct="' . (float) $wv_score['score'] . '"/></svg>'
+				. '<div class="jperf-ctr"><div class="jperf-score-num" data-count="' . (int) $wv_score['score'] . '">0</div>'
+				. '<div class="jperf-rlbl">' . esc_html__( '满分 100', 'jinyu-theme-companion' ) . '</div></div></div></div>'
+				. '<div class="jperf-score-body">'
+				. '<div class="jperf-score-head"><span class="jperf-score-tt">' . esc_html__( '综合体验评分', 'jinyu-theme-companion' ) . '</span>'
+				. '<span class="jperf-wv-badge">' . esc_html( $sbadge ) . '</span></div>'
+				. '<div class="jperf-score-concl">' . esc_html( $concl ) . '</div>'
+				. '<div class="jperf-score-distrow"><div class="jperf-score-dist">' . $seg . '</div>'
+				. '<span class="jperf-score-dl">' . sprintf(
+					/* translators: 1: 良好项数, 2: 需优化项数, 3: 较差项数 */
+					__( '良好 %1$d / 需优化 %2$d / 较差 %3$d', 'jinyu-theme-companion' ),
+					$dist['good'],
+					$dist['mid'],
+					$dist['poor']
+				) . '</span></div>'
+				. '<div class="jperf-score-sub">Field Performance Score · ' . esc_html( $foot ) . '</div>'
+				. '<div class="jperf-score-meta">' . sprintf(
+					/* translators: %d: 指标总数 */
+					__( '%d 项加权（LCP / INP 各 25%%、TTFB 20%%、CLS / FCP 各 15%%）· 近 7 天滚动均值', 'jinyu-theme-companion' ),
+					$n_all
+				) . '</div>'
+				. '</div></div>';
+		}
 		foreach ( $wvm as $k => $meta ) {
 			$avg   = (float) $wv['avg'][ $k ];
 			$max   = (float) $wv['max'][ $k ];
@@ -1073,22 +1361,30 @@ function jyc_perf_render_status_html(): string {
 				. '<div class="jperf-wv-worst">' . esc_html__( '最差 ', 'jinyu-theme-companion' ) . $worst . '</div>'
 				. '<div class="jperf-tip" role="tooltip" hidden><div>' . esc_html( $meta['tip'] ) . '</div><div><b>' . esc_html__( '优化', 'jinyu-theme-companion' ) . '</b> · ' . esc_html( $meta['optimize'] ) . '</div></div></div>';
 		}
-		if ( null !== $wv_score ) {
-			$sr     = $wv_score['rate'];
-			$sbadge = 'good' === $sr ? __( '优秀', 'jinyu-theme-companion' ) : ( 'poor' === $sr ? __( '待提升', 'jinyu-theme-companion' ) : __( '一般', 'jinyu-theme-companion' ) );
-			$html .= '<div class="jperf-wv-chip jperf-wv-score rate-' . $sr . '">'
-				. '<div class="jperf-wv-top"><span class="jperf-wv-lab">' . esc_html__( '综合体验评分', 'jinyu-theme-companion' ) . '</span>'
-				. '<span class="jperf-wv-badge">' . $sbadge . '</span></div>'
-				. '<div class="jperf-wv-val jperf-score-num" data-count="' . $wv_score['score'] . '">0</div>'
-				. '<div class="jperf-wv-name">' . esc_html__( 'Field Performance Score · 满分 100', 'jinyu-theme-companion' ) . '</div>'
-				. '<div class="jperf-wv-scorebar"><i style="width:' . $wv_score['score'] . '%"></i></div>'
-				. '<div class="jperf-wv-note">' . esc_html__( '5 项加权 · 近 7 天滚动均值', 'jinyu-theme-companion' ) . '</div></div>';
+		// 热门页面 TOP5：占据指标 grid 末格，补上「内容维度」的数据视角。
+		if ( ! empty( $wv['paths'] ) ) {
+			$max_n = 0;
+			foreach ( $wv['paths'] as $prow ) {
+				$max_n = max( $max_n, (int) $prow['n'] );
+			}
+			$html .= '<div class="jperf-wv-chip jperf-wv-hot">'
+				. '<div class="jperf-wv-top"><span class="jperf-wv-lab">' . esc_html__( '热门页面', 'jinyu-theme-companion' ) . '</span>'
+				. '<span class="jperf-wv-badge jperf-hot-badge">' . esc_html__( '样本 TOP 5', 'jinyu-theme-companion' ) . '</span></div>'
+				. '<div class="jperf-hot-list">';
+			foreach ( $wv['paths'] as $prow ) {
+				$pdisp = urldecode( (string) $prow['path'] );
+				if ( mb_strlen( $pdisp ) > 26 ) {
+					$pdisp = mb_substr( $pdisp, 0, 26 ) . '…';
+				}
+				$ppct = $max_n > 0 ? round( (int) $prow['n'] / $max_n * 100, 1 ) : 0;
+				$html .= '<div class="jperf-hot-row">'
+					. '<span class="jperf-hot-path" title="' . esc_attr( $prow['path'] ) . '">' . esc_html( $pdisp ) . '</span>'
+					. '<span class="jperf-hot-bar"><i style="width:' . $ppct . '%"></i></span>'
+					. '<span class="jperf-hot-n">' . number_format_i18n( (int) $prow['n'] ) . '</span></div>';
+			}
+			$html .= '</div>'
+				. '<div class="jperf-wv-worst">' . esc_html__( '按上报样本数排序 · 点击量最高的入口页', 'jinyu-theme-companion' ) . '</div></div>';
 		}
-		$foot = sprintf( __( '基于 %s 次真实访问', 'jinyu-theme-companion' ), number_format_i18n( $wv['n'] ) );
-		if ( empty( $wv['fresh'] ) ) {
-			$foot .= __( '（窗口已过期，等待新样本）', 'jinyu-theme-companion' );
-		}
-		$html .= '<div class="jperf-wv-foot">' . $foot . '</div>';
 		$html .= '<div class="jperf-wv-legend"><span class="lg good">' . esc_html__( '良好', 'jinyu-theme-companion' ) . '</span><span class="lg mid">' . esc_html__( '需优化', 'jinyu-theme-companion' ) . '</span>'
 			. '<span class="lg poor">' . esc_html__( '较差', 'jinyu-theme-companion' ) . '</span><span class="lg-note">' . esc_html__( '除综合评分外，数值越低越好', 'jinyu-theme-companion' ) . '</span></div>';
 		if ( ! empty( $wv['slowest'] ) && is_array( $wv['slowest'] ) ) {
@@ -1245,6 +1541,34 @@ function jyc_perf_ajax_reset_wv(): void {
 add_action( 'wp_ajax_jyc_perf_save', 'jyc_perf_ajax_save' );
 add_action( 'wp_ajax_jyc_perf_reset_wv', 'jyc_perf_ajax_reset_wv' );
 add_action( 'wp_ajax_jyc_perf_status', 'jyc_perf_ajax_status' );
+add_action( 'wp_ajax_jyc_perf_deploy_cache', 'jyc_perf_ajax_deploy_cache' );
+add_action( 'wp_ajax_jyc_perf_upgrade_cache', 'jyc_perf_ajax_upgrade_cache' );
+
+/** 部署 / 回滚对象缓存 drop-in：deploy=1 部署，deploy=0 移除。 */
+function jyc_perf_ajax_deploy_cache(): void {
+	jyc_perf_guard();
+	$deploy = ! empty( $_POST['deploy'] ) ? (int) $_POST['deploy'] : 0;
+	$res    = 1 === $deploy ? jyc_perf_deploy_object_cache() : jyc_perf_remove_object_cache();
+	if ( ! empty( $res['ok'] ) ) {
+		wp_send_json_success( [ 'msg' => $res['msg'] ] );
+	}
+	wp_send_json_error( [ 'msg' => $res['msg'] ?? __( '操作失败', 'jinyu-theme-companion' ) ] );
+}
+
+/** 升级替换：把外部 object-cache.php 换成金玉版（可选先备份原文件）。 */
+function jyc_perf_ajax_upgrade_cache(): void {
+	jyc_perf_guard();
+	$target = WP_CONTENT_DIR . '/object-cache.php';
+	if ( ! file_exists( $target ) || jyc_perf_object_cache_is_jinyu( $target ) ) {
+		wp_send_json_error( [ 'msg' => __( '没有可替换的外部 object-cache.php', 'jinyu-theme-companion' ) ] );
+	}
+	$backup = ! empty( $_POST['backup'] );
+	$res    = jyc_perf_deploy_object_cache( true, $backup );
+	if ( ! empty( $res['ok'] ) ) {
+		wp_send_json_success( [ 'msg' => $res['msg'] ] );
+	}
+	wp_send_json_error( [ 'msg' => $res['msg'] ?? __( '升级失败', 'jinyu-theme-companion' ) ] );
+}
 
 /** 刷新状态看板：返回整块状态区 HTML（与页面初始渲染同一函数，杜绝两处漂移）。 */
 function jyc_perf_ajax_status(): void {
@@ -1264,8 +1588,13 @@ function jyc_perf_ajax_load_comments() {
 	$post_id = (int) ( $_GET['post_id'] ?? 0 );
 	$page    = max( 1, (int) ( $_GET['page'] ?? 1 ) );
 	$post    = get_post( $post_id );
-	if ( ! $post || ! comments_open( $post ) ) {
+	// 仅公开文章的评论可被匿名增量拉取：私有/草稿/待审文章即使评论开放也不经此端点外泄。
+	if ( ! $post || 'publish' !== get_post_status( $post ) || ! comments_open( $post ) ) {
 		wp_send_json_error( 'invalid' );
+	}
+	// 限流：匿名端点防刷（每 IP 每小时 120 次翻页已远超正常浏览节奏）。
+	if ( function_exists( 'jinyu_rate_limit_check' ) && ! jinyu_rate_limit_check( 'comments_load', 120, HOUR_IN_SECONDS ) ) {
+		wp_send_json_error( 'rate_limited' );
 	}
 	$opt = jyc_perf_get_options();
 	if ( empty( $opt['comment_lazyload'] ) ) {
@@ -1545,6 +1874,8 @@ function jyc_perf_render_pane(): void {
 		function refreshStatus(){
 			return post('jyc_perf_status').then(function(j){
 				if (j.success) {
+					// 整块替换前先收起：卡片 DOM 即将消失，浮层里的 tip 会变成无主残留
+					closeTips(null);
 					document.getElementById('jperf-status-zone').innerHTML = j.data.html;
 					animateBoards();
 					var at = document.getElementById('jperf-refreshed-at');
@@ -1569,31 +1900,84 @@ function jyc_perf_render_pane(): void {
 			});
 		});
 
-		// 帮助气泡（事件委托：覆盖开关卡与体验指标卡，看板整块刷新后依然有效）
-		// 展开期间给宿主卡片加 .jperf-tip-on 抬升层级：气泡向下展开会落到下一行卡片上，
-		// 宿主 hover 带 transform 会自建层叠上下文，不抬升就会被 DOM 靠后的兄弟卡片盖住。
+		/* 气泡先搬进 .jyc-app 直属浮层，再按视口坐标 fixed 定位。
+		   原因（实测复现）：.jcard / .jperf-wv-chip 的 hover transform（translateY）
+		   与 .jyc-pane 入场动画 fill-mode 残留的 identity matrix 都会成为 fixed 的
+		   包含块 —— JS 写入的「视口坐标」被当成「祖先坐标」，气泡整块下坠数百 px，
+		   桌面 / 平板 / 手机全端复现。搬进直属浮层后祖先只剩 .jyc-app（无 transform），
+		   坐标恒等于视口；同时仍继承面板的 --surface / --ink / --j-accent 等 token。 */
+		var tipLayer = null;
+		function getTipLayer(){
+			var app = document.querySelector('.jyc-app') || document.body;
+			if (!tipLayer || !tipLayer.isConnected) {
+				tipLayer = document.createElement('div');
+				tipLayer.id = 'jperf-tip-layer';
+				app.appendChild(tipLayer);
+			}
+			return tipLayer;
+		}
+		function tipOf(btn){
+			if (!btn._tip || !btn._tip.isConnected) {
+				var host = btn.closest('.jcard, .jperf-wv-chip');
+				btn._tip = host ? host.querySelector('.jperf-tip') : null;
+			}
+			return btn._tip;
+		}
+		/** 收起并送回卡片原位（卡片 DOM 被整块替换时 home 失效，直接丢弃）。 */
+		function restoreTip(tip){
+			tip.hidden = true;
+			var home = tip._home;
+			tip._home = null;
+			if (home && home.parent && home.parent.isConnected) {
+				home.parent.insertBefore(tip, (home.next && home.next.parentNode === home.parent) ? home.next : null);
+			}
+		}
+		function showTip(btn, tip){
+			if (!tip._home) { tip._home = { parent: tip.parentNode, next: tip.nextSibling }; }
+			getTipLayer().appendChild(tip);
+			tip.hidden = false;
+			positionTip(btn, tip);
+		}
+		/* 所有宽度统一：fixed 浮层 + JS 视口坐标定位到被点问号按钮。
+		   不依赖媒体查询断点（断点漏判会让某宽度整组问号退回错位 CSS）。 */
+		function positionTip(btn, tip){
+			tip.style.position = 'fixed';
+			tip.style.left = '0px'; tip.style.top = '0px';
+			var tw = tip.offsetWidth, th = tip.offsetHeight;
+			var r = btn.getBoundingClientRect();
+			var vw = window.innerWidth, vh = window.innerHeight, m = 10;
+			/* 水平贴着按钮那一侧：按钮在屏幕左半 → 气泡左缘对齐按钮左缘向右铺；
+			   按钮在右半（性能中心标题问号在右上）→ 气泡右缘对齐按钮右缘向左铺。
+			   避免把 15px 按钮吊在 320px 气泡中央、文字区离问号过远。 */
+			var bc = r.left + r.width / 2;
+			var left = bc < vw / 2 ? r.left : (r.right - tw);
+			left = Math.max(m, Math.min(left, vw - tw - m));
+			var top = r.bottom + 8;
+			if (top + th > vh - m) {
+				var above = r.top - 8 - th;
+				top = above < m ? m : above;
+			}
+			tip.style.left = left + 'px';
+			tip.style.top = top + 'px';
+		}
 		function closeTips(except){
+			var layer = getTipLayer();
+			Array.prototype.slice.call(layer.children).forEach(function(t){
+				if (t !== except) { restoreTip(t); }
+			});
 			document.querySelectorAll('.jperf-help[aria-expanded="true"]').forEach(function(b){
-				if (b === except) { return; }
-				b.setAttribute('aria-expanded', 'false');
-				var host = b.closest('.jcard, .jperf-wv-chip');
-				if (!host) { return; }
-				var t = host.querySelector('.jperf-tip');
-				if (t) { t.hidden = true; }
-				host.classList.remove('jperf-tip-on');
+				if (b._tip !== except) { b.setAttribute('aria-expanded', 'false'); }
 			});
 		}
 		document.addEventListener('click', function(e){
 			var b = e.target.closest('.jperf-help');
 			if (b) {
-				var host = b.closest('.jcard, .jperf-wv-chip');
-				var tip = host && host.querySelector('.jperf-tip');
+				var tip = tipOf(b);
 				if (!tip) { return; }
 				var open = b.getAttribute('aria-expanded') === 'true';
-				closeTips(b);
+				closeTips(tip);
 				b.setAttribute('aria-expanded', open ? 'false' : 'true');
-				tip.hidden = open;
-				if (host) { host.classList.toggle('jperf-tip-on', !open); }
+				if (open) { restoreTip(tip); } else { showTip(b, tip); }
 				return;
 			}
 			if (!e.target.closest('.jperf-tip')) { closeTips(null); }
@@ -1601,6 +1985,9 @@ function jyc_perf_render_pane(): void {
 		document.addEventListener('keydown', function(e){
 			if (e.key === 'Escape') { closeTips(null); }
 		});
+		/* fixed 气泡不随页面滚动/视口旋转，脱离按钮即收起，避免悬空错位（所有宽度） */
+		window.addEventListener('scroll', function(){ closeTips(null); }, true);
+		window.addEventListener('resize', function(){ closeTips(null); });
 
 		// 一键应用推荐优化
 		var run = document.getElementById('jperf-run');
@@ -1689,6 +2076,61 @@ function jyc_perf_render_pane(): void {
 					.catch(function(e){ b.disabled = false; lbl.textContent = old; showErr('jperf-cache-result', e); });
 			});
 		});
+
+		// 对象缓存 drop-in 部署 / 回滚（事件委托：状态看板刷新后仍有效）
+		var ocZone = document.getElementById('jperf-status-zone');
+		if (ocZone) {
+			ocZone.addEventListener('click', function(e){
+				// 升级替换：展开/收起确认面板
+				var up = e.target.closest('[data-upgrade="1"]');
+				if (up) {
+					var panel = ocZone.querySelector('.jperf-oc-confirm');
+					if (panel) { panel.hidden = !panel.hidden; }
+					return;
+				}
+				var canc = e.target.closest('[data-upgrade-cancel="1"]');
+				if (canc) {
+					var p2 = ocZone.querySelector('.jperf-oc-confirm');
+					if (p2) { p2.hidden = true; }
+					return;
+				}
+				// 升级替换：确认并执行
+				var cf = e.target.closest('[data-upgrade-confirm="1"]');
+				if (cf) {
+					e.preventDefault();
+					var chk = ocZone.querySelector('[data-backup="1"]');
+					var backup = chk && chk.checked ? 1 : 0;
+					var oldTxt = cf.textContent;
+					cf.disabled = true;
+					cf.textContent = '<?php echo esc_js( __( '升级中…', 'jinyu-theme-companion' ) ); ?>';
+					post('jyc_perf_upgrade_cache', {backup: backup})
+						.then(function(j){
+							cf.disabled = false; cf.textContent = oldTxt;
+							var p3 = ocZone.querySelector('.jperf-oc-confirm'); if (p3) { p3.hidden = true; }
+							if (!j.success) { showErr('jperf-cache-result', j.data && j.data.msg ? j.data.msg : '<?php echo esc_js( __( '升级失败', 'jinyu-theme-companion' ) ); ?>'); return; }
+							showResult('jperf-cache-result', [j.data.msg]);
+							refreshStatus();
+						})
+						.catch(function(err){ cf.disabled = false; cf.textContent = oldTxt; showErr('jperf-cache-result', err); });
+					return;
+				}
+				var b = e.target.closest('.jperf-btn[data-deploy]');
+				if (!b) { return; }
+				e.preventDefault();
+				b.disabled = true;
+				var lbl = b.querySelector('span');
+				var old = lbl ? lbl.textContent : '';
+				if (lbl) { lbl.textContent = '<?php echo esc_js( __( '处理中…', 'jinyu-theme-companion' ) ); ?>'; }
+				post('jyc_perf_deploy_cache', {deploy: b.getAttribute('data-deploy')})
+					.then(function(j){
+						b.disabled = false; if (lbl) { lbl.textContent = old; }
+						if (!j.success) { showErr('jperf-cache-result', j.data && j.data.msg ? j.data.msg : '<?php echo esc_js( __( '未知错误', 'jinyu-theme-companion' ) ); ?>'); return; }
+						showResult('jperf-cache-result', [j.data.msg]);
+						refreshStatus();
+					})
+					.catch(function(err){ b.disabled = false; if (lbl) { lbl.textContent = old; } showErr('jperf-cache-result', err); });
+			});
+		}
 
 		// 清空真实用户体验聚合
 		var rwv = document.getElementById('jperf-reset-wv');

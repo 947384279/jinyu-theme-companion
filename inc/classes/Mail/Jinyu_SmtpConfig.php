@@ -67,7 +67,11 @@ class Jinyu_SmtpConfig
         // 端口 0/负值（历史脏数据）回退 465，避免 PHPMailer Port=0 静默失败
         $port                  = (int) ($cfg['port'] ?? 0);
         $phpmailer->Port       = $port > 0 ? $port : 465;
+        // 加密方式白名单：历史脏数据/异常值归一为 ssl，避免直通 PHPMailer 触发 SMTPSecure 报错
         $secure                = (string) ($cfg['secure'] ?? 'ssl');
+        if ( ! in_array( $secure, array( 'ssl', 'tls', 'none' ), true ) ) {
+            $secure = 'ssl';
+        }
         $phpmailer->SMTPSecure = ($secure === 'none') ? '' : $secure;
 
         if (!empty($cfg['user'])) {

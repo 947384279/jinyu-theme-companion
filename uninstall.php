@@ -53,6 +53,16 @@ function jinyu_companion_uninstall_site( array $options, array $tables ): void {
 		delete_option( $name );
 	}
 
+	// 卸载时清理本插件部署的对象缓存 drop-in：仅删除带本插件标记的文件，
+	// 外部部署的 object-cache.php 一律保留，避免误删用户自有缓存配置。
+	$jinyu_oc = ( defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : '' ) . '/object-cache.php';
+	if ( '' !== $jinyu_oc && is_file( $jinyu_oc ) ) {
+		$head = (string) @file_get_contents( $jinyu_oc, false, null, 0, 2048 );
+		if ( false !== strpos( $head, 'JINYU_DROPIN_MARKER:jinyu-memcached-object-cache' ) ) {
+			@unlink( $jinyu_oc );
+		}
+	}
+
 	// 残留 transient（限流 / 验证码 / 海报缓存）：memcached 下删库表无意义，按前缀清一次。
 	$wpdb->query(
 		"DELETE FROM {$wpdb->options}

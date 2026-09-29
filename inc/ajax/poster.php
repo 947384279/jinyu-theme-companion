@@ -20,6 +20,14 @@ function jinyu_poster_generate()
     $post = get_post($post_id);
     if (!$post) wp_send_json_error('not found');
 
+    // 防探测：本端点对匿名开放，非公开内容不得经它外泄。
+    // 已发布文章对所有人放行（海报按钮本就是前台匿名分享功能）；
+    // 草稿 / 私密 / 待审文章仅限有阅读权限的用户（如管理员预览），匿名请求一律按不存在处理。
+    if ( 'publish' !== $post->post_status
+        && ( ! is_user_logged_in() || ! current_user_can( 'read_post', $post_id ) ) ) {
+        wp_send_json_error('not found');
+    }
+
     // 防滥用：每 IP 速率限制，避免匿名用户频繁触发 GD 图像生成消耗服务器资源
     if (!jinyu_rate_limit_check('poster', 20, MINUTE_IN_SECONDS)) {
         wp_send_json_error('请求过于频繁，请稍后再试');

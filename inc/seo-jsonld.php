@@ -6,6 +6,94 @@ if ( ! defined( 'ABSPATH' ) ) {
 // jinyu_truncate_desc() 统一在 inc/seo.php 定义：core.php 先加载本文件、再加载 seo.php，
 // 而该函数仅在 wp_head 运行时被调用，故此处直接复用，无需重复定义。
 
+/**
+ * 判断两个 URL 是否指向同一站点（含 www 互等）。
+ *
+ * @param string $url 待判断的 URL。
+ * @return bool
+ */
+function jinyu_jsonld_is_same_site_url( $url ) {
+    $home_host = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+    $url_host  = (string) wp_parse_url( $url, PHP_URL_HOST );
+    if ( $home_host === '' || $url_host === '' ) {
+        return false;
+    }
+    $home_host = strtolower( $home_host );
+    $url_host  = strtolower( $url_host );
+    return $url_host === $home_host
+        || $url_host === 'www.' . $home_host
+        || $home_host === 'www.' . $url_host;
+}
+
+/**
+ * 清洗 sameAs 候选值：只保留合法 http(s) URL，并剔除指向本站自身的项。
+ *
+ * 剔除同域项很关键：把站点首页写进 Person.sameAs 会让人与组织同形，
+ * 搜索与 AI 无法区分「作者」与「网站」，等于没声明甚至造成伤害。
+ *
+ * @param string|array $raw 换行分隔的 URL 串或 URL 数组。
+ * @return array 去重后的 URL 列表。
+ */
+function jinyu_jsonld_sameas_urls( $raw ) {
+    if ( is_array( $raw ) ) {
+        $raw = implode( "\n", $raw );
+    }
+    $urls = array();
+    foreach ( preg_split( '/\r\n|\r|\n/', (string) $raw ) as $line ) {
+        $line = trim( $line );
+        if ( '' === $line ) {
+            continue;
+        }
+        if ( filter_var( $line, FILTER_VALIDATE_URL ) === false ) {
+            continue;
+        }
+        if ( jinyu_jsonld_is_same_site_url( $line ) ) {
+            continue;
+        }
+        $urls[] = $line;
+    }
+    return array_values( array_unique( $urls ) );
+}
+
+/**
+ * 组织实体（Organization）的公共字段：name / url / logo / sameAs。
+ *
+ * 首页的独立 Organization 节点与文章页的 publisher 共用此取值，避免两处各写一套而漂移。
+ * logo 无值时不输出 logo 字段——输出空的 ImageObject 会被判为脏数据。
+ *
+ * @return array
+ */
+function jinyu_jsonld_org_fields() {
+    $fields = array(
+        'name' => get_bloginfo( 'name' ),
+        'url'  => home_url(),
+    );
+
+    // logo 取值顺序：面板指定 > 主题自定义 Logo > 站点图标。
+    $logo = trim( (string) jinyu_companion_get_option( 'org_logo_url', '' ) );
+    if ( '' === $logo ) {
+        $logo_id = (int) get_theme_mod( 'custom_logo' );
+        $logo    = $logo_id ? (string) wp_get_attachment_image_url( $logo_id, 'full' ) : '';
+    }
+    if ( '' === $logo ) {
+        $logo = (string) get_site_icon_url();
+    }
+    $logo = trim( (string) apply_filters( 'jinyu_seo_org_logo', $logo ) );
+    if ( '' !== $logo ) {
+        $fields['logo'] = array(
+            '@type' => 'ImageObject',
+            'url'   => $logo,
+        );
+    }
+
+    $sameas = jinyu_jsonld_sameas_urls( apply_filters( 'jinyu_seo_entity_sameas', (string) jinyu_companion_get_option( 'entity_sameas', '' ) ) );
+    if ( $sameas ) {
+        $fields['sameAs'] = $sameas;
+    }
+
+    return $fields;
+}
+
 // JSON-LD 结构化数据 - SE0 增强
 add_action('wp_head', 'jinyu_json_ld', 99);
 function jinyu_json_ld()
@@ -13,13 +101,19 @@ function jinyu_json_ld()
     if ( ! jinyu_companion_is_checked('ld_json_enable', true) ) return;
     $data = [];
 
+    // 组织实体锚点：首页的 Organization 与文章页 publisher 指向同一 @id，
+    // 让搜索把「文章 publisher」和「首页组织」认作同一个实体。
+    $org_id = home_url( '/' ) . '#organization';
+
     // Site 信息
     $data[] = [
         '@context'      => 'https://schema.org',
         '@type'         => 'WebSite',
+        '@id'           => home_url( '/' ) . '#website',
         'name'          => get_bloginfo('name'),
         'url'           => home_url(),
         'description'   => get_bloginfo('description'),
+        'publisher'     => [ '@id' => $org_id ],
         'potentialAction' => [
             '@type'       => 'SearchAction',
             'target'      => home_url('/?s={s}'),
@@ -27,47 +121,55 @@ function jinyu_json_ld()
         ],
     ];
 
+    // 组织实体：Google 用首页独立出现的 Organization 建立品牌 / 组织知识实体，
+    // 缺了它，全站只有文章页内嵌的 publisher，实体图底子就没搭起来。
+    if ( is_front_page() ) {
+        // 插在 WebSite 之后：HTML 里两个实体相邻，便于人工核对与排查
+        array_splice(
+            $data,
+            1,
+            0,
+            [ array_merge(
+                [ '@context' => 'https://schema.org', '@type' => 'Organization', '@id' => $org_id ],
+                jinyu_jsonld_org_fields()
+            ) ]
+        );
+    }
+
     // 单篇 Article（post 与 page 均输出，扩大 GEO 实体覆盖面；page 无分类故省略 articleSection）
     if (is_singular(['post', 'page'])) {
         global $post;
         $author_id = (int) $post->post_author;
         $author    = get_the_author_meta('display_name', $author_id);
         $cover     = jinyu_get_post_cover($post->ID, 'large', false);
-        $logo_id   = (int) get_theme_mod('custom_logo');
-        $logo_url  = $logo_id ? wp_get_attachment_image_url($logo_id, 'full') : get_site_icon_url();
         $cats      = is_singular('post') ? get_the_category($post->ID) : [];
 
-        // 实体关联档案（sameAs）：指向站点在其它平台的官方档案。
-        // 默认无 UI（冷门字段）；开发者可用 jinyu_seo_entity_sameas 过滤器返回换行分隔的 URL 串或数组。
-        $sameas_raw = (string) jinyu_companion_get_option( 'entity_sameas', '' );
-        $sameas_raw = apply_filters( 'jinyu_seo_entity_sameas', $sameas_raw );
-        if ( is_array( $sameas_raw ) ) {
-            $sameas_raw = implode( "\n", $sameas_raw );
-        }
-        $ent_sameas = array_values( array_filter( array_map( 'trim', preg_split( '/\r\n|\r|\n/', $sameas_raw ) ), static function ( $u ) {
-            return filter_var( $u, FILTER_VALIDATE_URL ) !== false;
-        } ) );
+        // 组织（publisher）：与首页 Organization 共用取值，并用 @id 与首页实体互相挂接。
+        $publisher = array_merge(
+            [ '@type' => 'Organization', '@id' => $org_id ],
+            jinyu_jsonld_org_fields()
+        );
 
-        $publisher = [
-            '@type'  => 'Organization',
-            'name'   => get_bloginfo('name'),
-            'url'    => home_url(),
-            'logo'   => ['@type'=>'ImageObject', 'url'=> $logo_url ?: get_site_icon_url()],
-        ];
-        if ( $ent_sameas ) {
-            $publisher['sameAs'] = $ent_sameas;
-        }
-
-        // 作者实体：若填写了个人网站则写入 sameAs。
+        // 作者实体：sameAs 须指向作者本人的站外身份页（GitHub / 知乎 / X …）。
+        // 用户资料里的 user_url 常被误填成站点首页，已在清洗时按同域剔除；
+        // 面板的 author_sameas 按作者过滤后可逐人填写，过滤器 jinyu_seo_author_sameas 可完全接管。
         $author_node = [
             '@type'  => 'Person',
             'name'   => $author,
             'url'    => get_author_posts_url($author_id),
             'image'  => get_avatar_url($author_id, ['size'=>96]),
         ];
-        $author_site = trim( (string) get_the_author_meta( 'user_url', $author_id ) );
-        if ( $author_site && filter_var( $author_site, FILTER_VALIDATE_URL ) ) {
-            $author_node['sameAs'] = [ $author_site ];
+        $author_sameas = jinyu_jsonld_sameas_urls( implode(
+            "\n",
+            [
+                (string) get_the_author_meta( 'user_url', $author_id ),
+                (string) jinyu_companion_get_option( 'author_sameas', '' ),
+                (string) apply_filters( "jinyu_seo_author_sameas_{$author_id}", '' ),
+                (string) apply_filters( 'jinyu_seo_author_sameas', '' ),
+            ]
+        ) );
+        if ( $author_sameas ) {
+            $author_node['sameAs'] = $author_sameas;
         }
 
         $ld_desc = get_post_meta($post->ID, 'jinyu_seo_desc', true);
@@ -91,19 +193,10 @@ function jinyu_json_ld()
         if ( is_singular('page') ) {
             unset( $article['articleSection'] );
         }
-        // GEO 增强：把净化后的正文直接喂给结构化数据，AI 无需解析 HTML 即得全文；
         // inLanguage 显式声明语种（多语言站点的 AI 索引关键），isAccessibleForFree 声明非付费墙。
-        // 按文章+修改时间缓存：apply_filters('the_content') 是完整二次渲染，曾每次 wp_head 都跑一遍。
-        $body_cache_key = jinyu_cache_key('jsonld_body_' . $post->ID . '_' . $post->post_modified_gmt);
-        $article_body = get_transient($body_cache_key);
-        if (!is_string($article_body) || $article_body === '') {
-            $article_body = wp_strip_all_tags(apply_filters('the_content', $post->post_content));
-            if (mb_strlen($article_body, 'UTF-8') > 5000) {
-                $article_body = mb_substr($article_body, 0, 5000, 'UTF-8') . '…';
-            }
-            set_transient($body_cache_key, $article_body, WEEK_IN_SECONDS);
-        }
-        $article['articleBody']         = $article_body;
+        // 不输出 articleBody：Google 官方 Article 字段清单把该字段列在「非推荐」一档，
+        // 既不参与富媒体呈现，又把整篇正文塞进 JSON-LD（单页约 +2KB），是纯粹的净亏损。
+        // 同理，这里的 apply_filters('the_content') 二次渲染与 transient 缓存也随之不再需要。
         $article['inLanguage']          = get_locale();
         $article['isAccessibleForFree'] = true;
         $data[] = $article;
@@ -157,12 +250,88 @@ function jinyu_json_ld()
             ];
         }
         if ($steps) {
+            global $post; // HowTo 由短代码触发，$post 未必在全局作用域内：显式引入并判空
             $data[] = [
                 '@context' => 'https://schema.org',
                 '@type'    => 'HowTo',
-                'name'     => $post->post_title,
+                'name'     => ( $post instanceof WP_Post ) ? $post->post_title : '',
                 'step'     => $steps,
             ];
+        }
+    }
+
+    // 归档页（分类 / 标签 / 日期 / 作者）：CollectionPage + ItemList。
+    // 此前归档页一条结构化数据都不输出，搜索与 AI 无从知道这类页面是「文章集合」而非单篇内容。
+    // 条目直接复用当前归档查询 $wp_query->posts，不额外发一次 SQL；单页最多取 50 条，避免长列表撑爆 JSON。
+    if ( is_archive() ) {
+        global $wp_query, $wp;
+
+        // 作者归档页：先落 Person 实体，再输出集合页。
+        // 文章页的 author 已带 sameAs（作者身份已建立），但作者页本身一直没有任何实体节点，
+        // 结果是「有署名的文章、没有人」——E-E-A-T 里最直接的 Expertise 信号在归档页断链。
+        // 取值与文章页 author 同源（user_url + 面板 author_sameas + 过滤器），保证两处实体一致。
+        if ( is_author() ) {
+            $author_id  = 0;
+            $author_url = '';
+            if ( ! empty( $wp_query->query_vars['author'] ) ) {
+                $author_id = (int) $wp_query->query_vars['author'];
+            } elseif ( ! empty( $wp_query->posts ) ) {
+                $author_id = (int) $wp_query->posts[0]->post_author;
+            }
+            if ( $author_id > 0 ) {
+                $author_url = get_author_posts_url( $author_id );
+            }
+            if ( $author_url ) {
+                $person = [
+                    '@context' => 'https://schema.org',
+                    '@type'    => 'Person',
+                    '@id'      => $author_url . '#person',
+                    'name'     => get_the_author_meta( 'display_name', $author_id ),
+                    'url'      => $author_url,
+                    'image'    => get_avatar_url( $author_id, ['size'=>96] ),
+                ];
+                $person_sameas = jinyu_jsonld_sameas_urls( implode(
+                    "\n",
+                    [
+                        (string) get_the_author_meta( 'user_url', $author_id ),
+                        (string) jinyu_companion_get_option( 'author_sameas', '' ),
+                        (string) apply_filters( "jinyu_seo_author_sameas_{$author_id}", '' ),
+                        (string) apply_filters( 'jinyu_seo_author_sameas', '' ),
+                    ]
+                ) );
+                if ( $person_sameas ) {
+                    $person['sameAs'] = $person_sameas;
+                }
+                $data[] = $person;
+            }
+        }
+
+        if ( $wp_query instanceof WP_Query && ! empty( $wp_query->posts ) ) {
+            $items = array();
+            foreach ( array_slice( $wp_query->posts, 0, 50 ) as $i => $archive_post ) {
+                $items[] = array(
+                    '@type'    => 'ListItem',
+                    'position' => $i + 1,
+                    'name'     => get_the_title( $archive_post ),
+                    'url'      => get_permalink( $archive_post ),
+                );
+            }
+            if ( $items ) {
+                $archive_path = isset( $wp->request ) && $wp->request ? $wp->request : '/';
+                $archive_url  = home_url( trailingslashit( $archive_path ) );
+                $data[] = array(
+                    '@context'   => 'https://schema.org',
+                    '@type'      => 'CollectionPage',
+                    '@id'        => $archive_url . '#collectionpage',
+                    'name'       => get_the_archive_title(),
+                    'url'        => $archive_url,
+                    'mainEntity' => array(
+                        '@type'           => 'ItemList',
+                        'numberOfItems'   => count( $items ),
+                        'itemListElement' => $items,
+                    ),
+                );
+            }
         }
     }
 

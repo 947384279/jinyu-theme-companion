@@ -5,14 +5,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * 去除分类链接中的 /category/ 前缀。
- * 由设置面板「SEO / 社交」分区的「去除 /category/ 前缀」开关控制（默认开启，
- * 保持历史行为可关闭）；关闭后 WP 默认规则自动恢复，互不污染。
+ * 由设置面板「SEO / 社交」分区的「去除 /category/ 前缀」开关控制（默认关闭 ——
+ * 该开关会改写全站分类 / 文章 URL 结构，存量站点开启后旧链接可能 404，交给用户主动决定）；
+ * 关闭后 WP 默认规则自动恢复，互不污染。
  *
  * WP 7.x 兼容：去掉旧版 version_compare('3.4') 分支（早已无意义），
  * 直接写入 extra_permastructs['category']['struct']。
  */
 
-if ( jinyu_companion_is_checked( 'no_category_enable', '1' ) ) {
+if ( jinyu_companion_is_checked( 'no_category_enable', false ) ) {
 	add_action('load-themes.php', 'jinyu_no_category_base_flush');
 	add_action('created_category', 'jinyu_no_category_base_flush');
 	add_action('edited_category', 'jinyu_no_category_base_flush');
@@ -77,9 +78,14 @@ function jinyu_no_category_base_query_vars(array $vars): array
 function jinyu_no_category_base_request(array $vars)
 {
     if (isset($vars['category_redirect'])) {
-        $link = trailingslashit(home_url()) . user_trailingslashit($vars['category_redirect'], 'category');
-        status_header(301);
-        header('Location: ' . $link);
+        // 只放行分类路径语义的值（字母数字与连字符/斜杠段），杜绝任意字符串进 301 Location；
+        // 并改走 wp_safe_redirect（校验后仍限本站，PHP 层对换行的拒绝只是最后一道兜底）。
+        $target = (string) $vars['category_redirect'];
+        if ( ! preg_match( '#^[A-Za-z0-9\x{4e00}-\x{9fa5}][A-Za-z0-9\x{4e00}-\x{9fa5}\-/_%]*$#u', $target ) ) {
+            return $vars;
+        }
+        $link = trailingslashit(home_url()) . user_trailingslashit($target, 'category');
+        wp_safe_redirect( esc_url_raw( $link ), 301 );
         exit;
     }
     return $vars;

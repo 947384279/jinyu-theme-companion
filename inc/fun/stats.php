@@ -66,13 +66,14 @@ function jinyu_stats_track()
         set_transient('jinyu_stats_checked', 1, HOUR_IN_SECONDS * 12);
     }
 
-	// PV 每次 +1；UV 仅在「今日尚未打 UV Cookie」时 +1。
-	// 首访客：INSERT 时 uv 初始化为 0，下方按 Cookie 缺失 +1 → 计为 1（不再重复 +1，修原每日首访 uv=2 的 bug）。
-	$wpdb->query($wpdb->prepare("INSERT INTO $tbl (stat_date, pv, uv) VALUES (%s, 1, 0) ON DUPLICATE KEY UPDATE pv=pv+1", $today));
-
+	// PV 每次 +1；UV 仅在「今日尚未打 UV Cookie」时 +1（单条 upsert 完成，不再额外 UPDATE）。
 	$uv_key = 'jinyu_uv_' . $today;
 	if (!isset($_COOKIE[$uv_key])) {
-		$wpdb->query($wpdb->prepare("UPDATE $tbl SET uv=uv+1 WHERE stat_date=%s", $today));
+		// 新访客：PV 与 UV 各 +1（恒为单条 SQL）
+		$wpdb->query($wpdb->prepare("INSERT INTO $tbl (stat_date, pv, uv) VALUES (%s, 1, 1) ON DUPLICATE KEY UPDATE pv=pv+1, uv=uv+1", $today));
+	} else {
+		// 回头客：仅 PV +1
+		$wpdb->query($wpdb->prepare("INSERT INTO $tbl (stat_date, pv, uv) VALUES (%s, 1, 0) ON DUPLICATE KEY UPDATE pv=pv+1", $today));
 	}
 }
 
@@ -107,7 +108,7 @@ add_action('wp_dashboard_setup', function(){
         $tbl = $wpdb->prefix . 'jinyu_stats';
         $rows = $wpdb->get_results($wpdb->prepare("SELECT stat_date, pv, uv FROM %i ORDER BY stat_date DESC LIMIT 7", $tbl));
         $total = $wpdb->get_row($wpdb->prepare("SELECT SUM(pv) pv, SUM(uv) uv FROM %i", $tbl));
-        echo '<p><b>总 PV:</b> ' . number_format((int)$total->pv) . ' &nbsp; <b>总 UV:</b> ' . number_format((int)$total->uv) . '</p>';
+        echo '<p><b>总 PV:</b> ' . number_format($total ? (int) $total->pv : 0) . ' &nbsp; <b>总 UV:</b> ' . number_format($total ? (int) $total->uv : 0) . '</p>';
         if ($rows) {
             echo '<table class="widefat striped"><thead><tr><th>日期</th><th>PV</th><th>UV</th></tr></thead><tbody>';
             foreach ($rows as $r) echo '<tr><td>'.$r->stat_date.'</td><td>'.$r->pv.'</td><td>'.$r->uv.'</td></tr>';
@@ -128,5 +129,5 @@ function jinyu_stats_ajax()
     global $wpdb;
     $tbl = $wpdb->prefix . 'jinyu_stats';
     $row = $wpdb->get_row($wpdb->prepare("SELECT SUM(pv) as pv, SUM(uv) as uv FROM %i", $tbl));
-    wp_send_json_success(['pv'=>(int)$row->pv, 'uv'=>(int)$row->uv]);
+    wp_send_json_success(['pv'=> $row ? (int) $row->pv : 0, 'uv'=> $row ? (int) $row->uv : 0]);
 }

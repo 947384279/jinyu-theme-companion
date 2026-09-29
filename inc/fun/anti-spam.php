@@ -62,7 +62,7 @@ function jinyu_anti_spam($approved, $commentdata)
 
 // 自动关闭超过 30 天文章的评论
 add_action('init', function(){
-    if (jinyu_companion_is_checked('close_comments_old', true)) {
+    if (jinyu_companion_is_checked('close_comments_old', false)) {
         add_filter('comments_open', function($open, $pid){
             $days = jinyu_companion_get_option('close_comments_days', 30);
             $post = get_post($pid);

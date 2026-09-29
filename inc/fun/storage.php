@@ -1259,6 +1259,28 @@ function jinyu_storage_scan_uploads() {
 	return $list;
 }
 
+/**
+ * 校验批处理条目解析出的 uploads 相对路径是否安全。
+ * push（读本地）与 pull（写本地）共用：拒绝 .. / . / 空段与反斜杠分隔，
+ * 防止被污染的远端 key 或任务数据把读写路径引到 uploads 之外（防目录穿越）。
+ *
+ * @param string $rel 相对路径（已剥去 prefix）。
+ * @return string 规范化后的相对路径；不安全时返回空串，调用方按无效条目跳过。
+ */
+function jinyu_storage_safe_rel( string $rel ): string {
+	$rel = str_replace( '\\', '/', $rel );
+	$rel = ltrim( $rel, '/' );
+	if ( '' === $rel ) {
+		return '';
+	}
+	foreach ( explode( '/', $rel ) as $seg ) {
+		if ( '' === $seg || '.' === $seg || '..' === $seg ) {
+			return '';
+		}
+	}
+	return $rel;
+}
+
 /* ───────────────────────────────────────────────────────────
  * 服务端批处理核心（AJAX 与 CLI 自愈共用）
  * 处理一个批次并推进 done；无活跃任务返回 null，出错返回 false。
@@ -1298,7 +1320,12 @@ function jinyu_storage_process_one( $type ) {
 	if ( $type === 'push' ) {
 		$items = array();
 		for ( $i = $done; $i < $end; $i++ ) {
-			$rel   = $data[ $i ];
+			// 防目录穿越：任务数据被污染时不把读写路径引出 uploads（与 pull 侧同一守卫）
+			$rel = jinyu_storage_safe_rel( (string) $data[ $i ] );
+			if ( '' === $rel ) {
+				$done++;
+				continue;
+			}
 			$local = $basedir . '/' . $rel;
 			if ( is_file( $local ) ) {
 				$items[] = array( 'local' => $local, 'key' => $prefix . $rel );
@@ -1334,7 +1361,8 @@ function jinyu_storage_process_one( $type ) {
 	} else { // pull
 		for ( $i = $done; $i < $end; $i++ ) {
 			$key = $data[ $i ];
-			$rel = ltrim( (string) substr( $key, strlen( $prefix ) ), '/' );
+			// prefix 为空时 substr 会剥掉 key 首字符：先确认前缀命中再剥，未命中原样返回。
+			$rel = jinyu_storage_safe_rel( (string) ( 0 === strpos( $key, $prefix ) ? substr( $key, strlen( $prefix ) ) : $key ) );
 			if ( $rel === '' ) {
 				$done++;
 				continue;
@@ -1464,7 +1492,12 @@ add_action(
 		$prefix  = rtrim( $cfg['prefix'], '/' ) . '/';
 		$items   = array();
 		for ( $i = $done; $i < $end; $i++ ) {
-			$rel   = $data[ $i ];
+			// 防目录穿越：任务数据被污染时不把读写路径引出 uploads（与 pull 侧同一守卫）
+			$rel = jinyu_storage_safe_rel( (string) $data[ $i ] );
+			if ( '' === $rel ) {
+				$done++;
+				continue;
+			}
 			$local = $basedir . '/' . $rel;
 			if ( is_file( $local ) ) {
 				$items[] = array( 'local' => $local, 'key' => $prefix . $rel );
@@ -1562,7 +1595,8 @@ add_action(
 		$errors  = 0;
 		for ( $i = $done; $i < $end; $i++ ) {
 			$key = $data[ $i ];
-			$rel = ltrim( (string) substr( $key, strlen( $prefix ) ), '/' );
+			// prefix 为空时 substr 会剥掉 key 首字符：先确认前缀命中再剥，未命中原样返回。
+			$rel = jinyu_storage_safe_rel( (string) ( 0 === strpos( $key, $prefix ) ? substr( $key, strlen( $prefix ) ) : $key ) );
 			if ( $rel === '' ) {
 				$done++;
 				continue;

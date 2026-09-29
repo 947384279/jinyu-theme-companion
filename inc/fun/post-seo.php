@@ -22,8 +22,10 @@ function jinyu_post_seo_register_meta(): void {
 				'type'              => 'string',
 				'single'            => true,
 				'sanitize_callback' => 'sanitize_text_field',
-				'auth_callback'     => static function (): bool {
-					return current_user_can( 'edit_posts' );
+				'auth_callback'     => static function ( $allowed, $meta_key, $object_id ): bool {
+					// 逐文章判权：edit_posts 不足以证明可编辑「这篇」文章
+					// （如作者改他人的文章），REST 写入面必须收紧到 per-post。
+					return current_user_can( 'edit_post', (int) $object_id );
 				},
 				'show_in_rest'      => true,
 			]
@@ -62,7 +64,7 @@ function jinyu_post_seo_meta_box_html( WP_Post $post ): void {
 	<p>
 		<label for="jinyu_seo_keys" style="display:block;font-weight:600;margin-bottom:4px"><?php echo esc_html__( 'SEO 关键词', 'jinyu-theme-companion' ); ?></label>
 		<input id="jinyu_seo_keys" name="jinyu_seo_keys" type="text" style="width:100%" value="<?php echo esc_attr( $keys ); ?>" placeholder="<?php echo esc_attr__( '英文逗号分隔', 'jinyu-theme-companion' ); ?>">
-		<span class="description" style="font-size:12px"><?php echo esc_html__( '留空则用文章标签；输出为 <meta name="keywords">。', 'jinyu-theme-companion' ); ?></span>
+		<span class="description" style="font-size:12px"><?php echo esc_html__( '留空则用文章标签；是否输出为 <meta name="keywords"> 由「SEO / 社交分享」面板的「输出 keywords 标签」开关决定（默认关闭）。', 'jinyu-theme-companion' ); ?></span>
 	</p>
 	<?php
 }

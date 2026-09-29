@@ -19,7 +19,7 @@ function jinyu_img_seo_filter( $content ) {
 	if ( is_admin() ) {
 		return $content;
 	}
-	$fix_alt = jinyu_companion_is_checked( 'img_alt_enable', false );
+	$fix_alt = jinyu_companion_is_checked( 'img_alt_enable', true );
 	$fix_dim = jinyu_companion_is_checked( 'img_dim_enable', true );
 	if ( ! $fix_alt && ! $fix_dim ) {
 		return $content;

@@ -41,8 +41,9 @@ add_action('wp_ajax_jinyu_test_smtp', function () {
         'from_name' => jinyu_companion_get_option('smtp_from_name', ''),
     ];
     foreach ($map as $post => $key) {
-        if (isset($_POST[$post]) && $_POST[$post] !== '') {
-            $form[$key] = is_string($_POST[$post]) ? wp_unslash($_POST[$post]) : $_POST[$post];
+        // 只接受字符串：数组值透传进 SmtpConfig 会触发 PHP 8 的 array-to-string TypeError
+        if (isset($_POST[$post]) && is_string($_POST[$post]) && $_POST[$post] !== '') {
+            $form[$key] = wp_unslash($_POST[$post]);
         }
     }
     $useForm = !empty($form['host']);

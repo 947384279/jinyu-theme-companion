@@ -653,6 +653,21 @@ function jinyu_page_cache_send_headers( string $etag ): void
     header( 'Cache-Control: public, max-age=600, must-revalidate' );
 }
 
+/**
+ * 是否携带 WP 匿名评论者身份 cookie（comment_author_*）。
+ * 这类访客的姓名/邮箱/网址会被 WP 预填进评论表单，若按匿名处理进缓存，
+ * 会把个人信息串号下发给其他访客——必须与登录用户同等对待（不读不写缓存）。
+ */
+function jinyu_page_cache_has_commenter_cookie(): bool
+{
+    foreach (array_keys($_COOKIE) as $k) {
+        if (is_string($k) && strpos((string) $k, 'comment_author_') === 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function jinyu_page_cache_serve(): void
 {
     if ( ! jinyu_companion_is_checked( 'page_cache_enable' ) ) {
@@ -664,7 +679,7 @@ function jinyu_page_cache_serve(): void
         return;
     }
     if (empty($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'GET') return;
-    if (is_user_logged_in() || is_admin()) return;
+    if (is_user_logged_in() || is_admin() || jinyu_page_cache_has_commenter_cookie()) return;
     if (strpos($_SERVER['REQUEST_URI'] ?? '', 'wp-admin') !== false) return;
     if (strpos($_SERVER['REQUEST_URI'] ?? '', 'wp-login') !== false) return;
     // 搜索页不缓存：serve 端早于 WP 查询（is_search() 不可用），按 URI 特征判定；
@@ -750,7 +765,7 @@ function jinyu_page_cache_capture(): void
     // 检测到第三方整页缓存插件时自动让位，避免两层 HTML 缓存冲突 / 内容不同步。
     if (function_exists('jinyu_has_external_page_cache') && jinyu_has_external_page_cache()) return;
     if (empty($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'GET') return;
-    if (is_user_logged_in() || is_admin()) return;
+    if (is_user_logged_in() || is_admin() || jinyu_page_cache_has_commenter_cookie()) return;
     // 这些响应体不该进整页缓存：404 / feed / 预览 / robots / trackback / 搜索
     if (is_404() || is_feed() || is_preview() || is_robots() || is_trackback() || is_search()) return;
     if (jinyu_page_cache_is_search_uri()) return;

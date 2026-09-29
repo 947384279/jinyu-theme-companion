@@ -135,9 +135,12 @@ abstract class Jinyu_OAuth_Provider
 		$code = (int) wp_remote_retrieve_response_code( $resp );
 		$body = wp_remote_retrieve_body( $resp );
 		if ( $code >= 400 ) {
+			// 错误消息不回显完整 URL：QQ 等平台把 access_token 放 query string，
+			// 异常时整条 URL 会进前台提示与日志，token 随之泄露——只留路径。
+			$display_url = (string) wp_parse_url( $url, PHP_URL_PATH );
 			return new WP_Error(
 				'jinyu_oauth_http_' . $code,
-				sprintf( '平台接口 %s 返回 %d', $url, $code )
+				sprintf( '平台接口 %s 返回 %d', $display_url, $code )
 			);
 		}
 
