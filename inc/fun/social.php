@@ -13,8 +13,8 @@ function jinyu_follow_user(int $follower, int $following): bool
     if ($follower <= 0 || $following <= 0 || $follower === $following) return false;
     if (!get_userdata($following)) return false;
 
-    $following_list = jinyu_meta_ids($follower, 'jinyu_following');
-    $followers_list = jinyu_meta_ids($following, 'jinyu_followers');
+    $following_list = jinyu_companion_meta_ids($follower, 'jinyu_following');
+    $followers_list = jinyu_companion_meta_ids($following, 'jinyu_followers');
 
     if (in_array($following, $following_list, true)) return true; // 已关注
 
@@ -32,8 +32,8 @@ function jinyu_unfollow_user(int $follower, int $following): bool
 {
     if ($follower <= 0 || $following <= 0) return false;
 
-    $following_list = jinyu_meta_ids($follower, 'jinyu_following');
-    $followers_list = jinyu_meta_ids($following, 'jinyu_followers');
+    $following_list = jinyu_companion_meta_ids($follower, 'jinyu_following');
+    $followers_list = jinyu_companion_meta_ids($following, 'jinyu_followers');
 
     $fi = array_search($following, $following_list, true);
     $fo = array_search($follower, $followers_list, true);
@@ -48,14 +48,14 @@ function jinyu_unfollow_user(int $follower, int $following): bool
 function jinyu_is_following(int $follower, int $following): bool
 {
     if ($follower <= 0 || $following <= 0) return false;
-    $following_list = jinyu_meta_ids($follower, 'jinyu_following');
+    $following_list = jinyu_companion_meta_ids($follower, 'jinyu_following');
     return in_array($following, $following_list, true);
 }
 
 function jinyu_get_following_users(int $uid, int $limit = 0): array
 {
     if ($uid <= 0) return [];
-    $ids = jinyu_meta_ids($uid, 'jinyu_following');
+    $ids = jinyu_companion_meta_ids($uid, 'jinyu_following');
     if ($limit > 0) $ids = array_slice($ids, 0, $limit);
     $out = [];
     foreach ($ids as $id) {
@@ -68,7 +68,7 @@ function jinyu_get_following_users(int $uid, int $limit = 0): array
 function jinyu_follow_term(int $uid, int $term_id): bool
 {
     if ($uid <= 0 || $term_id <= 0) return false;
-    $terms = jinyu_meta_ids($uid, 'jinyu_following_terms');
+    $terms = jinyu_companion_meta_ids($uid, 'jinyu_following_terms');
     if (in_array($term_id, $terms, true)) return true;
     $terms[] = $term_id;
     update_user_meta($uid, 'jinyu_following_terms', array_values($terms));
@@ -78,7 +78,7 @@ function jinyu_follow_term(int $uid, int $term_id): bool
 function jinyu_unfollow_term(int $uid, int $term_id): bool
 {
     if ($uid <= 0 || $term_id <= 0) return false;
-    $terms = jinyu_meta_ids($uid, 'jinyu_following_terms');
+    $terms = jinyu_companion_meta_ids($uid, 'jinyu_following_terms');
     $i = array_search($term_id, $terms, true);
     if ($i !== false) array_splice($terms, $i, 1);
     update_user_meta($uid, 'jinyu_following_terms', array_values($terms));
@@ -88,14 +88,14 @@ function jinyu_unfollow_term(int $uid, int $term_id): bool
 function jinyu_is_following_term(int $uid, int $term_id): bool
 {
     if ($uid <= 0 || $term_id <= 0) return false;
-    $terms = jinyu_meta_ids($uid, 'jinyu_following_terms');
+    $terms = jinyu_companion_meta_ids($uid, 'jinyu_following_terms');
     return in_array($term_id, $terms, true);
 }
 
 function jinyu_get_following_terms(int $uid): array
 {
     if ($uid <= 0) return [];
-    $ids = jinyu_meta_ids($uid, 'jinyu_following_terms');
+    $ids = jinyu_companion_meta_ids($uid, 'jinyu_following_terms');
     $out = [];
     foreach ($ids as $id) {
         // get_term 对不存在/已删除的系列返回 WP_Error（truthy），直接入列会在

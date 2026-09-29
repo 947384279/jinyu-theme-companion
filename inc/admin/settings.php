@@ -683,12 +683,46 @@ function jinyu_companion_settings_page_html(): void {
 								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span><?php echo esc_html__( '爬虫放行清单', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '只读 · 与站点根 robots.txt 保持一致', 'jinyu-theme-companion' ); ?></span></div>
 								<div class="jyc-panel-b">
 									<div class="jyc-frow">
-										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( 'AI 爬虫（GEO）', 'jinyu-theme-companion' ); ?></div>
-											<div class="jyc-fdesc"><?php echo esc_html( implode( '、', jinyu_geo_ai_crawlers() ) ); ?></div></div>
-									</div>
-									<div class="jyc-frow">
-										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '社交抓取器', 'jinyu-theme-companion' ); ?></div>
-											<div class="jyc-fdesc"><?php echo esc_html( implode( '、', jinyu_geo_social_crawlers() ) ); ?></div></div>
+										<div class="jyc-grow">
+											<div class="jyc-crawlers">
+												<?php
+												foreach ( jinyu_geo_crawler_groups() as $jyc_region => $jyc_groups ) :
+													$jyc_ua_count = 0;
+													foreach ( $jyc_groups as $jyc_group ) {
+														$jyc_ua_count += count( $jyc_group['crawlers'] );
+													}
+													?>
+													<details class="jyc-csect">
+														<summary class="jyc-csect-h">
+															<svg class="jyc-csect-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+															<span class="jyc-csect-name"><?php echo esc_html( jinyu_geo_crawler_region_label( $jyc_region ) ); ?></span>
+															<span class="jyc-csect-meta"><?php
+																/* translators: 1: number of brands, 2: number of user agents. */
+																echo esc_html( sprintf( __( '%1$d 个品牌 · %2$d 条 UA', 'jinyu-theme-companion' ), count( $jyc_groups ), $jyc_ua_count ) );
+															?></span>
+														</summary>
+														<div class="jyc-csect-b">
+															<?php foreach ( $jyc_groups as $jyc_group ) : ?>
+																<div class="jyc-cgroup">
+																	<span class="jyc-brand">
+																		<svg class="jyc-brand-ico" viewBox="0 0 24 24" aria-hidden="true">
+																			<circle cx="12" cy="12" r="12" fill="<?php echo esc_attr( $jyc_group['color'] ); ?>"></circle>
+																			<text x="12" y="12" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="<?php echo esc_attr( preg_match_all( '/./u', $jyc_group['mark'] ) > 1 ? 9 : 12 ); ?>" font-weight="700"><?php echo esc_html( $jyc_group['mark'] ); ?></text>
+																		</svg>
+																		<span class="jyc-brand-name"><?php echo esc_html( $jyc_group['label'] ); ?></span>
+																	</span>
+																	<span class="jyc-ua-list">
+																		<?php foreach ( $jyc_group['crawlers'] as $jyc_ua ) : ?>
+																			<code class="jyc-ua"><?php echo esc_html( $jyc_ua ); ?></code>
+																		<?php endforeach; ?>
+																	</span>
+																</div>
+															<?php endforeach; ?>
+														</div>
+													</details>
+												<?php endforeach; ?>
+											</div>
+										</div>
 									</div>
 									<div class="jyc-frow">
 										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '说明', 'jinyu-theme-companion' ); ?></div>

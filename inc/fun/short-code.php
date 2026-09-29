@@ -158,8 +158,8 @@ $jinyu_gallery = function ($atts) {
 	$cols  = max( 1, min( 6, intval( $a['cols'] ) ) );
 	$html  = '<div class="jinyu-gallery jinyu-gallery-cols-' . $cols . '">';
 	foreach ( $ids as $id ) {
-		$url   = jinyu_img_to_webp_url( wp_get_attachment_image_url( $id, 'large' ) );
-		$thumb = jinyu_img_to_webp_url( wp_get_attachment_image_url( $id, 'medium' ) );
+		$url   = jinyu_companion_webp_url( wp_get_attachment_image_url( $id, 'large' ) );
+		$thumb = jinyu_companion_webp_url( wp_get_attachment_image_url( $id, 'medium' ) );
 		if ( $url ) {
 			$html .= '<a class="jinyu-gallery-item" href="' . esc_url( $url ) . '">'
 				. '<img src="' . esc_url( $thumb ) . '" alt="">' . '</a>';
@@ -247,7 +247,7 @@ $jinyu_music = function ($atts, $content = '') {
 	$artist = $a['artist'] ? esc_html( $a['artist'] ) : '';
 	$html   = '<div class="jinyu-music">';
 	if ( $cover ) {
-		$html .= '<img class="jinyu-music-cover" src="' . esc_url( jinyu_img_to_webp_url( $cover ) ) . '" alt="" loading="lazy">';
+		$html .= '<img class="jinyu-music-cover" src="' . esc_url( jinyu_companion_webp_url( $cover ) ) . '" alt="" loading="lazy">';
 	}
 	$html .= '<div class="jinyu-music-meta">';
 	if ( $name ) {

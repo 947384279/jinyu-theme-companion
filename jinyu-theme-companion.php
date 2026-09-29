@@ -111,13 +111,11 @@ add_action( 'init', static function (): void {
 
 /* --------------------------------------------------------------------------
  * 模块加载：下列文件原属主题，拆为独立外发插件；各文件顶部自行注册钩子。
- * WordPress 加载顺序是「插件先于主题」，故必须延后到 after_setup_theme 再 require，
- * 确保主题函数（若启用）已就绪。插件不依赖主题：所有跨主题调用经 inc/fun/theme-shims.php
- * 兼容层 function_exists 守卫兜底，主题缺席时优雅降级，站点不会白屏 / 致命。
+ * WordPress 加载顺序是「插件先于主题」。这里延后到 after_setup_theme 只是为了等 WP 环境就绪，
+ * 与主题无关：插件内部一律调 jinyu_companion_* 自持原语（inc/fun/primitives.php），
+ * 既不调用主题函数，也不读主题私有数据模型，主题是否在场都不影响插件行为。
  * ------------------------------------------------------------------------ */
 add_action( 'after_setup_theme', static function (): void {
-	// 不再要求金玉主题在场：插件可独立运行。所有对主题原语的调用统一经
-	// inc/fun/theme-shims.php 兼容层兜底（function_exists 守卫，主题在场优先用主题版）。
 
 	// 头部冗余输出清理（plugin-territory）：原属主题的 clean_wp_head 优化项，
 	// 迁出到配套插件，使主题通过 .org 审查；线上行为保持不变。
@@ -133,9 +131,9 @@ add_action( 'after_setup_theme', static function (): void {
 	// 基础设施：SMTP 配置类（被 email.php 依赖，须先加载）
 	require_once __DIR__ . '/inc/classes/Mail/Jinyu_SmtpConfig.php';
 
-	// 选项 helper + 主题兼容层（必须在各功能模块之前加载）
+	// 选项 helper + 插件自持原语（必须在各功能模块之前加载）
 	require_once __DIR__ . '/inc/fun/companion-options.php';
-	require_once __DIR__ . '/inc/fun/theme-shims.php';
+	require_once __DIR__ . '/inc/fun/primitives.php';
 
 	// 加密：companion 自有实现（唯一命名，不与主题 jinyu_encrypt/decrypt 冲突），
 	// storage 的 Secret 加密入库 + 一次性迁移解密主题历史密文均依赖此文件，须先于 storage.php 加载。
@@ -196,6 +194,14 @@ require_once __DIR__ . '/inc/fun/baidu-push.php';
 	require_once __DIR__ . '/inc/fun/comment-notify.php';
 	require_once __DIR__ . '/inc/fun/anti-spam.php';
 	require_once __DIR__ . '/inc/fun/comment-cleanup.php';
+
+	// 主题更新通道：补回后台「检查更新」的 AJAX 处理端（wp_ajax_jinyu_check_update）
+	// 与 WP 原生主题更新注入（含 RSA 验签 + 更新包 sha256 校验）。原属主题 inc/fun/update.php，
+	// 因更新源/下载服务器属 plugin-territory 迁入本插件；主题侧只保留按钮 UI。
+	// 用 file_exists 包裹：存量站点增量部署时缺文件静默跳过，不整站 500。
+	if ( file_exists( __DIR__ . '/inc/fun/theme-update.php' ) ) {
+		require_once __DIR__ . '/inc/fun/theme-update.php';
+	}
 
 	// 性能 / 系统
 	require_once __DIR__ . '/inc/fun/speculation.php';

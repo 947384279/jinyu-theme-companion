@@ -118,8 +118,8 @@ function jinyu_page_cache_flush(): void
 /**
  * 全局缓存失效入口（插件独占，主题不可覆盖）。
  *
- * 存在意义：theme-shims.php 的 jinyu_cache_flush() 带 function_exists 守卫，
- * 主题一旦定义了同名函数，插件那两行 llms transient 的 delete 就永远不会执行
+ * 存在意义：早年的 jinyu_cache_flush() 带 function_exists 守卫，主题一旦定义了同名函数，
+ * 插件那两行 llms transient 的 delete 就永远不会执行
  * （发布文章后 llms.txt 最长 TTL 内仍是旧内容）。故内部调用一律走本函数 ——
  * 函数名带插件前缀，主题不可能定义，失效链不会被劫持。
  *

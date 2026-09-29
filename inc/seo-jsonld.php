@@ -141,7 +141,7 @@ function jinyu_json_ld()
         global $post;
         $author_id = (int) $post->post_author;
         $author    = get_the_author_meta('display_name', $author_id);
-        $cover     = jinyu_get_post_cover($post->ID, 'large', false);
+        $cover     = jinyu_companion_post_cover($post->ID, 'large');
         $cats      = is_singular('post') ? get_the_category($post->ID) : [];
 
         // 组织（publisher）：与首页 Organization 共用取值，并用 @id 与首页实体互相挂接。

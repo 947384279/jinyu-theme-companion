@@ -66,7 +66,7 @@ add_action( 'admin_head', function () {
 		return;
 	}
 	$list = jinyu_sc_editor_list();
-	echo '<script' . jinyu_csp_nonce_attr() . '>window.JINYU_SC=' . wp_json_encode( [ 'list' => $list ] ) . ';</script>';
+	echo '<script' . jinyu_companion_csp_nonce_attr() . '>window.JINYU_SC=' . wp_json_encode( [ 'list' => $list ] ) . ';</script>';
 } );
 
 // 文本模式（QuickTags）按钮
@@ -77,7 +77,7 @@ add_action( 'admin_print_footer_scripts', function () {
 	}
 	$list = jinyu_sc_editor_list();
 	?>
-	<script<?php echo jinyu_csp_nonce_attr(); ?>>
+	<script<?php echo jinyu_companion_csp_nonce_attr(); ?>>
 	(function () {
 		if (typeof QTags === 'undefined') return;
 		var list = <?php echo wp_json_encode( $list ); ?>;

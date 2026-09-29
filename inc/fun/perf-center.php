@@ -315,29 +315,20 @@ function jyc_perf_apply(): void {
 	}
 
 	// 12) 关键域名 DNS 预连接：在 <head> 最前为 CDN 域名提前建连。
-	//     存储加速域名读本插件独立选项（storage_domain，与对象存储分区同源）；
-	//     主题在场时兼容读取主题的静态资源 CDN 域名（cdn_url），缺席则跳过。
+	//     预连接域名只来自本插件接管的存储加速域名（storage_domain）。
+	//     静态资源 CDN 域名这类站点自有配置，由站点经 jinyu_companion_preconnect_hosts 过滤器追加 ——
+	//     插件不读任何主题的配置项，换主题后预连接不失效。
 	if ( ! empty( $o['dns_preconnect'] ) ) {
 		add_action( 'wp_head', static function () {
-		$hosts = [];
-		$cdn   = '';
-		if ( function_exists( 'jinyu_get_option' ) ) {
-			$cdn = trim( (string) jinyu_get_option( 'cdn_url', '' ) );
-		}
+		$hosts  = [];
 		$scheme = 'https';
-		if ( $cdn && preg_match( '#^[a-z]+://#i', $cdn, $mm ) ) {
-			$scheme = rtrim( $mm[0], ':' );
-		}
-		if ( $cdn ) {
-			$h = wp_parse_url( $cdn, PHP_URL_HOST );
-			if ( $h && ! in_array( $h, $hosts, true ) ) {
-				$hosts[] = $h;
-			}
-		}
-		// 图片常托管在存储加速域名（storage_domain，独立于 cdn_url）；只预连接 cdn_url 会导致
-		// 图床域名零预连接。JY-10：一并纳入，使浏览器提前建连、省首屏 RTT。
+		// 图片常托管在存储加速域名；只预连接站点域名会导致图床域名零预连接，
+		// 浏览器无法提前建连，首屏多一个 RTT。
 		$sd = trim( (string) jinyu_companion_get_option( 'storage_domain', '' ) );
 		if ( $sd ) {
+			if ( preg_match( '#^[a-z]+://#i', $sd, $mm ) ) {
+				$scheme = rtrim( $mm[0], ':' );
+			}
 			$h = wp_parse_url( $sd, PHP_URL_HOST );
 			if ( $h && ! in_array( $h, $hosts, true ) ) {
 				$hosts[] = $h;
@@ -1593,7 +1584,7 @@ function jyc_perf_ajax_load_comments() {
 		wp_send_json_error( 'invalid' );
 	}
 	// 限流：匿名端点防刷（每 IP 每小时 120 次翻页已远超正常浏览节奏）。
-	if ( function_exists( 'jinyu_rate_limit_check' ) && ! jinyu_rate_limit_check( 'comments_load', 120, HOUR_IN_SECONDS ) ) {
+	if ( ! jinyu_companion_rate_limit( 'comments_load', 120, HOUR_IN_SECONDS ) ) {
 		wp_send_json_error( 'rate_limited' );
 	}
 	$opt = jyc_perf_get_options();

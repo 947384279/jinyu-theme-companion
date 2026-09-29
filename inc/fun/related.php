@@ -19,7 +19,7 @@ if (!function_exists('jinyu_get_related_post_ids')) {
         $pid = $post_id ?: (isset($post) ? $post->ID : 0);
         if (!$pid) return [];
         $key = 'related_' . $pid . '_' . $type . '_' . $num;
-        $ids = jinyu_cache_get($key);
+        $ids = jinyu_companion_cache_get($key);
         if (is_array($ids)) {
             return $ids;
         }
@@ -67,7 +67,7 @@ if (!function_exists('jinyu_get_related_post_ids')) {
         shuffle($pool);
         $ids = array_slice($pool, 0, $num);
         $ids = array_values(array_diff($ids, [$pid]));
-        jinyu_cache_set($key, $ids, HOUR_IN_SECONDS);
+        jinyu_companion_cache_set($key, $ids, HOUR_IN_SECONDS);
         return $ids;
     }
 }
@@ -114,12 +114,15 @@ if (!function_exists('jinyu_get_hot_posts')) {
     function jinyu_get_hot_posts($num = 5)
     {
         $num = max(1, (int) $num);
-        $key = 'hot_posts_' . $num;
+        // ID 列表与文章对象必须分用两个 key：hydrate 内部也按传入 key 取缓存，
+        // 若与 ID 列表同 key，命中后会读回 ID 数组当文章对象返回（调用方取 ->ID 全警告、封面全空）。
+        $key      = 'hot_posts_' . $num;
+        $obj_key  = $key . '_objs';
 
         // 结果集缓存：热门/补齐两次查询只在 TTL 内跑一次，之后复用 ID 列表。
-        $ids = jinyu_cache_get($key);
+        $ids = jinyu_companion_cache_get($key);
         if (is_array($ids)) {
-            return jinyu_hydrate_posts_cached($ids, $key, 10 * MINUTE_IN_SECONDS);
+            return jinyu_companion_hydrate_posts($ids, $obj_key, 10 * MINUTE_IN_SECONDS);
         }
 
         $hot = new WP_Query([
@@ -150,7 +153,7 @@ if (!function_exists('jinyu_get_hot_posts')) {
         }
 
         $ids = array_map('intval', wp_list_pluck($posts, 'ID'));
-        jinyu_cache_set($key, $ids, 10 * MINUTE_IN_SECONDS);
-        return jinyu_hydrate_posts_cached($ids, $key, 10 * MINUTE_IN_SECONDS);
+        jinyu_companion_cache_set($key, $ids, 10 * MINUTE_IN_SECONDS);
+        return jinyu_companion_hydrate_posts($ids, $obj_key, 10 * MINUTE_IN_SECONDS);
     }
 }

@@ -29,7 +29,7 @@ function jinyu_poster_generate()
     }
 
     // 防滥用：每 IP 速率限制，避免匿名用户频繁触发 GD 图像生成消耗服务器资源
-    if (!jinyu_rate_limit_check('poster', 20, MINUTE_IN_SECONDS)) {
+    if (!jinyu_companion_rate_limit('poster', 20, MINUTE_IN_SECONDS)) {
         wp_send_json_error('请求过于频繁，请稍后再试');
     }
 
@@ -57,7 +57,7 @@ function jinyu_poster_generate()
     imagefill($img, 0, 0, $bg);
     imagefilledrectangle($img, 0, 0, $w, 200, $accent);
 
-    $cover_url = jinyu_get_post_cover($post_id, 'large');
+    $cover_url = jinyu_companion_post_cover($post_id, 'large');
     if ($cover_url) {
         // 用 WP HTTP API 并限时 8s：file_get_contents 无超时，CDN 抖动时 AJAX 会挂满 PHP 超时
         $resp = wp_remote_get($cover_url, ['timeout' => 8]);

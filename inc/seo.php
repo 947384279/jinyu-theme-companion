@@ -297,10 +297,10 @@ function jinyu_seo_meta()
 
     if (is_singular()) {
         $title = get_the_title();
-        $cover = jinyu_get_post_cover(get_the_ID(), 'large', false);
+        $cover = jinyu_companion_post_cover(get_the_ID(), 'large');
         $og_img = jinyu_companion_get_option('og_image', '');
-        $og_image = $cover ?: $og_img;
-        if (!$og_image && function_exists('jinyu_get_option')) $og_image = jinyu_get_option('web_logo', '');
+        // 兜底链只用 WP 标准数据（特色图 → 插件配置 → 站点图标），不读任何主题配置。
+        $og_image = $cover ?: ( $og_img ?: (string) get_site_icon_url() );
         $site_name = jinyu_companion_get_option('og_site_name', '');
         if (!$site_name) $site_name = get_bloginfo('name');
         // 分享图替代文本：全局配置优先，留空用文章标题兜底。
@@ -333,7 +333,6 @@ function jinyu_seo_meta()
             $home_img = wp_get_attachment_image_url(get_theme_mod('custom_logo'), 'full');
         }
         if (!$home_img) $home_img = get_site_icon_url();
-        if (!$home_img && function_exists('jinyu_get_option')) $home_img = jinyu_get_option('web_logo', '');
         // 首页分享图替代文本：全局配置优先，留空用站点名称。
         $home_alt = jinyu_companion_get_option('og_image_alt', '');
         if (!$home_alt) $home_alt = $site_name;
@@ -378,7 +377,6 @@ function jinyu_seo_meta()
             $arc_img = wp_get_attachment_image_url(get_theme_mod('custom_logo'), 'full');
         }
         if (!$arc_img) $arc_img = get_site_icon_url();
-        if (!$arc_img && function_exists('jinyu_get_option')) $arc_img = jinyu_get_option('web_logo', '');
         // 归档分页页 og:url 指向自身（带 /page/N/），与 canonical 口径一致
         $arc_paged = max( 1, (int) get_query_var('paged'), (int) get_query_var('page') );
         if ( $arc_paged > 1 && $arc_url && ! is_wp_error( $arc_url ) ) {

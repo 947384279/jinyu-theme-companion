@@ -51,7 +51,7 @@ function jinyu_series_ids(int $term_id): array
     if ($term_id <= 0) return [];
 
     $key = 'series_ids_' . $term_id;
-    $ids = jinyu_cache_get($key);
+    $ids = jinyu_companion_cache_get($key);
     if (is_array($ids)) return $ids;
 
     $q = new WP_Query([
@@ -68,7 +68,7 @@ function jinyu_series_ids(int $term_id): array
     ]);
 
     $ids = array_map('intval', (array) $q->posts);
-    jinyu_cache_set($key, $ids, HOUR_IN_SECONDS);
+    jinyu_companion_cache_set($key, $ids, HOUR_IN_SECONDS);
     return $ids;
 }
 
@@ -103,7 +103,7 @@ function jinyu_get_series_posts($post_id = 0)
     if (!$post_id) return false;
 
     $key = 'series_' . $post_id;
-    $cached = jinyu_cache_get($key);
+    $cached = jinyu_companion_cache_get($key);
     if (is_array($cached)) {
         return $cached;
     }
@@ -126,6 +126,6 @@ function jinyu_get_series_posts($post_id = 0)
         'prev'    => ($idx > 0) ? $ids[$idx - 1] : 0,
         'next'    => ($idx < count($ids) - 1) ? $ids[$idx + 1] : 0,
     ];
-    jinyu_cache_set($key, $result, HOUR_IN_SECONDS);
+    jinyu_companion_cache_set($key, $result, HOUR_IN_SECONDS);
     return $result;
 }
