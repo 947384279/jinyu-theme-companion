@@ -50,7 +50,7 @@ function jinyu_img_seo_filter( $content ) {
 					}
 					// 兜底：文件名去扩展名 + 连字符转空格
 					if ( ! $alt ) {
-						$path = (string) parse_url( $src, PHP_URL_PATH );
+						$path = (string) wp_parse_url( $src, PHP_URL_PATH );
 						$base = basename( $path ?: $src );
 						$base = (string) preg_replace( '#\.[a-z0-9]+$#i', '', $base );
 						$alt  = ucwords( (string) preg_replace( '#[-_]+#', ' ', $base ) );
@@ -106,8 +106,8 @@ function jinyu_img_alt_postid_cached( string $url ): int {
 	if ( ! $id ) {
 		// 对象存储 / CDN 改写过的 URL（域名不同 + 又拍云式 !参数）：还原为本站 URL 再查一次。
 		$clean = (string) preg_replace( '#!.*$#', '', $url );
-		$h     = (string) parse_url( $clean, PHP_URL_HOST );
-		$hh    = (string) parse_url( home_url(), PHP_URL_HOST );
+		$h     = (string) wp_parse_url( $clean, PHP_URL_HOST );
+		$hh    = (string) wp_parse_url( home_url(), PHP_URL_HOST );
 		if ( $h && $hh && 0 !== strcasecmp( $h, $hh ) ) {
 			$id = (int) attachment_url_to_postid( str_ireplace( $h, $hh, $clean ) );
 		}
@@ -133,7 +133,7 @@ function jinyu_img_seo_dims_cached( string $url ): array {
 		return $hit;
 	}
 	$dims = [];
-	$path = (string) parse_url( $url, PHP_URL_PATH );
+	$path = (string) wp_parse_url( $url, PHP_URL_PATH );
 	$file = basename( (string) preg_replace( '#!.*$#', '', $path ?: $url ) );
 	if ( preg_match( '#-(\d+)x(\d+)\.[a-z0-9]+$#i', $file, $m ) ) {
 		$dims = [ (int) $m[1], (int) $m[2] ];

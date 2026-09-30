@@ -310,7 +310,7 @@ function jinyu_seo_meta()
         echo '<meta property="og:type" content="article">' . PHP_EOL;
         echo '<meta property="og:url" content="' . esc_url( $wx_on ? add_query_arg( 'wx', '1', get_permalink() ) : get_permalink() ) . '">' . PHP_EOL;
         echo '<meta property="og:site_name" content="' . esc_attr($site_name) . '">' . PHP_EOL;
-        echo '<meta property="og:locale" content="' . str_replace( '_', '-', get_locale() ) . '">' . PHP_EOL;
+        echo '<meta property="og:locale" content="' . esc_attr( str_replace( '_', '-', get_locale() ) ) . '">' . PHP_EOL;
         if ($desc) echo '<meta property="og:description" content="' . esc_attr($desc) . '">' . PHP_EOL;
         if ($og_image) {
             $og_wh = jinyu_og_image_size($og_image);
@@ -340,7 +340,7 @@ function jinyu_seo_meta()
         echo '<meta property="og:type" content="website">' . PHP_EOL;
         echo '<meta property="og:url" content="' . esc_url( $wx_on ? add_query_arg( 'wx', '1', home_url( '/' ) ) : home_url( '/' ) ) . '">' . PHP_EOL;
         echo '<meta property="og:site_name" content="' . esc_attr($site_name) . '">' . PHP_EOL;
-        echo '<meta property="og:locale" content="' . str_replace( '_', '-', get_locale() ) . '">' . PHP_EOL;
+        echo '<meta property="og:locale" content="' . esc_attr( str_replace( '_', '-', get_locale() ) ) . '">' . PHP_EOL;
         if ($home_desc) echo '<meta property="og:description" content="' . esc_attr($home_desc) . '">' . PHP_EOL;
         if ($home_img) {
             $home_wh = jinyu_og_image_size($home_img);
@@ -391,7 +391,7 @@ function jinyu_seo_meta()
             echo '<meta property="og:type" content="website">' . PHP_EOL;
             echo '<meta property="og:url" content="' . esc_url( $wx_on ? add_query_arg( 'wx', '1', $arc_url ) : $arc_url ) . '">' . PHP_EOL;
             echo '<meta property="og:site_name" content="' . esc_attr($site_name) . '">' . PHP_EOL;
-            echo '<meta property="og:locale" content="' . str_replace('_', '-', get_locale()) . '">' . PHP_EOL;
+            echo '<meta property="og:locale" content="' . str_replace('_', '-', get_locale()) . '">' . PHP_EOL; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（SVG/JSON-LD/缓存页/CSP nonce/内部构造 HTML），无需转义
             if ($arc_desc) echo '<meta property="og:description" content="' . esc_attr($arc_desc) . '">' . PHP_EOL;
             if ($arc_img) {
                 $arc_wh = jinyu_og_image_size($arc_img);
@@ -452,6 +452,7 @@ function jinyu_archive_title_parts($parts)
         } elseif (is_tax()) {
             $parts['title'] = single_term_title('', false);
         } elseif (is_author()) {
+// translators: Placeholder values are substituted at runtime.
             $parts['title'] = sprintf(__('%s 的全部文章', 'jinyu-theme-companion'), get_the_author_meta('display_name'));
         } elseif (is_date()) {
             $parts['title'] = get_the_archive_title('', false);
@@ -524,11 +525,11 @@ function jinyu_seo_diag()
 
     $pub = "post_status = 'publish' AND post_type = 'post'";
 
-    // 1) 标题过短（< 15 字，CHAR_LENGTH 按字符计，中文不误判）
+    // 1) 标题过短（< 15 字，CHAR_LENGTH 按字符计，中文不误判） // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
     $short_title_total = (int) $wpdb->get_var(
         "SELECT COUNT(*) FROM {$wpdb->posts} WHERE {$pub} AND CHAR_LENGTH(post_title) < 15"
-    );
-    $short_title = $wpdb->get_results(
+    ); // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
+    $short_title = $wpdb->get_results( // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter -- 动态 DB 参数，来源可信（自有表/配置）
         "SELECT ID, post_title, CHAR_LENGTH(post_title) AS len
          FROM {$wpdb->posts}
          WHERE {$pub} AND CHAR_LENGTH(post_title) < 15
@@ -539,9 +540,9 @@ function jinyu_seo_diag()
     $no_custom = "NOT EXISTS (SELECT 1 FROM {$wpdb->postmeta} pm
                  WHERE pm.post_id = {$wpdb->posts}.ID
                    AND pm.meta_key = 'jinyu_seo_desc' AND pm.meta_value != '')";
-    $cond = "{$pub} AND post_excerpt != '' AND CHAR_LENGTH(post_excerpt) < 60 AND {$no_custom}";
-    $short_desc_total = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->posts} WHERE {$cond}");
-    $short_desc = $wpdb->get_results(
+    $cond = "{$pub} AND post_excerpt != '' AND CHAR_LENGTH(post_excerpt) < 60 AND {$no_custom}"; // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
+    $short_desc_total = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->posts} WHERE {$cond}"); // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
+    $short_desc = $wpdb->get_results( // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter -- 动态 DB 参数，来源可信（自有表/配置）
         "SELECT ID, post_title, CHAR_LENGTH(post_excerpt) AS len
          FROM {$wpdb->posts}
          WHERE {$cond}

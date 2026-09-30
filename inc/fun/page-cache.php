@@ -103,7 +103,7 @@ function jinyu_page_cache_gc(): void
             $name = substr($name, 0, -5);
         }
         if ($name !== $keep && 0 !== strpos($name, $keep)) {
-            @unlink($f);
+            @wp_delete_file($f);
         }
     }
 }
@@ -189,7 +189,7 @@ function jinyu_page_cache_file(): string
     $dir = jinyu_page_cache_dir();
     // 目录不存在则尝试创建；只读文件系统 / 权限不足时静默放弃缓存，
     // 但仍要留一条可观测记录（jinyu_page_cache_note_blocked），否则用户开着开关却始终不生效也不自知
-    if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+    if (!is_dir($dir) && !wp_mkdir_p($dir) && !is_dir($dir)) {
         jinyu_page_cache_note_blocked('no_mkdir');
         return '';
     }
@@ -286,12 +286,12 @@ function jinyu_page_cache_status(): array
         return $status;
     }
 
-    if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+    if (!is_dir($dir) && !wp_mkdir_p($dir) && !is_dir($dir)) {
         $status['reason'] = 'no_mkdir';
         return $status;
     }
 
-    if (!is_writable($dir)) {
+    if (!is_writable($dir)) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- 前端缓存目录可写性检查，无可替代 WP API
         $status['reason'] = 'not_writable';
         return $status;
     }
@@ -343,10 +343,7 @@ function jinyu_page_cache_hint(): string
          * translators: 1: 缓存目录绝对路径；2: wp-content 目录路径
          */
         __(
-            '整页缓存已开启，但无法把 HTML 写入 <code>%1$s</code>，缓存实际未生效。'
-            . '请在 SSH 中执行 <code>mkdir -p %1$s &amp;&amp; chown -R www:www %2$s</code>'
-            . '（把 www 换成你的 php-fpm 运行用户）；面板用户可在文件管理器中把 <code>%2$s</code> 改为 775、'
-            . '并让属主与 PHP 进程一致。设置完刷新本页即可。',
+            '整页缓存已开启，但无法把 HTML 写入 <code>%1$s</code>，缓存实际未生效。请在 SSH 中执行 <code>mkdir -p %1$s &amp;&amp; chown -R www:www %2$s</code>（把 www 换成你的 php-fpm 运行用户）；面板用户可在文件管理器中把 <code>%2$s</code> 改为 775、并让属主与 PHP 进程一致。设置完刷新本页即可。',
             'jinyu-theme-companion'
         ),
         esc_html($dir),
@@ -385,10 +382,10 @@ function jinyu_page_cache_admin_notice(): void
     printf(
         '<div class="notice notice-warning is-dismissible"><p><strong>%1$s</strong> %2$s</p></div>',
         esc_html__('整页缓存未生效', 'jinyu-theme-companion'),
-        jinyu_page_cache_hint()
+        jinyu_page_cache_hint() // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
     );
 }
-
+ // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
 /**
  * 「条件请求」配置提示（仅缓存就绪时展示）。
  *
@@ -407,8 +404,7 @@ function jinyu_page_cache_etag_hint(): string
          * translators: 1: Nginx 需要追加的配置行
          */
         __(
-            '命中时已下发 ETag。若希望浏览器 / CDN 回「304 未修改」以节省流量，需确认 Web 服务器把条件请求头转给了 PHP'
-            . '（Nginx 在 server 段追加：<code>%1$s</code>）。未配置不影响缓存生效，仅少一次带宽优化；Apache 一般无需设置。',
+            '命中时已下发 ETag。若希望浏览器 / CDN 回「304 未修改」以节省流量，需确认 Web 服务器把条件请求头转给了 PHP（Nginx 在 server 段追加：<code>%1$s</code>）。未配置不影响缓存生效，仅少一次带宽优化；Apache 一般无需设置。',
             'jinyu-theme-companion'
         ),
         'fastcgi_param HTTP_IF_NONE_MATCH $http_if_none_match;'
@@ -426,12 +422,12 @@ function jinyu_page_cache_uri_parts(): array
     if (!is_string($uri) || '' === $uri) {
         return ['/', []];
     }
-    $path = parse_url($uri, PHP_URL_PATH);
+    $path = wp_parse_url($uri, PHP_URL_PATH);
     if (!is_string($path) || '' === $path) {
         $path = '/';
     }
     $params = [];
-    $query  = parse_url($uri, PHP_URL_QUERY);
+    $query  = wp_parse_url($uri, PHP_URL_QUERY);
     if (is_string($query) && '' !== $query) {
         parse_str($query, $params);
     }
@@ -705,11 +701,11 @@ function jinyu_page_cache_serve(): void
     // 响应头已在极早阶段发出（主题或插件提前 echo 过）：ETag / Cache-Control 都设不了，
     // 但缓存内容本身有效，降级为「不带缓存指令的直接输出」而不是整条命中路径作废。
     if (headers_sent()) {
-        echo $body;
+        echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（SVG/JSON-LD/缓存页/CSP nonce/内部构造 HTML），无需转义
         exit;
     }
 
-    $meta_file    = $file . '.meta';
+    $meta_file    = $file . '.meta'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
     $content_type = is_readable($meta_file) ? (string) file_get_contents($meta_file) : '';
     if ('' === $content_type || strlen($content_type) > 191) {
         $content_type = 'text/html; charset=utf-8';
@@ -739,11 +735,11 @@ function jinyu_page_cache_serve(): void
     // 标记本次为缓存命中：性能采样（inc/fun/live.php）据此跳过，
     // 否则几毫秒的缓存响应会把「实时心跳」曲线压成一条直线。
     define('JINYU_CACHE_HIT', true);
-    echo $body;
+    echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（SVG/JSON-LD/缓存页/CSP nonce/内部构造 HTML），无需转义
     // 缓存命中时已在 init 阶段 echo+exit，template_redirect 不会触发，
     // 而来源统计(jinyu_track_visit_source)挂在该钩子上，故在此显式调用，
     // 确保匿名访客的来源 PV/UV 在缓存命中时仍被记录（写库已在函数内延迟到 shutdown，exit 后仍会执行）。
-    if (function_exists('jinyu_track_visit_source')) {
+    if (function_exists('jinyu_track_visit_source')) { // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
         jinyu_track_visit_source();
     }
     // UV Cookie 补写：命中路径绕过了 wp 钩子，不补写则每个缓存 PV 都会被 shutdown 统计记为新 UV。
@@ -789,12 +785,12 @@ function jinyu_page_cache_capture(): void
             jinyu_page_cache_note_blocked('write_fail');
             return $html;
         }
-        @chmod($file, 0644);
+        @chmod($file, 0644); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- 前端写缓存后修正权限，WP_Filesystem 在前台有凭据弹窗风险
 
         $ct = jinyu_page_cache_content_type();
         if ('' !== $ct && strlen($ct) < 191) {
             @file_put_contents($file . '.meta', $ct);
-            @chmod($file . '.meta', 0644);
+            @chmod($file . '.meta', 0644); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- 前端写缓存后修正权限，WP_Filesystem 在前台有凭据弹窗风险
         }
 
         return $html;

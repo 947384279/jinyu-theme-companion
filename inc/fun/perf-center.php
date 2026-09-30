@@ -93,7 +93,7 @@ function jyc_perf_toggle_meta(): array {
 			'label' => __( '移除 WP Emoji 脚本（推荐）', 'jinyu-theme-companion' ),
 
 			'group' => 'front',
-			'desc'  => __( 'WP 会在前台/后台注入 emoji 检测脚本，并在浏览器不支持时把部分 emoji 字符替换为 s.w.org 的远程图片——国内 s.w.org 不可达时就会看到「裂开的图」。移除后 emoji 恢复为系统原生渲染（显示效果不变），只是不再转图片。本页面已全程改用 CSS 绘制图标，不再依赖 emoji。', 'jinyu-theme-companion' ),
+			'desc'  => __( 'WP 会在前台/后台注入 emoji 检测脚本，并在浏览器不支持时把部分 emoji 字符替换成 WordPress.org 的 emoji 图片 CDN——国内不可达时就会看到「裂开的图」。移除后 emoji 恢复为系统原生渲染（显示效果不变），只是不再转图片。本页面已全程改用 CSS 绘制图标，不再依赖 emoji。', 'jinyu-theme-companion' ),
 
 		],
 		'disable_embed'          => [
@@ -471,11 +471,11 @@ function jyc_perf_apply(): void {
 function jyc_perf_status(): array {
 	global $wpdb;
 
-	$autoload = (int) $wpdb->get_var(
+	$autoload = (int) $wpdb->get_var( // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
 		// WP 6.6+ autoload 列为 on/off/auto/auto-on/auto-off，须用兼容 IN 列表（复用 db-optimize 的 helper），
 		// 写死 'yes' 会把「Autoload 体积」指标统计成 0。
 		'SELECT SUM(LENGTH(option_value)) FROM ' . $wpdb->options . ' WHERE '
-		. ( function_exists( 'jinyu_autoload_sql_in' ) ? jinyu_autoload_sql_in() : "autoload IN ('yes','on','auto','auto-on')" )
+		. ( function_exists( 'jinyu_autoload_sql_in' ) ? jinyu_autoload_sql_in() : "autoload IN ('yes','on','auto','auto-on')" ) // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	);
 
 	$transient_total = (int) $wpdb->get_var(
@@ -786,7 +786,7 @@ function jyc_perf_clean_transients(): int {
 			WHERE (option_name LIKE '_transient_timeout_%' OR option_name LIKE '_site_transient_timeout_%')
 			AND option_value < UNIX_TIMESTAMP()";
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- 维护类批量操作，无法用 API 替代
-	$wpdb->query( $sql );
+	$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	return (int) $wpdb->rows_affected;
 }
@@ -949,7 +949,7 @@ function jyc_perf_object_cache_backup( string $target ) {
 	if ( count( $globs ) > 3 ) {
 		usort( $globs, static function ( $a, $b ) { return filemtime( $a ) <=> filemtime( $b ); } );
 		foreach ( array_slice( $globs, 0, count( $globs ) - 3 ) as $old ) {
-			@unlink( $old );
+			@wp_delete_file( $old );
 		}
 	}
 	return $bak;
@@ -970,7 +970,7 @@ function jyc_perf_deploy_object_cache( $force = false, $backup = false ): array 
 	if ( ! class_exists( 'Memcached' ) ) {
 		return [ 'ok' => false, 'msg' => __( 'PECL Memcached 扩展不可用，无法部署', 'jinyu-theme-companion' ) ];
 	}
-	$target = WP_CONTENT_DIR . '/object-cache.php';
+	$target = ABSPATH . 'wp-content/object-cache.php';
 	if ( file_exists( $target ) ) {
 		if ( jyc_perf_object_cache_is_jinyu( $target ) ) {
 			return [ 'ok' => true, 'msg' => __( '对象缓存已部署，无需重复', 'jinyu-theme-companion' ) ];
@@ -1005,7 +1005,7 @@ function jyc_perf_remove_object_cache(): array {
 	if ( ! jyc_perf_object_cache_is_jinyu( $target ) ) {
 		return [ 'ok' => false, 'msg' => __( '该 object-cache.php 非本插件部署，未删除', 'jinyu-theme-companion' ) ];
 	}
-	if ( ! @unlink( $target ) ) {
+	if ( ! @wp_delete_file( $target ) ) {
 		return [ 'ok' => false, 'msg' => __( '删除 object-cache.php 失败，请检查目录权限', 'jinyu-theme-companion' ) ];
 	}
 	return [ 'ok' => true, 'msg' => __( '已移除 object-cache.php，下次请求起恢复默认数据库缓存', 'jinyu-theme-companion' ) ];
@@ -1090,6 +1090,7 @@ function jyc_perf_flush_page_cache(): string {
 	// 否则点「清除整页缓存」只清了第三方插件、本插件片段缓存原样留存，造成「点了没反应」的假象。
 	if ( function_exists( 'jinyu_companion_cache_flush' ) ) {
 		$n      = jinyu_companion_cache_flush();
+// translators: Placeholder values are substituted at runtime.
 		$msgs[] = sprintf( __( '片段缓存已清空（%d 项）', 'jinyu-theme-companion' ), $n );
 	}
 
@@ -1274,6 +1275,7 @@ function jyc_perf_render_status_html(): string {
 	if ( null === $wv ) {
 		$html .= '<div class="jperf-wv-empty">' . esc_html__( '暂无样本。前端已采集 LCP / INP / CLS / FCP / TTFB，访客浏览后这里会出现真实均值。', 'jinyu-theme-companion' ) . '</div>';
 	} else {
+// translators: Placeholder values are substituted at runtime.
 		$foot = sprintf( __( '基于 %s 次真实访问', 'jinyu-theme-companion' ), number_format_i18n( $wv['n'] ) );
 		if ( empty( $wv['fresh'] ) ) {
 			$foot .= __( '（窗口已过期，等待新样本）', 'jinyu-theme-companion' );
@@ -1309,6 +1311,7 @@ function jyc_perf_render_status_html(): string {
 			$concl = ( $dist['mid'] + $dist['poor'] ) > 0
 				/* translators: 1: 达标项数, 2: 总项数, 3: 指标标签, 4: 当前均值, 5: 良好阈值 */
 				? sprintf( __( '%1$d / %2$d 项达标 · 最短板 %3$s（%4$s，良好线 %5$s）', 'jinyu-theme-companion' ), $dist['good'], $n_all, $wvm[ $weak_k ]['label'], $wv_val, $wvm[ $weak_k ]['good'] . ( $wvm[ $weak_k ]['ms'] ? ' ms' : '' ) )
+// translators: Placeholder values are substituted at runtime.
 				: sprintf( __( '%d 项全部达标 · 真实用户访问体验处于良好区间', 'jinyu-theme-companion' ), $n_all );
 			$html .= '<div class="jperf-wv-score rate-' . $sr . '">'
 				. '<div class="jperf-score-ring"><div class="jperf-ring"><svg viewBox="0 0 108 108">'
@@ -1398,6 +1401,7 @@ function jyc_perf_render_status_html(): string {
 				$html  .= '<div class="jperf-slow-row rate-' . $srate . '">'
 					. '<span class="jperf-slow-rank">' . $rank . '</span>'
 					. '<span class="jperf-slow-path" title="' . esc_attr( $srow['path'] ) . '">' . esc_html( $sdisp ) . '</span>'
+// translators: Placeholder values are substituted at runtime.
 					. '<span class="jperf-slow-meta">' . sprintf( __( '最差 %1$s · %2$s 次', 'jinyu-theme-companion' ), $slcp, number_format_i18n( (int) $srow['n'] ) ) . '</span>'
 					. '<span class="jperf-slow-bar"><i style="width:' . $spct . '%"></i></span>'
 					. '<span class="jperf-slow-badge">' . $sbadge . '</span></div>';
@@ -1665,11 +1669,11 @@ function jyc_perf_render_pane(): void {
 	$opts    = jyc_perf_get_options();
 	$nonce   = wp_create_nonce( 'jinyu_companion_nonce' );
 	$toggles = jyc_perf_toggle_meta();
-	$st      = jyc_perf_status_snapshot();
+	$st      = jyc_perf_status_snapshot(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
 	$oc_on   = ! empty( $st['object_cache'] );
 	?>
 	<div class="jperf-wrap">
-		<div id="jperf-status-zone"><?php echo jyc_perf_render_status_html(); // 内部均为服务端构造的受控 HTML ?></div>
+		<div id="jperf-status-zone"><?php echo jyc_perf_render_status_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 内部均为服务端构造的受控 HTML ?></div>
 
 		<section class="jperf-block">
 			<div class="jperf-block-head">
@@ -1708,7 +1712,8 @@ function jyc_perf_render_pane(): void {
 						<?php foreach ( $g_items as $key => $meta ) : ?>
 						<div class="jcard">
 							<div class="jcard-body">
-								<div class="jcard-t"><?php echo esc_html( $meta['label'] ); ?><?php if ( ! empty( $opts[ $key ] ) ) : ?><span class="jbadge"><?php esc_html_e( '默认开', 'jinyu-theme-companion' ); ?></span><?php endif; ?><button type="button" class="jperf-help" aria-expanded="false" aria-label="<?php echo esc_attr( sprintf( __( '%s 的说明', 'jinyu-theme-companion' ), $meta['label'] ) ); ?>"><svg viewBox="0 0 24 24"><path d="M9.1 9a3 3 0 015.8 1c0 2-3 2.4-3 4"/><circle cx="12" cy="17.3" r=".6"/></svg></button></div>
+// translators: Placeholder values are substituted at runtime.
+								<div class="jcard-t"><?php echo esc_html( $meta['label'] ); ?><?php if ( ! empty( $opts[ $key ] ) ) : ?><span class="jbadge"><?php esc_html_e( '默认开', 'jinyu-theme-companion' ); ?></span><?php endif; ?><button type="button" class="jperf-help" aria-expanded="false" aria-label="<?php echo esc_attr( sprintf( __( '%s 的说明', 'jinyu-theme-companion' ), $meta['label'] ) ); // phpcs:ignore WordPress.WP.I18n.MissingTranslatorsComment ?>"><svg viewBox="0 0 24 24"><path d="M9.1 9a3 3 0 015.8 1c0 2-3 2.4-3 4"/><circle cx="12" cy="17.3" r=".6"/></svg></button></div>
 								<div class="jperf-tip" role="tooltip" hidden><?php echo esc_html( $meta['desc'] ); ?></div>
 							</div>
 							<div class="jperf-sw <?php echo ! empty( $opts[ $key ] ) ? 'on' : ''; ?>"

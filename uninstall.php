@@ -59,7 +59,7 @@ function jinyu_companion_uninstall_site( array $options, array $tables ): void {
 	if ( '' !== $jinyu_oc && is_file( $jinyu_oc ) ) {
 		$head = (string) @file_get_contents( $jinyu_oc, false, null, 0, 2048 );
 		if ( false !== strpos( $head, 'JINYU_DROPIN_MARKER:jinyu-memcached-object-cache' ) ) {
-			@unlink( $jinyu_oc );
+			@wp_delete_file( $jinyu_oc );
 		}
 	}
 
@@ -116,7 +116,7 @@ function jinyu_companion_uninstall_wm_files(): void {
 				continue;
 			}
 			$seen[ $path ] = true;
-			@unlink( $path );
+			@wp_delete_file( $path );
 		}
 	}
 }

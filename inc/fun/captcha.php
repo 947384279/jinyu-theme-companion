@@ -159,7 +159,7 @@ function jinyu_captcha_markup(string $scene): string
       <button type="button" class="jinyu-captcha-refresh" data-jinyu-captcha-refresh
               title="<?php esc_attr_e('刷新验证码', 'jinyu-theme-companion'); ?>"
               aria-label="<?php esc_attr_e('刷新验证码', 'jinyu-theme-companion'); ?>">
-        <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+        <svg class="jinyu-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
       </button>
       <input type="text" name="captcha" inputmode="latin" autocomplete="off"
              maxlength="4" placeholder="<?php esc_attr_e('验证码', 'jinyu-theme-companion'); ?>">
@@ -183,7 +183,7 @@ function jinyu_captcha_output(): void
     nocache_headers();
     header('Content-Type: image/svg+xml; charset=utf-8');
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-    echo jinyu_captcha_svg(jinyu_captcha_generate());
+    echo jinyu_captcha_svg(jinyu_captcha_generate()); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
     exit;
 }
 

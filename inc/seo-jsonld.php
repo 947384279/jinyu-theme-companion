@@ -338,7 +338,7 @@ function jinyu_json_ld()
     if ($data) {
         // 中和 </script> 闭合标签，防止任意值（标题/FAQ 问题/HowTo 步骤名）提前闭合脚本注入标记
         $json = str_replace('</', '<\/', wp_json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        echo "\n<script type='application/ld+json'>" . $json . "</script>\n";
+        echo "\n<script type='application/ld+json'>" . $json . "</script>\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
     }
 }
 

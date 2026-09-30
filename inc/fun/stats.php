@@ -111,7 +111,7 @@ add_action('wp_dashboard_setup', function(){
         echo '<p><b>总 PV:</b> ' . number_format($total ? (int) $total->pv : 0) . ' &nbsp; <b>总 UV:</b> ' . number_format($total ? (int) $total->uv : 0) . '</p>';
         if ($rows) {
             echo '<table class="widefat striped"><thead><tr><th>日期</th><th>PV</th><th>UV</th></tr></thead><tbody>';
-            foreach ($rows as $r) echo '<tr><td>'.$r->stat_date.'</td><td>'.$r->pv.'</td><td>'.$r->uv.'</td></tr>';
+            foreach ($rows as $r) echo '<tr><td>'.esc_html($r->stat_date).'</td><td>'.esc_html($r->pv).'</td><td>'.esc_html($r->uv).'</td></tr>';
             echo '</tbody></table>';
         } else {
             echo '<p>暂无数据</p>';

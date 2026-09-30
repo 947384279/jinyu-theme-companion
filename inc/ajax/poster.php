@@ -116,7 +116,7 @@ function jinyu_poster_sweep_old(): void {
     $cut = time() - WEEK_IN_SECONDS;
     foreach ( glob( $dir . '/jinyu-poster-*.png' ) ?: [] as $f ) {
         if ( is_file( $f ) && filemtime( $f ) < $cut ) {
-            @unlink( $f );
+            @wp_delete_file( $f );
         }
     }
 }

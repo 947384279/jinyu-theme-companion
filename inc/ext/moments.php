@@ -16,13 +16,21 @@ function jinyu_moments_init(): void
         'labels' => [
             'name'               => $name,
             'singular_name'      => $name,
+// translators: Placeholder values are substituted at runtime.
             'add_new'            => sprintf(__('发表%s', 'jinyu-theme-companion'), $name),
+// translators: Placeholder values are substituted at runtime.
             'add_new_item'       => sprintf(__('发表%s', 'jinyu-theme-companion'), $name),
+// translators: Placeholder values are substituted at runtime.
             'edit_item'          => sprintf(__('编辑%s', 'jinyu-theme-companion'), $name),
+// translators: Placeholder values are substituted at runtime.
             'new_item'           => sprintf(__('新%s', 'jinyu-theme-companion'), $name),
+// translators: Placeholder values are substituted at runtime.
             'view_item'          => sprintf(__('查看%s', 'jinyu-theme-companion'), $name),
+// translators: Placeholder values are substituted at runtime.
             'search_items'       => sprintf(__('搜索%s', 'jinyu-theme-companion'), $name),
+// translators: Placeholder values are substituted at runtime.
             'not_found'          => sprintf(__('暂无%s', 'jinyu-theme-companion'), $name),
+// translators: Placeholder values are substituted at runtime.
             'not_found_in_trash' => sprintf(__('没有已遗弃的%s', 'jinyu-theme-companion'), $name),
             'menu_name'          => $name,
         ],

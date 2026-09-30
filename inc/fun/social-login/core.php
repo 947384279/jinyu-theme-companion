@@ -527,7 +527,7 @@ function jinyu_sl_create_oauth_user( string $platform, array $ud ): int|WP_Error
 	if ( username_exists( $username ) ) {
 		$username .= '_' . wp_generate_password( 4, false );
 	}
-	$fallback = $platform . '_' . $slug . '@' . ( parse_url( home_url(), PHP_URL_HOST ) ?: 'localhost' );
+	$fallback = $platform . '_' . $slug . '@' . ( wp_parse_url( home_url(), PHP_URL_HOST ) ?: 'localhost' );
 	$uid      = wp_create_user( $username, wp_generate_password( 16, true ), $ud['email'] ?: $fallback );
 	if ( is_wp_error( $uid ) ) {
 		return $uid;

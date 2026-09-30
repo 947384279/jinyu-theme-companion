@@ -1,20 +1,20 @@
 <?php
 /**
  * Plugin Name: Jinyu Theme Companion
- * Plugin URI:  https://www.qicaiyun.top
+ * Plugin URI:  https://www.qicaiyun.top/4698.html
  * Description: Official companion plugin for the Jinyu WordPress theme. After the theme was split into a
  *              three-part structure, this plugin takes over all functional capabilities (SEO, structured
  *              data, social, related posts, shortcodes, cache, anti-spam, index ping, and more) so the
  *              theme stays a pure presentation layer. All outbound features are off by default.
  * Version:     1.2.3
- * Author:      金玉主题作者
+ * Author:      金玉
  * Author URI:  https://www.qicaiyun.top
  * License:     GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: jinyu-theme-companion
  * Domain Path: /languages
  * Requires at least: 6.2
- * Tested up to: 6.8
+ * Tested up to: 7.1
  * Requires PHP: 8.0
  *
  * @package Jinyu_Theme_Companion
@@ -134,6 +134,9 @@ add_action( 'after_setup_theme', static function (): void {
 	// 选项 helper + 插件自持原语（必须在各功能模块之前加载）
 	require_once __DIR__ . '/inc/fun/companion-options.php';
 	require_once __DIR__ . '/inc/fun/primitives.php';
+	// 从主题迁出的「插件领地」兼容层：安全加固 / 浏览量采集 / 客户端 IP / IP 限流。
+	// 主题侧仅保留委托壳，本文件在插件启用时提供真实实现；未启用主题时优雅降级。
+	require_once __DIR__ . '/inc/fun/theme-compat.php';
 
 	// 加密：companion 自有实现（唯一命名，不与主题 jinyu_encrypt/decrypt 冲突），
 	// storage 的 Secret 加密入库 + 一次性迁移解密主题历史密文均依赖此文件，须先于 storage.php 加载。

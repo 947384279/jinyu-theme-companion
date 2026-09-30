@@ -249,19 +249,19 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 		$tmp = function_exists( 'wp_tempnam' ) ? wp_tempnam( 'jinyu_wm_probe' ) : '';
 		if ( $tmp ) {
 			$png = $tmp . '.png';
-			@unlink( $tmp );
+			@wp_delete_file( $tmp );
 			$im = $has_gd ? imagecreatetruecolor( 2, 2 ) : null;
 			if ( $im ) {
 				imagefill( $im, 0, 0, imagecolorallocate( $im, 255, 255, 255 ) );
 				if ( imagepng( $im, $png ) ) {
 					$probe = wp_get_image_editor( $png );
-					@unlink( $png );
+					@wp_delete_file( $png );
 					if ( $probe instanceof WP_Image_Editor ) {
 						$cached = true;
 						return true;
 					}
 				} else {
-					@unlink( $png );
+					@wp_delete_file( $png );
 				}
 				imagedestroy( $im );
 			}
@@ -525,7 +525,7 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 				&& (string) @md5_file( $file ) === (string) $proof[0]
 				&& (string) @md5_file( $backup ) === (string) $proof[1] ) {
 				// 现图=登记在册的水印版、备份=登记在册的原图：还原（备份→原路径），继续重打
-				if ( ! @rename( $backup, $file ) ) {
+				if ( ! @rename( $backup, $file ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- 水印备份/还原的原子 rename，保留 @rename 的原子与返回值语义
 					error_log( 'jinyu watermark: rebuild restore failed, skipped file=' . $file );
 					return self::skip( $out, 'backup_exists' );
 				}
@@ -567,13 +567,13 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 		 *    WP 7.1 的 get_output_format() 会把自定义后缀当成扩展名剥掉再换回标准扩展名，
 		 *    给 save() 传 $file . '.jyc-wm-xxx' 会被改写到 $file . '.jpg'，
 		 *    真正的临时文件根本不存在，随后 rename 回原路径必然失败。 */
-		if ( ! rename( $file, $backup ) ) {
+		if ( ! rename( $file, $backup ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- 水印备份：原图→备份名，原子操作
 			$out['reason'] = 'backup_failed';
 			return $out;
 		}
 		/* ③ 水印版直接写回原路径。失败则把备份改回去，原图完整回来。 */
 		if ( ! $editor->save( $file, self::save_mime( $ext ) ) ) {
-			rename( $backup, $file ); // 回滚：备份图改回原路径
+			rename( $backup, $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- 水印回滚：备份图改回原路径
 			$out['reason'] = 'apply_failed';
 			return $out;
 		}
@@ -608,7 +608,7 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 		}
 		if ( ! is_file( $file ) ) {
 			$reason = 'renamed';
-			return rename( $backup, $file ); // 水印图已不在（被删/被移走），备份直接回归
+			return rename( $backup, $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- 去除水印：备份直接回归原路径
 		}
 		if ( is_array( $proof ) ) {
 			$now = @md5_file( $file );
@@ -644,7 +644,7 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 	/** 真正把备份改回原路径，供 remove_file 的各条放行分支共用。 */
 	private static function do_restore( string $file, string $backup, ?string &$reason ): bool {
 		$reason = 'ok';
-		return (bool) @rename( $backup, $file );
+		return (bool) @rename( $backup, $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- do_restore 备份改回原路径
 	}
 
 	/** 备份路径：xxx.jpg → xxx-jywmo.jpg。 */
@@ -892,7 +892,7 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 				if ( is_array( $registered ) && isset( $registered[ $name ] ) ) {
 					$p = self::size_file( $dir, (string) $s['file'] );
 					if ( $p && is_file( $p ) ) {
-						@unlink( $p );
+						@wp_delete_file( $p );
 						$rebuilt[ (string) $s['file'] ] = $p;
 					}
 				}
@@ -924,7 +924,7 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 				}
 				$bak = self::backup_path( $p );
 				if ( is_file( $bak ) && self::file_same( $bak, $p ) ) {
-					@unlink( $bak ); // 旧备份与重建产物相同（就是上一轮的 regen 产物），没有还原价值
+					@wp_delete_file( $bak ); // 旧备份与重建产物相同（就是上一轮的 regen 产物），没有还原价值
 					$marked[ $name ] = array( $cur, '' );
 				} else {
 					$marked[ $name ] = array( $cur, (string) ( $old[1] ?? '' ) );

@@ -170,8 +170,8 @@ if ( ! function_exists( 'jinyu_wechat_print_script' ) ) {
 			. 'wx.ready(function(){wx.updateAppMessageShareData({title:data.title,desc:data.desc,link:data.link,imgUrl:data.imgUrl});wx.updateTimelineShareData({title:data.title,link:data.link,imgUrl:data.imgUrl});});'
 			. 'wx.error(function(res){if(' . $debug . '){console.warn(\'[jinyu-wechat] config fail:\',res);}});'
 			. '})();';
-		echo '<script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>' . PHP_EOL;
-		echo '<script>' . $inline . '</script>' . PHP_EOL;
+		wp_enqueue_script( 'jinyu-wechat-jssdk', 'https://res.wx.qq.com/open/js/jweixin-1.6.0.js', array(), '1.6.0', true );
+		wp_add_inline_script( 'jinyu-wechat-jssdk', $inline );
 	}
 }
 

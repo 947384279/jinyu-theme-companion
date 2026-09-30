@@ -592,7 +592,7 @@ if ( ! function_exists( 'jinyu_companion_handle_import' ) ) {
 				return;
 			}
 			if ( (int) $file['size'] > jinyu_companion_io_max_upload() ) {
-				@unlink( $file['tmp_name'] );
+				@wp_delete_file( $file['tmp_name'] );
 				jinyu_companion_import_result(
 					array(
 						'ok'      => false,
@@ -606,7 +606,7 @@ if ( ! function_exists( 'jinyu_companion_handle_import' ) ) {
 				return;
 			}
 			$raw = (string) file_get_contents( $file['tmp_name'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions -- 本地临时文件，无远程调用。
-			@unlink( $file['tmp_name'] );
+			@wp_delete_file( $file['tmp_name'] );
 		} elseif ( ! empty( $_POST['jyc_import_text'] ) ) {
 			$raw = wp_unslash( $_POST['jyc_import_text'] );
 		}

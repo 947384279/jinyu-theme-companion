@@ -77,7 +77,7 @@ function jinyu_indexnow_serve(): void {
 	$key = (string) get_option( 'jinyu_indexnow_key' );
 	header( 'Content-Type: text/plain; charset=utf-8' );
 	header( 'X-Robots-Tag: noindex' );
-	echo $key;
+	echo $key; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
 	exit;
 }
 

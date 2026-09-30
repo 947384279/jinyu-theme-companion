@@ -169,8 +169,8 @@ function jinyu_companion_wm_worker_pool( array $batch, int $concurrency, string 
 				'id'     => (int) $id,
 				'mode'   => $mode,
 			);
-			$ch = curl_init();
-			curl_setopt_array(
+			$ch = curl_init(); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_init -- 站内 admin-ajax worker 并发处理，需转发会话 Cookie（wp_remote 无法并行且易丢会话）
+			curl_setopt_array( // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_setopt_array -- 站内 admin-ajax worker 并发处理
 				$ch,
 				array(
 					CURLOPT_URL            => $url,
@@ -187,20 +187,20 @@ function jinyu_companion_wm_worker_pool( array $batch, int $concurrency, string 
 			);
 			$handles[] = $ch;
 		}
-		$mh = curl_multi_init();
+		$mh = curl_multi_init(); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_init -- 站内 admin-ajax worker 并发处理
 		foreach ( $handles as $ch ) {
-			curl_multi_add_handle( $mh, $ch );
+			curl_multi_add_handle( $mh, $ch ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_add_handle -- 站内 admin-ajax worker 并发处理
 		}
 		do {
-			curl_multi_exec( $mh, $running );
-			curl_multi_select( $mh, 0.05 );
+			curl_multi_exec( $mh, $running ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_exec -- 站内 admin-ajax worker 并发处理
+			curl_multi_select( $mh, 0.05 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_select -- 站内 admin-ajax worker 并发处理
 		} while ( $running > 0 );
 		foreach ( $handles as $ch ) {
-			$results[] = curl_multi_getcontent( $ch );
-			curl_multi_remove_handle( $mh, $ch );
-			curl_close( $ch );
+			$results[] = curl_multi_getcontent( $ch ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_getcontent -- 站内 admin-ajax worker 并发处理
+			curl_multi_remove_handle( $mh, $ch ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_remove_handle -- 站内 admin-ajax worker 并发处理
+			curl_close( $ch ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_close -- 站内 admin-ajax worker 并发处理
 		}
-		curl_multi_close( $mh );
+		curl_multi_close( $mh ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_close -- 站内 admin-ajax worker 并发处理
 	}
 
 	$errors = 0;

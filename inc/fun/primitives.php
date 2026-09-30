@@ -112,7 +112,7 @@ function jinyu_companion_webp_url( string $url ): string {
 		return $url; // 非本站上传目录（外链 / 主题资源）：不处理.
 	}
 	$rel      = substr( $url, strlen( $up['baseurl'] ) );
-	$rel_path = ltrim( parse_url( $rel, PHP_URL_PATH ) ?: $rel, '/' );
+	$rel_path = ltrim( wp_parse_url( $rel, PHP_URL_PATH ) ?: $rel, '/' );
 	$src_file = $up['basedir'] . '/' . $rel_path;
 	$webp_rel = preg_replace( '/\.(jpe?g|png)$/i', '.webp', $rel_path );
 	if ( null === $webp_rel || $webp_rel === $rel_path ) {

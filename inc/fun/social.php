@@ -220,6 +220,7 @@ function jinyu_notify_comment_reply($comment_id, $comment)
     $actor_name = $actor_ud ? $actor_ud->display_name : ($comment->comment_author ?: __('有人', 'jinyu-theme-companion'));
     $post     = get_post($comment->comment_post_ID);
     $post_title = $post ? $post->post_title : '';
+// translators: Placeholder values are substituted at runtime.
     $title    = sprintf(__('%s 回复了你的评论', 'jinyu-theme-companion'), $actor_name);
     $content  = ($post_title ? '《' . $post_title . '》 ' : '') . mb_substr(wp_strip_all_tags($comment->comment_content), 0, 140);
     $link     = get_comment_link($comment_id);

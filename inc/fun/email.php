@@ -62,6 +62,7 @@ add_action('wp_ajax_jinyu_test_smtp', function () {
     $err  = (isset($phpmailer) && is_object($phpmailer)) ? $phpmailer->ErrorInfo : '';
 
     if ($sent) {
+// translators: Placeholder values are substituted at runtime.
         wp_send_json_success(sprintf(__('测试邮件已发送至 %s', 'jinyu-theme-companion'), $to));
     }
     wp_send_json_error(__('发送失败：', 'jinyu-theme-companion') . ($err ?: __('请检查 SMTP 主机/端口/账号或服务器发信权限', 'jinyu-theme-companion')));
@@ -73,5 +74,6 @@ add_action('wp_ajax_jinyu_clear_cache', function () {
     // 走插件独占的失效入口（jinyu_companion_cache_flush 返回清理条目数；
     // 旧别名 jinyu_cache_flush 签名是 void，拿不到计数）。
     $n = function_exists('jinyu_companion_cache_flush') ? jinyu_companion_cache_flush() : 0;
+// translators: Placeholder values are substituted at runtime.
     wp_send_json_success(sprintf(__('已清理 %d 条缓存', 'jinyu-theme-companion'), (int) $n));
 });

@@ -1,10 +1,8 @@
-=== Plugin Name ===
-Jinyu Theme Companion
-
-Contributors: qicaiyun
+=== Jinyu Theme Companion ===
+Contributors: jinyu888
 Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
-Tested up to: 6.8
+Tested up to: 7.1
 Requires PHP: 8.0
 Stable tag: 1.2.3
 License: GPL-2.0-or-later
@@ -63,9 +61,11 @@ For each enabled provider, the plugin exchanges the OAuth authorization code for
 
 Client secrets are encrypted (AES-256-CBC with HMAC) in your site's own database using WordPress salts; they are never transmitted to any party other than the provider they belong to.
 
-== Screenshots ==
+Additional outbound connections:
 
-(Add screenshots before release: settings page, related posts, message center, shortcode UI, and so on.)
+* Theme update check — when the Jinyu theme is active, the plugin periodically requests `https://update.qicaiyun.top/jinyu-update.json` to check for (and download) theme updates; the package is verified with an RSA signature and SHA-256 before any install. Only the request is sent; no site data leaves your server.
+* WeChat JS-SDK share — when the WeChat share feature is enabled, the plugin fetches a short-lived access token and ticket from `https://api.weixin.qq.com` to sign the share card. No personal data is transmitted.
+* Remote object storage — when you configure UpYun / Aliyun OSS / Tencent COS / Qiniu / S3, media files are uploaded to and served from the endpoint you specify. The endpoint is chosen by you; nothing is sent to the plugin author.
 
 == Changelog ==
 
@@ -147,10 +147,9 @@ First release: the functional companion plugin split out from the Jinyu theme.
 
 == Resources ==
 
-This plugin uses Font Awesome icons (CSS class fa-*) on the front end; the fonts and styles are loaded and distributed by the Jinyu theme.
+This plugin no longer depends on any external or theme-provided icon font. All front-end icons (for example the captcha refresh button and the "comment to view" hint) are inlined as self-contained SVG, so the plugin works fully standalone.
 
-* Font Awesome Free: icons are under the CC BY 4.0 license (https://creativecommons.org/licenses/by/4.0/), and fonts are under the SIL OFL 1.1 license (https://scripts.sil.org/OFL).
-* Trademark: Font Awesome is a trademark of Dave Gandy. This plugin uses it only under its open-source license and is not affiliated with the trademark holder.
+* Previously this plugin referenced Font Awesome on the front end; that dependency has been removed. Font Awesome Free remains under the CC BY 4.0 license (https://creativecommons.org/licenses/by/4.0/) and SIL OFL 1.1 (https://scripts.sil.org/OFL); its trademark belongs to Dave Gandy.
 
 == Privacy ==
 

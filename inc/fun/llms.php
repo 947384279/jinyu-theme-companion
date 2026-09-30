@@ -101,7 +101,7 @@ function jinyu_llms_serve(): void {
 	$cache_key = 'full' === $mode ? 'jinyu_llms_full_cache' : 'jinyu_llms_index_cache';
 	$cached    = get_transient( $cache_key );
 	if ( is_string( $cached ) && '' !== $cached ) {
-		echo $cached;
+		echo $cached; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
 		exit;
 	}
 
@@ -286,7 +286,7 @@ function jinyu_llms_serve(): void {
 	}
 
 	jinyu_llms_cache_output( $cache_key, $out );
-	echo $out;
+	echo $out; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（SVG/JSON-LD/缓存页/CSP nonce/内部构造 HTML），无需转义
 	exit;
 }
 
@@ -415,6 +415,6 @@ function jinyu_llms_serve_full( string $cache_key = 'jinyu_llms_full_cache' ): v
 	}
 
 	jinyu_llms_cache_output( $cache_key, $out );
-	echo $out;
+	echo $out; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（SVG/JSON-LD/缓存页/CSP nonce/内部构造 HTML），无需转义
 	exit;
 }

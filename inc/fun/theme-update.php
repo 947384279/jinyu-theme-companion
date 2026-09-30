@@ -35,17 +35,15 @@ if ( ! defined( 'JINYU_COMPANION_UPDATE_SERVER' ) ) {
 /* 验签公钥（仅公钥随包分发，私钥仅发布者持有）。 */
 define(
 	'JINYU_COMPANION_UPDATE_PUBKEY',
-	<<<JINYU_PUBKEY
------BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqLakGXi75f8FkiajP3La
-C85un5mTfg/KC9I6sadx895kG1yf1zirVqml5li+r+SX/pUWWfZnRunPewhXV/UC
-yDbBwP3MmkydDQQpy5en4CXjfbWQN974NjL2XQpBUQhPDvtXi6GSy1iG9J3jnxn4
-mS1dK1ceb6C+5ulDqZPVn1zeWzqbXhRX8BFWviSNUDqQSZiRfZL9syGNHpbUt2ey
-8cnrvkOUJU8IQRhxYiTpF0aBNNWQK8lw5AUIrgSi+IeEmyXj/0iX0ab/0v0O7pXy
-B23GHORyOPUrorod65Au2hWt8PYsEvQSMm0YK7gToj+67RmAddUxtKm0zYW9pIyl
-pwIDAQAB
------END PUBLIC KEY-----
-JINYU_PUBKEY
+	"-----BEGIN PUBLIC KEY-----\n"
+	. "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqLakGXi75f8FkiajP3La\n"
+	. "C85un5mTfg/KC9I6sadx895kG1yf1zirVqml5li+r+SX/pUWWfZnRunPewhXV/UC\n"
+	. "yDbBwP3MmkydDQQpy5en4CXjfbWQN974NjL2XQpBUQhPDvtXi6GSy1iG9J3jnxn4\n"
+	. "mS1dK1ceb6C+5ulDqZPVn1zeWzqbXhRX8BFWviSNUDqQSZiRfZL9syGNHpbUt2ey\n"
+	. "8cnrvkOUJU8IQRhxYiTpF0aBNNWQK8lw5AUIrgSi+IeEmyXj/0iX0ab/0v0O7pXy\n"
+	. "B23GHORyOPUrorod65Au2hWt8PYsEvQSMm0YK7gToj+67RmAddUxtKm0zYW9pIyl\n"
+	. "pwIDAQAB\n"
+	. "-----END PUBLIC KEY-----\n"
 );
 
 if ( ! function_exists( 'jinyu_companion_update_target_slug' ) ) {
@@ -289,7 +287,7 @@ if ( ! function_exists( 'jinyu_companion_upgrader_pre_download' ) ) {
 		$zip_path = $tmp;
 		if ( ! preg_match( '/\.zip$/i', $tmp ) ) {
 			$renamed = $tmp . '.zip';
-			if ( @rename( $tmp, $renamed ) && file_exists( $renamed ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors
+			if ( @rename( $tmp, $renamed ) && file_exists( $renamed ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename,  WordPress.PHP.NoSilencedErrors
 				$zip_path = $renamed;
 			}
 		}
@@ -331,7 +329,7 @@ if ( ! function_exists( 'jinyu_companion_upgrader_source_selection' ) ) {
 		if ( $wp_filesystem && method_exists( $wp_filesystem, 'move' ) ) {
 			$wp_filesystem->move( $source, $new_source );
 		} else {
-			@rename( $source, $new_source ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+			@rename( $source, $new_source ); // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename,  WordPress.PHP.NoSilencedErrors
 		}
 
 		return is_dir( $new_source ) ? $new_source : $source;

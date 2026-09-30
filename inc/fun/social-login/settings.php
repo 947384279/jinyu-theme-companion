@@ -173,7 +173,8 @@ function jinyu_sl_settings_pane(): void {
 		<div class="jyc-sl-hero-side">
 			<div class="jyc-sl-hero-stat" title="<?php echo esc_attr__( '已完整填写凭据的平台数量', 'jinyu-theme-companion' ); ?>">
 				<b class="jyc-num"><?php echo (int) $ready; ?></b>
-				<span><?php echo esc_html( sprintf( __( '/ %d 已配置', 'jinyu-theme-companion' ), count( $provs ) ) ); ?></span>
+// translators: Placeholder values are substituted at runtime.
+				<span><?php echo esc_html( sprintf( __( '/ %d 已配置', 'jinyu-theme-companion' ), count( $provs ) ) ); // phpcs:ignore WordPress.WP.I18n.MissingTranslatorsComment ?></span>
 			</div>
 			<label class="jyc-switch jyc-switch-lg"><input type="checkbox" name="jinyu_sl_enable" <?php checked( $enable ); ?>><span class="jyc-track"></span></label>
 		</div>
@@ -243,8 +244,8 @@ function jinyu_sl_settings_pane(): void {
 				$wide     = $fields_total >= 4;
 			?>
 			<div class="jyc-sl-card<?php echo $wide ? ' jyc-sl-card-wide' : ''; ?>" style="--pc:<?php echo esc_attr( $pc ); ?>;--pc-l:<?php echo esc_attr( jinyu_sl_hex_rgba( $pc, 0.34 ) ); ?>;--pc-t:<?php echo esc_attr( jinyu_sl_hex_rgba( $pc, 0.13 ) ); ?>">
-				<div class="jyc-sl-card-hd">
-					<span class="jyc-sl-badge" aria-hidden="true"><?php echo jinyu_sl_icon_markup( $prov->icon() ); ?></span>
+				<div class="jyc-sl-card-hd"> // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
+					<span class="jyc-sl-badge" aria-hidden="true"><?php echo jinyu_sl_icon_markup( $prov->icon() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（SVG 图标标记），无需转义 ?></span>
 					<div class="jyc-sl-card-tx">
 						<div class="jyc-sl-name"><?php echo esc_html( $prov->label() ); ?></div>
 						<div class="jyc-sl-id"><?php echo esc_html( $prov->id() ); ?></div>

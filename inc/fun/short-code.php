@@ -107,7 +107,7 @@ $jinyu_comment = function ($atts, $content = '') {
 		return do_shortcode( $content );
 	}
 	return '<div class="jinyu-comment-hide">'
-		 . '<i class="fa-regular fa-comment"></i> ' . __( '评论后可见，请先登录并评论', 'jinyu-theme-companion')
+		 . '<svg class="jinyu-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> ' . __( '评论后可见，请先登录并评论', 'jinyu-theme-companion')
 		 . '</div>';
 };
 add_shortcode( 'jinyu_comment', $jinyu_comment );
@@ -143,8 +143,9 @@ $jinyu_gist = function ($atts) {
 	if ( ! $a['id'] ) {
 		return '';
 	}
-	return '<script src="https://gist.github.com/' . esc_attr( $a['id'] ) . '.js'
-		 . ( $a['file'] ? '?file=' . esc_attr( $a['file'] ) : '' ) . '"></script>';
+	$src = 'https://gist.github.com/' . esc_attr( $a['id'] ) . '.js' . ( $a['file'] ? '?file=' . esc_attr( $a['file'] ) : '' );
+	wp_enqueue_script( 'jinyu-gist-' . sanitize_key( $a['id'] ), $src, array(), null, true );
+	return '';
 };
 add_shortcode( 'jinyu_gist', $jinyu_gist );
 

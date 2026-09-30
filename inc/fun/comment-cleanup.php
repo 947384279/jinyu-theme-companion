@@ -137,6 +137,7 @@ function jinyu_comment_cleanup_scan() {
 		$total_links = max( count( $ext_links ), $raw_links );
 		if ( $total_links >= 1 ) {
 			$score    += min( $total_links * 12, 40 );
+// translators: Placeholder values are substituted at runtime.
 			$reason    = sprintf( __( '正文含 %d 个站外链接', 'jinyu-theme-companion' ), $total_links );
 			if ( $ext_links ) {
 				$reason .= '（' . implode( ', ', $ext_links ) . '）';
@@ -156,6 +157,7 @@ function jinyu_comment_cleanup_scan() {
 		}
 		if ( $hit ) {
 			$score    += min( count( $hit ) * 12, 35 );
+// translators: Placeholder values are substituted at runtime.
 			$reasons[] = sprintf( __( '命中垃圾词：%s', 'jinyu-theme-companion' ), implode( '、', array_slice( $hit, 0, 5 ) ) );
 		}
 
@@ -182,12 +184,14 @@ function jinyu_comment_cleanup_scan() {
 		$ck = md5( trim( strtolower( $text ) ) );
 		if ( isset( $content_count[ $ck ] ) && $content_count[ $ck ] > 1 ) {
 			$score    += 20;
+// translators: Placeholder values are substituted at runtime.
 			$reasons[] = sprintf( __( '内容重复出现（疑似批量灌水，%d 条）', 'jinyu-theme-companion' ), $content_count[ $ck ] );
 		}
 
 		// 7) 同一邮箱多次评论。
 		if ( '' !== $email && isset( $email_count[ $email ] ) && $email_count[ $email ] >= 3 ) {
 			$score    += 12;
+// translators: Placeholder values are substituted at runtime.
 			$reasons[] = sprintf( __( '同一邮箱多次评论（%d 条）', 'jinyu-theme-companion' ), $email_count[ $email ] );
 		}
 
@@ -241,6 +245,7 @@ function jinyu_comment_cleanup_scan() {
 
 	wp_send_json_success(
 		array(
+// translators: Placeholder values are substituted at runtime.
 			'msg'   => sprintf( __( '扫描完成：发现 %d 条疑似垃圾评论（已按风险评分降序排列）。请勾选确认后删除。', 'jinyu-theme-companion' ), $total ),
 			'items' => $items,
 			'total' => $total,
@@ -302,7 +307,9 @@ function jinyu_comment_cleanup_delete() {
 	wp_send_json_success(
 		array(
 			'msg'     => $backup
+// translators: Placeholder values are substituted at runtime.
 				? sprintf( __( '已备份 %1$d 条并彻底删除 %2$d 条垃圾评论（备份表 %3$s，可经 SQL 恢复）。', 'jinyu-theme-companion' ), $backed_up, $deleted, $table )
+// translators: Placeholder values are substituted at runtime.
 				: sprintf( __( '已彻底删除 %d 条垃圾评论（未备份）。', 'jinyu-theme-companion' ), $deleted ),
 			'deleted' => $deleted,
 		)

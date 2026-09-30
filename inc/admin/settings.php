@@ -1032,7 +1032,7 @@ function jinyu_companion_settings_page_html(): void {
 												                                printf(
                                     /* translators: 1: 缓存文件数；2: 最近写入时间 */
                                     esc_html__( '缓存目录就绪：%1$s 个缓存文件，最近写入 %2$s。', 'jinyu-theme-companion' ),
-                                    number_format_i18n( (int) $jpc['files'] ),
+                                    number_format_i18n( (int) $jpc['files'] ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
                                     esc_html( $jpc_last )
                                 );
                                 ?>
@@ -1040,13 +1040,13 @@ function jinyu_companion_settings_page_html(): void {
                                     <?php
                                     // 内含 <code> 标记，输出处不做转义（与 jinyu_page_cache_hint 一致）
                                     if ( function_exists( 'jinyu_page_cache_etag_hint' ) ) {
-                                        echo jinyu_page_cache_etag_hint();
+                                        echo jinyu_page_cache_etag_hint(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
                                     }
                                     ?>
                                 </div>
 											<?php else : ?>
 												<strong><?php esc_html_e( '整页缓存未生效', 'jinyu-theme-companion' ); ?></strong>
-												<?php echo jinyu_page_cache_hint(); // 内含 esc_html 处理过的路径，非转义输出 ?>
+												<?php echo jinyu_page_cache_hint(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（路径经 esc_html 处理，非转义输出） ?>
 											<?php endif; ?>
 										</div>
 									<?php endif; ?>
@@ -1115,7 +1115,7 @@ function jinyu_companion_settings_page_html(): void {
 							<div class="jyc-panel">
 								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><?php echo esc_html__( '传输体检', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '服务器 / CDN 层', 'jinyu-theme-companion' ); ?></span></div>
 								<div class="jyc-panel-b">
-									<div id="jyc-tpResult"><?php echo $tp_html; ?></div>
+									<div id="jyc-tpResult"><?php echo $tp_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（内部构造 HTML），无需转义 ?></div>
 									<div class="jyc-test-row" style="margin-top:12px">
 										<button class="jyc-btn jyc-btn-soft" type="button" id="jyc-tpProbe" data-loading="<?php echo esc_attr__( '体检中…', 'jinyu-theme-companion' ); ?>" onclick="window.jycTransportProbe(this)"><?php echo esc_html__( '立即体检', 'jinyu-theme-companion' ); ?></button>
 										<span class="jyc-muted" style="font-size:12px" id="jyc-tpAgo"><?php echo '' !== $tp_ago ? esc_html( sprintf( /* translators: %s: relative time */ __( '上次 %s', 'jinyu-theme-companion' ), $tp_ago ) ) : ''; ?></span>
