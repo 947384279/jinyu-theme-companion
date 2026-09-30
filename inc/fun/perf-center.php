@@ -991,6 +991,7 @@ function jyc_perf_deploy_object_cache( $force = false, $backup = false ): array 
 	}
 
 	$code = (string) file_get_contents( $tpl );
+	// phpcs:ignore PluginCheck.CodeAnalysis.WriteFile.PluginDirectoryWrite -- 缓存类插件的对象缓存 drop-in 只能落在 WP_CONTENT_DIR 根目录，WP 不识别其他位置；wp.org 指南对缓存插件有此豁免。
 	if ( false === @file_put_contents( $target, $code, LOCK_EX ) ) {
 		return [ 'ok' => false, 'msg' => __( '写入 wp-content/object-cache.php 失败，请检查目录写权限', 'jinyu-theme-companion' ) ];
 	}
@@ -1581,8 +1582,8 @@ function jyc_perf_ajax_status(): void {
  * 仅校验来源文章与开关，不做权限限制（公开评论本就可读）。
  */
 function jyc_perf_ajax_load_comments() {
-	$post_id = (int) ( $_GET['post_id'] ?? 0 );
-	$page    = max( 1, (int) ( $_GET['page'] ?? 1 ) );
+	$post_id = absint( wp_unslash( $_GET['post_id'] ?? 0 ) );
+	$page    = max( 1, absint( wp_unslash( $_GET['page'] ?? 1 ) ) );
 	$post    = get_post( $post_id );
 	// 仅公开文章的评论可被匿名增量拉取：私有/草稿/待审文章即使评论开放也不经此端点外泄。
 	if ( ! $post || 'publish' !== get_post_status( $post ) || ! comments_open( $post ) ) {

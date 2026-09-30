@@ -219,8 +219,8 @@ add_action( 'admin_post_nopriv_jinyu_social_login', 'jinyu_sl_dispatch' );
 add_action( 'admin_post_jinyu_social_login', 'jinyu_sl_dispatch' );
 
 function jinyu_sl_dispatch(): void {
-	if ( ( $_GET['mode'] ?? '' ) === 'start' ) {
-		jinyu_sl_begin( sanitize_key( $_GET['platform'] ?? '' ) );
+	if ( 'start' === sanitize_key( wp_unslash( $_GET['mode'] ?? '' ) ) ) {
+		jinyu_sl_begin( sanitize_key( wp_unslash( $_GET['platform'] ?? '' ) ) );
 		return;
 	}
 	jinyu_sl_callback();
@@ -278,11 +278,14 @@ function jinyu_sl_begin( string $platform ): void {
 	$nonce    = ( 'apple' === $platform ) ? bin2hex( random_bytes( 16 ) ) : '';
 
 	// 绑定意图：已登录用户从用户中心发起，回调后关联当前账号并回跳用户中心（而非新建账号/写文章页）
-	$intent      = ( ( $_GET['intent'] ?? '' ) === 'bind' ) ? 'bind' : '';
+	$intent      = ( 'bind' === sanitize_key( wp_unslash( $_GET['intent'] ?? '' ) ) ) ? 'bind' : '';
 	$redirect_to = '';
 	// 回跳地址（bind 与登录通用）：仅在同域安全时采纳，防开放重定向
 	if ( ! empty( $_GET['redirect_to'] ) ) {
-		$redirect_to = wp_validate_redirect( wp_unslash( $_GET['redirect_to'] ), '' );
+		$redirect_to = wp_validate_redirect(
+			esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ),
+			''
+		);
 	}
 
 	// state 存 transient（多 worker 共享，替代 $_SESSION），并下发 cookie 绑定浏览器
@@ -323,7 +326,7 @@ function jinyu_sl_callback(): void {
 	// CSRF：state 参数已在下方与 transient 校验（OAuth 标准做法）。
 	// cookie 仅作同浏览器冗余校验；若缺失/不一致不致命，避免代理或子域场景下被误杀，
 	// 但记录日志以便排查。真正的防 CSRF 由 state↔transient 保证。
-	$cookie = $_COOKIE[ JINYU_SL_COOKIE ] ?? '';
+	$cookie = isset( $_COOKIE[ JINYU_SL_COOKIE ] ) ? sanitize_text_field( wp_unslash( $_COOKIE[ JINYU_SL_COOKIE ] ) ) : '';
 	if ( '' !== $cookie && ! hash_equals( $cookie, $state ) ) {
 		error_log( 'Jinyu Social Login: state cookie mismatch, proceeding via transient check.' );
 	}

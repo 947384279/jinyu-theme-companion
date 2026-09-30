@@ -81,12 +81,13 @@ function jinyu_moments_migrate_legacy(): void
         return;
     }
 
+    // 不显式传 suppress_filters：get_posts() 的默认值本就是 true，
+    // 而 WPCS/PCP 的 WPQueryParams.SuppressFilters 嗅探对显式传值报 ERROR 级错误。
     $legacy = get_posts([
-        'post_type'        => 'moments',
-        'post_status'      => 'any',
-        'numberposts'      => -1,
-        'fields'           => 'ids',
-        'suppress_filters' => true,
+        'post_type'   => 'moments',
+        'post_status' => 'any',
+        'numberposts' => -1,
+        'fields'      => 'ids',
     ]);
 
     foreach ($legacy as $post_id) {

@@ -4,7 +4,7 @@ Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.2.4
+Stable tag: 1.2.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -106,6 +106,12 @@ Administrators can disable any of the above outbound features at any time in the
 
 == Changelog ==
 
+= 1.2.5 =
+* Fix: the "moments" migration query no longer passes `suppress_filters` explicitly (`get_posts()` already defaults it to `true`), which Plugin Check reports as an error.
+* Fix: `$_GET` / `$_POST` / `$_COOKIE` values in the social-login dispatcher and callback, the poster endpoint, the media-batch endpoints and the lazy-comment loader are now unslashed and sanitized.
+* Fix: deploying the object-cache drop-in is annotated for Plugin Check — WordPress only loads `object-cache.php` from the wp-content root, which the directory guidelines allow for caching plugins.
+* The Jinyu theme, its companion plugin and the author's site are all published by the same author at https://www.qicaiyun.top — ownership verified by the TXT record on qicaiyun.top.
+
 = 1.2.4 =
 * Compliance: the theme update check is now opt-in and off by default (new "Theme Updates" settings screen). The plugin no longer contacts its own update server without the administrator's consent.
 * Compliance: removed `Tested up to` from the plugin header (it belongs in this readme only) and removed the redundant `load_plugin_textdomain()` call.
@@ -183,6 +189,9 @@ Administrators can disable any of the above outbound features at any time in the
 * Initial public release, extracted from the Jinyu theme: SEO / structured data / index ping / social follow and messages / related posts / series / moments / automatic internal linking / shortcodes / anti-spam / page cache / database optimization / mail / posters.
 
 == Upgrade Notice ==
+
+= 1.2.5 =
+Maintenance release for the WordPress.org review: input sanitizing in a few endpoints and a Plugin Check fix in the "moments" migration query. No configuration changes.
 
 = 1.2.4 =
 The theme update check is now opt-in and off by default — enable it on the new "Theme Updates" screen if you want the companion to keep the Jinyu theme up to date. The "moments" posts are migrated to the new `jinyu_moments` post type automatically on the next page load; front-end URLs do not change.

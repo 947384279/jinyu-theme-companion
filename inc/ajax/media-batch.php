@@ -316,7 +316,7 @@ add_action(
 		if ( ! jinyu_companion_wm_throttle() ) {
 			wp_send_json_error( __( '请求过于频繁，请稍后再试', 'jinyu-theme-companion' ) );
 		}
-		$id   = (int) ( $_POST['id'] ?? 0 );
+		$id   = absint( wp_unslash( $_POST['id'] ?? 0 ) );
 		$mode = isset( $_POST['mode'] ) && 'remove' === $_POST['mode'] ? 'remove' : 'apply';
 		if ( ! $id ) {
 			wp_send_json_error( __( '缺少附件 ID', 'jinyu-theme-companion' ) );
@@ -347,7 +347,7 @@ add_action(
 		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'jinyu_companion_wm' ) ) {
 			wp_send_json_error( array( 'ok' => false ), 403 );
 		}
-		$id   = (int) ( $_POST['id'] ?? 0 );
+		$id   = absint( wp_unslash( $_POST['id'] ?? 0 ) );
 		$mode = isset( $_POST['mode'] ) && 'remove' === $_POST['mode'] ? 'remove' : 'apply';
 		if ( $id <= 0 ) {
 			wp_send_json_error( array( 'ok' => false ) );

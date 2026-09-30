@@ -15,7 +15,7 @@ function jinyu_poster_generate()
         wp_send_json_error(__('nonce 校验失败', 'jinyu-theme-companion'), 403);
     }
 
-    $post_id = isset($_REQUEST['post_id']) ? intval($_REQUEST['post_id']) : 0;
+    $post_id = absint( wp_unslash( $_REQUEST['post_id'] ?? 0 ) );
     if (!$post_id) wp_send_json_error('invalid');
     $post = get_post($post_id);
     if (!$post) wp_send_json_error('not found');
