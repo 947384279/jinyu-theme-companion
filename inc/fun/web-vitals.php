@@ -62,7 +62,8 @@ function jinyu_web_vitals_record( array $m ): void {
 
 function jinyu_ajax_web_vitals() {
 	// 仅接受 POST
-	if ( 'POST' !== $_SERVER['REQUEST_METHOD'] ) {
+	$method = isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
+	if ( 'POST' !== $method ) {
 		wp_send_json_error( 'method', 405 );
 	}
 
@@ -71,7 +72,7 @@ function jinyu_ajax_web_vitals() {
 		wp_send_json_error( 'rate_limited', 429 );
 	}
 
-	$raw = isset( $_POST['data'] ) ? wp_unslash( $_POST['data'] ) : '';
+	$raw = isset( $_POST['data'] ) ? sanitize_text_field( wp_unslash( $_POST['data'] ) ) : '';
 	$data = json_decode( $raw, true );
 	if ( ! is_array( $data ) ) {
 		wp_send_json_error( 'bad_payload' );

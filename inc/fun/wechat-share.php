@@ -134,10 +134,11 @@ if ( ! function_exists( 'jinyu_wechat_current_url' ) ) {
 	 * 当前前端页面 URL（用于签名）。与微信内浏览器地址栏一致（含 query，剔除 #hash）。
 	 */
 	function jinyu_wechat_current_url() {
-		$proto = ( ( ! empty( $_SERVER['HTTPS'] ) && 'off' !== strtolower( (string) $_SERVER['HTTPS'] ) )
-			|| ( ! empty( $_SERVER['SERVER_PORT'] ) && '443' === (string) $_SERVER['SERVER_PORT'] ) ) ? 'https' : 'http';
-		$host = ! empty( $_SERVER['HTTP_HOST'] ) ? (string) wp_unslash( $_SERVER['HTTP_HOST'] ) : (string) wp_parse_url( home_url(), PHP_URL_HOST );
-		$uri  = ! empty( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '/';
+		$https = isset( $_SERVER['HTTPS'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTPS'] ) ) : '';
+		$port  = isset( $_SERVER['SERVER_PORT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['SERVER_PORT'] ) ) : '';
+		$proto = ( ( '' !== $https && 'off' !== strtolower( $https ) ) || '443' === $port ) ? 'https' : 'http';
+		$host = ! empty( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : (string) wp_parse_url( home_url(), PHP_URL_HOST );
+		$uri  = ! empty( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
 		return $proto . '://' . $host . $uri;
 	}
 }

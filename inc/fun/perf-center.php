@@ -362,8 +362,8 @@ function jyc_perf_apply(): void {
 			if ( empty( $opt['comment_lazyload'] ) ) {
 				return;
 			}
+			ob_start();
 			?>
-			<script>
 			(function(){
 				var btn = document.querySelector('.jinyu-comments-more');
 				if(!btn) return;
@@ -390,8 +390,8 @@ function jyc_perf_apply(): void {
 					}).catch(function(){ if(txt) txt.textContent=old; busy=false; });
 				});
 			})();
-			</script>
 			<?php
+			wp_print_inline_script_tag( (string) ob_get_clean() );
 		} );
 	}
 
@@ -970,7 +970,8 @@ function jyc_perf_deploy_object_cache( $force = false, $backup = false ): array 
 	if ( ! class_exists( 'Memcached' ) ) {
 		return [ 'ok' => false, 'msg' => __( 'PECL Memcached 扩展不可用，无法部署', 'jinyu-theme-companion' ) ];
 	}
-	$target = ABSPATH . 'wp-content/object-cache.php';
+	// 用 WP_CONTENT_DIR 而不是 ABSPATH . 'wp-content'：后者的路径不保证存在（自定义 wp-content 目录会失效）。
+	$target = ( defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : ABSPATH . 'wp-content' ) . '/object-cache.php';
 	if ( file_exists( $target ) ) {
 		if ( jyc_perf_object_cache_is_jinyu( $target ) ) {
 			return [ 'ok' => true, 'msg' => __( '对象缓存已部署，无需重复', 'jinyu-theme-companion' ) ];
@@ -1437,7 +1438,7 @@ function jyc_perf_ajax_optimize(): void {
 
 	// 前端以 JSON 字符串提交开关集合，逐 key 白名单式写回（不在清单里的键直接丢弃）
 	if ( isset( $_POST['options'] ) ) {
-		$posted = json_decode( (string) wp_unslash( $_POST['options'] ), true );
+		$posted = json_decode( sanitize_text_field( wp_unslash( $_POST['options'] ) ), true );
 		if ( is_array( $posted ) ) {
 			$opts    = jyc_perf_get_options();
 			$allowed = array_keys( jyc_perf_toggle_meta() );
@@ -1513,7 +1514,7 @@ function jyc_perf_ajax_save(): void {
 	jyc_perf_guard();
 
 	if ( isset( $_POST['options'] ) ) {
-		$posted = json_decode( (string) wp_unslash( $_POST['options'] ), true );
+		$posted = json_decode( sanitize_text_field( wp_unslash( $_POST['options'] ) ), true );
 		if ( is_array( $posted ) ) {
 			$opts    = jyc_perf_get_options();
 			$allowed = array_keys( jyc_perf_toggle_meta() );
@@ -1784,7 +1785,7 @@ function jyc_perf_render_pane(): void {
 	</div>
 
 
-	<script>
+	<?php ob_start(); ?>
 	(function(){
 		'use strict';
 		var NONCE = <?php echo wp_json_encode( $nonce ); ?>;
@@ -2157,6 +2158,6 @@ function jyc_perf_render_pane(): void {
 		// 首次绘制
 		animateBoards();
 	})();
-	</script>
 	<?php
+	wp_print_inline_script_tag( (string) ob_get_clean() );
 }

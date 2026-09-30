@@ -73,7 +73,7 @@ function jinyu_post_seo_save( int $post_id ): void {
 	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 		return;
 	}
-	if ( ! isset( $_POST['jinyu_post_seo_nonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['jinyu_post_seo_nonce'] ), 'jinyu_post_seo_save' ) ) {
+	if ( ! isset( $_POST['jinyu_post_seo_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['jinyu_post_seo_nonce'] ) ), 'jinyu_post_seo_save' ) ) {
 		return;
 	}
 	if ( ! current_user_can( 'edit_post', $post_id ) ) {

@@ -99,7 +99,8 @@ function jinyu_companion_uninstall_site( array $options, array $tables ): void {
  * 只删本插件造的文件（文件名形如 xxx-jywmo.jpg），且限定在 uploads 之内。
  */
 function jinyu_companion_uninstall_wm_files(): void {
-	$dir = ( defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : '' ) . '/uploads';
+	$uploads = wp_upload_dir();
+	$dir     = isset( $uploads['basedir'] ) ? (string) $uploads['basedir'] : '';
 	if ( '' === $dir || ! is_dir( $dir ) || ! function_exists( 'glob' ) ) {
 		return;
 	}

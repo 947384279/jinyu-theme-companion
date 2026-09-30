@@ -60,7 +60,7 @@ function jinyu_companion_apply_saved_settings(): void {
 	}
 
 	// 布尔开关：勾选存 '1'，未勾存 '0'
-	foreach ( [ 'seo_open', 'seo_content_h1_fix', 'twitter_card_enable', 'og_article_meta', 'llms_enable', 'auto_link_enable', 'indexnow_enable', 'close_comments_old', 'page_cache_enable', 'speculation_enable', 'img_alt_enable', 'img_dim_enable', 'ld_json_enable', 'no_category_enable', 'sitemap_enable', 'seo_keywords_enable', 'storage_auto_upload', 'storage_delete_local', 'storage_sync_extra', 'comment_notify_reply', 'comment_notify_blocked', 'comment_notify_approved', 'comment_freq_enable', 'wechat_share_enable', 'wechat_share_debug' ] as $k ) {
+	foreach ( [ 'seo_open', 'seo_content_h1_fix', 'twitter_card_enable', 'og_article_meta', 'llms_enable', 'auto_link_enable', 'indexnow_enable', 'close_comments_old', 'page_cache_enable', 'speculation_enable', 'img_alt_enable', 'img_dim_enable', 'ld_json_enable', 'no_category_enable', 'sitemap_enable', 'seo_keywords_enable', 'storage_auto_upload', 'storage_delete_local', 'storage_sync_extra', 'comment_notify_reply', 'comment_notify_blocked', 'comment_notify_approved', 'comment_freq_enable', 'wechat_share_enable', 'wechat_share_debug', 'theme_update_check' ] as $k ) {
 		$settings[ $k ] = isset( $_POST[ $k ] ) ? '1' : '0';
 	}
 
@@ -318,6 +318,8 @@ function jinyu_companion_settings_page_html(): void {
 	$wechat_enable    = jinyu_companion_get_option( 'wechat_share_enable', '0' );
 	$wechat_appid     = jinyu_companion_get_option( 'wechat_appid', '' );
 	$wechat_debug     = jinyu_companion_get_option( 'wechat_share_debug', '0' );
+	// 主题更新通道：默认关闭（未经管理员同意不回连自有更新服务器）。
+	$theme_update_check = jinyu_companion_get_option( 'theme_update_check', '0' );
 	$wechat_has_secret = '' !== (string) jinyu_companion_get_option( 'wechat_appsecret', '' );
 	// 分享卡片预览（首页口径）：图片与站点名随输入实时联动，描述 / 域名取当前站点信息。
 	$pv_desc = trim( (string) get_bloginfo( 'description' ) );
@@ -488,6 +490,10 @@ function jinyu_companion_settings_page_html(): void {
 								<button type="button" class="jyc-nav-item<?php echo 'perfcenter' === $active_pane ? ' jyc-active' : ''; ?>" data-mod="perfcenter">
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>
 									<span>性能中心</span>
+								</button>
+								<button type="button" class="jyc-nav-item<?php echo 'update' === $active_pane ? ' jyc-active' : ''; ?>" data-mod="update">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+									<span>主题更新</span>
 								</button>
 								<button type="button" class="jyc-nav-item<?php echo 'comment' === $active_pane ? ' jyc-active' : ''; ?>" data-mod="comment">
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.3 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 0 1 12 3a8.38 8.38 0 0 1 9 8.5z"/></svg>
@@ -1134,6 +1140,27 @@ function jinyu_companion_settings_page_html(): void {
 								</div>
 								<div class="jyc-sub"><?php echo esc_html__( '服务器运行时运维：OPcache / Memcached 实时看板、可逆优化开关、多层缓存清理与一键优化。整页缓存等前台配置在「前台加速」。', 'jinyu-theme-companion' ); ?></div></div>
 							<?php jyc_perf_render_pane(); ?>
+						</section>
+
+						<!-- ===================== THEME UPDATE（主题更新通道） ===================== -->
+						<section id="pane-update" class="jyc-pane<?php echo 'update' === $active_pane ? ' jyc-shown' : ''; ?>">
+							<div class="jyc-mod-head"><h1><?php echo esc_html__( '主题更新', 'jinyu-theme-companion' ); ?></h1>
+								<div class="jyc-sub"><?php echo esc_html__( '「金玉」主题的更新检查通道。为避免在未经管理员同意的情况下回连服务器，此功能默认关闭。', 'jinyu-theme-companion' ); ?></div></div>
+
+							<div class="jyc-panel">
+								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg></span><?php echo esc_html__( '更新检查', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '默认关闭', 'jinyu-theme-companion' ); ?></span></div>
+								<div class="jyc-panel-b">
+									<div class="jyc-frow">
+										<label class="jyc-switch"><input type="checkbox" name="theme_update_check" <?php checked( $theme_update_check, '1' ); ?>><span class="jyc-track"></span></label>
+										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '启用主题更新检查', 'jinyu-theme-companion' ); ?></div>
+											<div class="jyc-fdesc"><?php echo esc_html__( '开启后，检测到「金玉」主题时定时请求 update.qicaiyun.top 获取版本信息（更新包经 RSA 签名与 SHA-256 双重校验后才允许安装）。请求不含任何站点数据。', 'jinyu-theme-companion' ); ?></div></div>
+									</div>
+									<ul class="jyc-note-list">
+										<li><?php echo esc_html__( '关闭时不会向任何外部服务器发起请求，后台也不会出现主题更新提示。', 'jinyu-theme-companion' ); ?></li>
+										<li><?php echo esc_html__( '此开关只作用于「金玉」主题的更新通道，与 WordPress.org 的插件更新无关。', 'jinyu-theme-companion' ); ?></li>
+									</ul>
+								</div>
+							</div>
 						</section>
 
 						<!-- ===================== COMMENT ===================== -->

@@ -124,6 +124,12 @@ if ( ! function_exists( 'jinyu_companion_fetch_update_info' ) ) {
 	 * @return array|null 验签通过返回数据数组，任何异常返回 null。
 	 */
 	function jinyu_companion_fetch_update_info( bool $force = false ): ?array {
+		// 合规（wp.org 指南 7/9）：未经管理员明确同意，不向本插件的自有服务器发起任何请求。
+		// 该开关默认关闭，需在插件设置「主题更新」面板手动打开后才检查 / 下载主题更新。
+		if ( ! jinyu_companion_is_checked( 'theme_update_check', false ) ) {
+			return null;
+		}
+
 		$url = trim( (string) JINYU_COMPANION_UPDATE_SERVER );
 		if ( '' === $url ) {
 			return null;
@@ -284,10 +290,19 @@ if ( ! function_exists( 'jinyu_companion_upgrader_pre_download' ) ) {
 		}
 
 		// 部分 WP 路径按 .zip 后缀识别压缩包，download_url 的临时文件已被去扩展名，补回。
+		// 用 WP_Filesystem 而非 PHP rename() 做这次移动：文件位于 get_temp_dir()（WP 允许的临时目录），
+		// 只是补一个扩展名提示，不写入插件 / 主题 / 核心 / wp-content 目录。
 		$zip_path = $tmp;
 		if ( ! preg_match( '/\.zip$/i', $tmp ) ) {
+			if ( ! function_exists( 'WP_Filesystem' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/file.php';
+			}
+			global $wp_filesystem;
+			if ( ! $wp_filesystem ) {
+				WP_Filesystem();
+			}
 			$renamed = $tmp . '.zip';
-			if ( @rename( $tmp, $renamed ) && file_exists( $renamed ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename,  WordPress.PHP.NoSilencedErrors
+			if ( $wp_filesystem && $wp_filesystem->move( $tmp, $renamed, true ) ) {
 				$zip_path = $renamed;
 			}
 		}
@@ -356,6 +371,10 @@ add_action(
 		$slug = jinyu_companion_update_target_slug();
 		if ( '' === $slug ) {
 			wp_send_json_error( [ 'msg' => __( '当前主题非「金玉」，无需检查更新。', 'jinyu-theme-companion' ) ] );
+		}
+
+		if ( ! jinyu_companion_is_checked( 'theme_update_check', false ) ) {
+			wp_send_json_error( [ 'msg' => __( '「主题更新检查」未启用，请先在插件设置的「主题更新」面板中打开。', 'jinyu-theme-companion' ) ] );
 		}
 
 		$current = (string) wp_get_theme( $slug )->get( 'Version' );

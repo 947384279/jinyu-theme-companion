@@ -54,7 +54,5 @@ function jinyu_speculation_rules(): void {
 	// 允许其它模块/主题微调规则（例如排除特定路径或追加预渲染白名单）
 	$rule = apply_filters( 'jinyu_speculation_rules_config', $rule, $mode, $eager );
 
-	echo "\n<script type=\"speculationrules\">\n"
-		. wp_json_encode( $rule, JSON_UNESCAPED_SLASHES )
-		. "\n</script>\n";
+	echo "\n" . wp_get_inline_script_tag( (string) wp_json_encode( $rule, JSON_UNESCAPED_SLASHES ), array( 'type' => 'speculationrules' ) ) . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_get_inline_script_tag 生成的标签
 }

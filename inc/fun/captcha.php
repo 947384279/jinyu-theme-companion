@@ -11,10 +11,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  *    验证码文本存 transient，索引 key 写入 httponly cookie，同请求内立即可用。
  *  - 验证码一次性：校验通过或失败后立即失效。
  *  - 图片用内联 SVG 输出，不依赖 GD 扩展。
+ *
+ * 命名：常量 / cookie / transient 一律使用 jinyu_companion_ 前缀（wp.org 要求至少 4 字符且唯一的
+ * 前缀，两字符的 jy_ 前缀冲突风险高，已弃用）。
  */
 
-const JY_CAPTCHA_COOKIE = 'jy_captcha_key';
-const JY_CAPTCHA_TTL    = 600;
+const JINYU_COMPANION_CAPTCHA_COOKIE = 'jinyu_companion_captcha_key';
+const JINYU_COMPANION_CAPTCHA_TTL    = 600;
 
 /**
  * 可用字符（剔除 0/O/1/I/L 等易混淆字形）
@@ -29,7 +32,9 @@ function jinyu_captcha_chars(): string
  */
 function jinyu_captcha_key(): string
 {
-    $key = $_COOKIE[JY_CAPTCHA_COOKIE] ?? '';
+    $key = isset( $_COOKIE[ JINYU_COMPANION_CAPTCHA_COOKIE ] )
+        ? sanitize_text_field( wp_unslash( $_COOKIE[ JINYU_COMPANION_CAPTCHA_COOKIE ] ) )
+        : '';
     return preg_match('/^[a-f0-9]{32}$/', $key) ? $key : '';
 }
 
@@ -46,19 +51,19 @@ function jinyu_captcha_generate(): string
     }
 
     $key = bin2hex(random_bytes(16));
-    set_transient('jy_captcha_' . $key, strtolower($code), JY_CAPTCHA_TTL);
+    set_transient('jinyu_companion_captcha_' . $key, strtolower($code), JINYU_COMPANION_CAPTCHA_TTL);
 
     setcookie(
-        JY_CAPTCHA_COOKIE,
+        JINYU_COMPANION_CAPTCHA_COOKIE,
         $key,
-        time() + JY_CAPTCHA_TTL,
+        time() + JINYU_COMPANION_CAPTCHA_TTL,
         defined('COOKIEPATH') ? COOKIEPATH : '/',
         defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '',
         is_ssl(),
         true
     );
     // 让本次请求内即可读到，避免依赖浏览器回写
-    $_COOKIE[JY_CAPTCHA_COOKIE] = $key;
+    $_COOKIE[JINYU_COMPANION_CAPTCHA_COOKIE] = $key;
 
     return $code;
 }
@@ -73,8 +78,8 @@ function jinyu_captcha_check(string $input): bool
         return false;
     }
 
-    $code = get_transient('jy_captcha_' . $key);
-    delete_transient('jy_captcha_' . $key);
+    $code = get_transient('jinyu_companion_captcha_' . $key);
+    delete_transient('jinyu_companion_captcha_' . $key);
     if (!$code) {
         return false;
     }
@@ -106,23 +111,23 @@ function jinyu_captcha_required(string $scene): bool
  */
 function jinyu_login_failures(): int
 {
-    return (int)get_transient('jy_login_fail_' . jinyu_client_key());
+    return (int)get_transient('jinyu_companion_login_fail_' . jinyu_client_key());
 }
 
 function jinyu_login_failure_incr(): void
 {
-    $k = 'jy_login_fail_' . jinyu_client_key();
+    $k = 'jinyu_companion_login_fail_' . jinyu_client_key();
     set_transient($k, jinyu_login_failures() + 1, 15 * MINUTE_IN_SECONDS);
 }
 
 function jinyu_login_failure_reset(): void
 {
-    delete_transient('jy_login_fail_' . jinyu_client_key());
+    delete_transient('jinyu_companion_login_fail_' . jinyu_client_key());
 }
 
 function jinyu_client_key(): string
 {
-    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
     return md5($ip);
 }
 

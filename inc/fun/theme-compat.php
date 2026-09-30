@@ -29,7 +29,7 @@ if ( ! function_exists( 'jinyu_companion_client_ip' ) ) {
 	 * @return string
 	 */
 	function jinyu_companion_client_ip(): string {
-		$remote        = isset( $_SERVER['REMOTE_ADDR'] ) ? trim( (string) $_SERVER['REMOTE_ADDR'] ) : '';
+		$remote        = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 		$trusted_proxy = filter_var( $remote, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 )
 		&& (
 			str_starts_with( $remote, '10.' )          // RFC1918 私有地址.
@@ -39,8 +39,9 @@ if ( ! function_exists( 'jinyu_companion_client_ip' ) ) {
 		);
 		if ( $trusted_proxy ) {
 			foreach ( [ 'HTTP_X_FORWARDED_FOR', 'HTTP_CLIENT_IP' ] as $k ) {
-				if ( ! empty( $_SERVER[ $k ] ) ) {
-					$ip = trim( explode( ',', (string) $_SERVER[ $k ] )[0] );
+				$raw = isset( $_SERVER[ $k ] ) ? sanitize_text_field( wp_unslash( $_SERVER[ $k ] ) ) : '';
+				if ( '' !== $raw ) {
+					$ip = trim( explode( ',', $raw )[0] );
 					if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
 						return $ip;
 					}
@@ -62,7 +63,7 @@ if ( ! function_exists( 'jinyu_companion_rate_limit_check' ) ) {
 	 * @return bool true=放行，false=已超限需拒绝
 	 */
 	function jinyu_companion_rate_limit_check( string $action, int $max = 10, int $seconds = 60 ): bool {
-		$ip    = function_exists( 'jinyu_companion_client_ip' ) ? jinyu_companion_client_ip() : ( isset( $_SERVER['REMOTE_ADDR'] ) ? trim( (string) $_SERVER['REMOTE_ADDR'] ) : '0.0.0.0' );
+		$ip    = function_exists( 'jinyu_companion_client_ip' ) ? jinyu_companion_client_ip() : ( isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '0.0.0.0' );
 		$key   = 'jinyu_rl_' . md5( $action . '|' . $ip );
 		$count = (int) get_transient( $key );
 		if ( $count >= $max ) {

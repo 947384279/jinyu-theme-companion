@@ -17,6 +17,7 @@
 		content: document.getElementById('pane-content'),
 		perf: document.getElementById('pane-perf'),
 		perfcenter: document.getElementById('pane-perfcenter'),
+		update: document.getElementById('pane-update'),
 		comment: document.getElementById('pane-comment'),
 		smtp: document.getElementById('pane-smtp'),
 		storage: document.getElementById('pane-storage'),

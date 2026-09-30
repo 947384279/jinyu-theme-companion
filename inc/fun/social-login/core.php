@@ -314,7 +314,7 @@ function jinyu_sl_begin( string $platform ): void {
 
 function jinyu_sl_callback(): void {
 	ob_start(); // 缓冲 token 交换阶段的零散输出，避免其在 Set-Cookie 之前冲刷 header 导致登录 cookie 静默失效
-	$is_post = ( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) === 'POST';
+	$is_post = 'POST' === ( isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : 'GET' );
 	$state   = sanitize_text_field( wp_unslash( $is_post ? ( $_POST['state'] ?? '' ) : ( $_GET['state'] ?? '' ) ) );
 	if ( '' === $state ) {
 		jinyu_sl_bail( '登录状态丢失（缺少 state），请重新点击第三方登录。' );
@@ -516,12 +516,21 @@ function jinyu_sl_save_avatar( int $uid, string $platform, string $avatar ): voi
 }
 
 /**
- * 自动建号。角色由面板配置（subscriber/contributor/author，默认 subscriber——
- * contributor 可投草稿并占用媒体上传等能力，对开放注册站点偏宽）；仅接受白名单，防越权注入。
+ * 自动建号。
+ *
+ * 合规（wp.org 指南 7/9）：不得绕过站点自身的注册策略。
+ *  - 仅当站点开启「任何人都可以注册」(users_can_register) 时才自动建号；
+ *  - 角色一律取站点的「默认角色」(default_role)，不再由面板指定 contributor / author 等可投递
+ *    内容或上传媒体的角色，避免匿名访客经 OAuth 拿到超出站点注册策略的权限。
  */
 function jinyu_sl_create_oauth_user( string $platform, array $ud ): int|WP_Error {
-	$opt  = jinyu_sl_get_option();
-	$role = in_array( $opt['role'] ?? '', [ 'subscriber', 'contributor', 'author' ], true ) ? $opt['role'] : 'subscriber';
+	if ( ! get_option( 'users_can_register' ) ) {
+		return new WP_Error(
+			'jinyu_sl_registration_closed',
+			__( '本站未开放注册，请先用已有账号登录后再绑定第三方账号。', 'jinyu-theme-companion' )
+		);
+	}
+	$role     = (string) get_option( 'default_role', 'subscriber' );
 	$slug     = substr( md5( $ud['id'] ), 0, 8 );
 	$username = sanitize_user( $platform . '_' . $slug );
 	if ( username_exists( $username ) ) {

@@ -181,7 +181,7 @@ function jinyu_companion_wm_worker_pool( array $batch, int $concurrency, string 
 					CURLOPT_RETURNTRANSFER => true,
 					// 必须转发登录 Cookie：裸 curl 无会话，current_user_can 恒 false，
 					// 子请求全部 403，并发批量会「全军覆没」。
-					CURLOPT_COOKIE         => isset( $_SERVER['HTTP_COOKIE'] ) ? (string) $_SERVER['HTTP_COOKIE'] : '',
+					CURLOPT_COOKIE         => isset( $_SERVER['HTTP_COOKIE'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_COOKIE'] ) ) : '',
 					CURLOPT_REFERER        => admin_url(),
 				)
 			);

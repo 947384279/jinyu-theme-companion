@@ -138,15 +138,31 @@ function jinyu_companion_csp_nonce_attr(): string {
 	return ' nonce="' . esc_attr( $nonce ) . '"';
 }
 
+/**
+ * 用 WordPress 的 inline script 构造函数输出内联脚本，并按需带上 CSP nonce 属性。
+ * 不要手写 <script> 标签（wp.org 审查要求使用 wp_enqueue / inline script API）。
+ *
+ * @param string $js 完整 JS 代码（不含 <script> 标签）。
+ * @return string
+ */
+function jinyu_companion_inline_script_tag( string $js ): string {
+	$args  = array();
+	$nonce = (string) apply_filters( 'jinyu_companion_csp_nonce', '' );
+	if ( '' !== $nonce ) {
+		$args['nonce'] = $nonce;
+	}
+	return wp_get_inline_script_tag( $js, $args );
+}
+
 /* ── A7. 限流（滑动窗口计数）──────────────────────────────────────────────
  * 供海报生成 / Web Vitals / 验证码等匿名端点防滥用。 */
 
 function jinyu_companion_rate_limit( string $action, int $limit, int $window ): bool {
 	// 默认只信 REMOTE_ADDR（不可伪造）。XFF 可被客户端任意伪造，仅当站点确实部署了
 	// 反向代理 / CDN 并经过滤器显式声明信任时才采信。
-	$ip = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' );
+	$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 	if ( apply_filters( 'jinyu_companion_rate_limit_trust_proxy', false ) ) {
-		$xff      = (string) ( $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '' );
+		$xff      = isset( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) : '';
 		$parts    = array_map( 'trim', explode( ',', $xff ) );
 		$proxy_ip = trim( (string) end( $parts ) );
 		if ( '' !== $proxy_ip ) {

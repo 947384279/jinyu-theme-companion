@@ -608,7 +608,7 @@ if ( ! function_exists( 'jinyu_companion_handle_import' ) ) {
 			$raw = (string) file_get_contents( $file['tmp_name'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions -- 本地临时文件，无远程调用。
 			@wp_delete_file( $file['tmp_name'] );
 		} elseif ( ! empty( $_POST['jyc_import_text'] ) ) {
-			$raw = wp_unslash( $_POST['jyc_import_text'] );
+			$raw = sanitize_textarea_field( wp_unslash( $_POST['jyc_import_text'] ) );
 		}
 
 		if ( '' === trim( (string) $raw ) ) {
@@ -621,7 +621,9 @@ if ( ! function_exists( 'jinyu_companion_handle_import' ) ) {
 			return;
 		}
 
-		$decoded = json_decode( $raw, true );
+		// $raw 来自上传文件原文或已 sanitize_textarea_field 过的文本域；
+		// 解析出的结构在 jinyu_companion_import_apply() 中按白名单逐字段校验后才落库。
+		$decoded = json_decode( $raw, true ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 上方已 sanitize，JSON 结构由导入白名单校验
 		if ( ! is_array( $decoded ) ) {
 			jinyu_companion_import_result(
 				array(

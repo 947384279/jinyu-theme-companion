@@ -52,7 +52,7 @@ $jinyu_tip = function ($atts, $content = '') {
 	$a = shortcode_atts( [ 'type' => 'info', 'title' => '' ], $atts );
 	return '<div class="jinyu-tip jinyu-tip-' . esc_attr( $a['type'] ) . '">'
 		 . ( $a['title'] ? '<div class="jinyu-tip-title">' . esc_html( $a['title'] ) . '</div>' : '' )
-		 . '<div class="jinyu-tip-body">' . do_shortcode( $content ) . '</div>'
+		 . '<div class="jinyu-tip-body">' . wp_kses_post( do_shortcode( $content ) ) . '</div>'
 		 . '</div>';
 };
 add_shortcode( 'jinyu_tip', $jinyu_tip );
@@ -79,7 +79,7 @@ add_shortcode( 'jinyu_download', $jinyu_download );
 // --- 登录可见 [jinyu_login]...[/jinyu_login] ---
 $jinyu_login = function ($atts, $content = '') {
 	if ( is_user_logged_in() ) {
-		return do_shortcode( $content );
+		return wp_kses_post( do_shortcode( $content ) );
 	}
 	return '<div class="jinyu-login-hide">'
 		 . '<div class="jinyu-login-hide-text">' . jinyu_svg_icon( 'lock' ) . ' ' . __( '登录后可见', 'jinyu-theme-companion') . '</div>'
@@ -104,7 +104,7 @@ $jinyu_comment = function ($atts, $content = '') {
 			]
 		) > 0;
 	if ( $has_commented ) {
-		return do_shortcode( $content );
+		return wp_kses_post( do_shortcode( $content ) );
 	}
 	return '<div class="jinyu-comment-hide">'
 		 . '<svg class="jinyu-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> ' . __( '评论后可见，请先登录并评论', 'jinyu-theme-companion')
@@ -115,7 +115,7 @@ add_shortcode( 'jinyu_comment', $jinyu_comment );
 // --- 仅管理员可见 [jinyu_hide]...[/jinyu_hide] ---
 $jinyu_hide = function ($atts, $content = '') {
 	if ( current_user_can( 'manage_options' ) ) {
-		return do_shortcode( $content );
+		return wp_kses_post( do_shortcode( $content ) );
 	}
 	return '<div class="jinyu-comment-hide">' . jinyu_svg_icon( 'eye' ) . ' ' . __( '隐藏内容，仅管理员可见', 'jinyu-theme-companion') . '</div>';
 };
@@ -174,7 +174,7 @@ add_shortcode( 'jinyu_gallery', $jinyu_gallery );
 // --- 徽章 [jinyu_badge color="primary"]...[/jinyu_badge] ---
 $jinyu_badge = function ($atts, $content = '') {
 	$a = shortcode_atts( [ 'color' => 'primary' ], $atts );
-	return '<span class="jinyu-badge jinyu-badge-' . esc_attr( $a['color'] ) . '">' . do_shortcode( $content ) . '</span>';
+	return '<span class="jinyu-badge jinyu-badge-' . esc_attr( $a['color'] ) . '">' . wp_kses_post( do_shortcode( $content ) ) . '</span>';
 };
 add_shortcode( 'jinyu_badge', $jinyu_badge );
 
@@ -204,7 +204,7 @@ $jinyu_tabs = function ($atts, $content = '') {
 		$body   = $tab[2];
 		$active = $i === 0 ? ' jinyu-tab-active' : '';
 		$tabs  .= '<button class="jinyu-tab-btn' . $active . '" data-target="jinyu-tab-pane-' . $i . '">' . esc_html( $title ) . '</button>';
-		$panes .= '<div class="jinyu-tab-pane' . $active . '" id="jinyu-tab-pane-' . $i . '">' . do_shortcode( $body ) . '</div>';
+		$panes .= '<div class="jinyu-tab-pane' . $active . '" id="jinyu-tab-pane-' . $i . '">' . wp_kses_post( do_shortcode( $body ) ) . '</div>';
 	}
 	return '<div class="jinyu-tabs"><div class="jinyu-tabs-nav">' . $tabs . '</div><div class="jinyu-tabs-content">' . $panes . '</div></div>';
 };
@@ -213,7 +213,7 @@ add_shortcode( 'jinyu_tabs', $jinyu_tabs );
 // --- 折叠面板 [jinyu_collapse title=""]...[/jinyu_collapse] ---
 $jinyu_collapse = function ($atts, $content = '') {
 	$a = shortcode_atts( [ 'title' => '' ], $atts );
-	return '<details class="jinyu-collapse"><summary class="jinyu-collapse-title">' . esc_html( $a['title'] ) . '</summary><div class="jinyu-collapse-body">' . do_shortcode( $content ) . '</div></details>';
+	return '<details class="jinyu-collapse"><summary class="jinyu-collapse-title">' . esc_html( $a['title'] ) . '</summary><div class="jinyu-collapse-body">' . wp_kses_post( do_shortcode( $content ) ) . '</div></details>';
 };
 add_shortcode( 'jinyu_collapse', $jinyu_collapse );
 
@@ -278,7 +278,7 @@ $jinyu_btn = function ($atts, $content = '') {
 	$href  = $a['href'] ? esc_url( $a['href'] ) : '#';
 	$target = ( $a['target'] === '_blank' ) ? ' target="_blank" rel="noopener"' : '';
 	$icon  = $a['icon'] ? '<i class="' . esc_attr( $a['icon'] ) . '"></i>' : '';
-	return '<a class="jinyu-btn jinyu-btn-' . $type . '" href="' . $href . '"' . $target . '>' . $icon . do_shortcode( $content ) . '</a>';
+	return '<a class="jinyu-btn jinyu-btn-' . $type . '" href="' . $href . '"' . $target . '>' . $icon . wp_kses_post( do_shortcode( $content ) ) . '</a>';
 };
 add_shortcode( 'jinyu_btn', $jinyu_btn );
 
@@ -289,7 +289,7 @@ $jinyu_login_email = function ($atts, $content = '') {
 		$user  = wp_get_current_user();
 		$email = $user->user_email;
 		if ( ! empty( $email ) && is_email( $email ) && $email !== get_option( 'admin_email' ) ) {
-			return do_shortcode( $content );
+			return wp_kses_post( do_shortcode( $content ) );
 		}
 	}
 	return '<div class="jinyu-login-hide">'
@@ -329,7 +329,7 @@ $jinyu_password_read = function ($atts, $content = '') {
 	}
 
 	if ( $unlocked ) {
-		return do_shortcode( $content );
+		return wp_kses_post( do_shortcode( $content ) );
 	}
 
 	$action = esc_url( get_permalink( $post_id ) );
@@ -344,32 +344,6 @@ $jinyu_password_read = function ($atts, $content = '') {
 		. '</form>';
 };
 add_shortcode( 'jinyu_password_read', $jinyu_password_read );
-
-/**
- * 旧标签别名（向后兼容）
- * 线上已有文章可能使用了无前缀的旧标签，保留为别名以免内容失效。
- * 确认全站无旧标签后，可整段删除本区块。
- */
-$jinyu_legacy_aliases = [
-	'tip'            => $jinyu_tip,
-	'download'       => $jinyu_download,
-	'login'          => $jinyu_login,
-	'comment'        => $jinyu_comment,
-	'hide'           => $jinyu_hide,
-	'github'         => $jinyu_github,
-	'gist'           => $jinyu_gist,
-	'jgallery'       => $jinyu_gallery,
-	'jy_badge'       => $jinyu_badge,
-	'jy_progress'    => $jinyu_progress,
-	'jy_tabs'        => $jinyu_tabs,
-	'jy_collapse'    => $jinyu_collapse,
-	'pre'            => $jinyu_pre,
-	'music'          => $jinyu_music,
-	'password_read'  => $jinyu_password_read,
-];
-foreach ( $jinyu_legacy_aliases as $jinyu_old_tag => $jinyu_old_cb ) {
-	add_shortcode( $jinyu_old_tag, $jinyu_old_cb );
-}
 
 /* ==========================================================================
    视频短代码 [jinyu_video]：原生 HTML5 <video>；识别 B站 链接时自动转为 iframe 直嵌。

@@ -222,8 +222,8 @@ function jinyu_json_ld()
         $data[] = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','itemListElement'=>$items];
     }
 
-    // FAQ (检测 [jinyu_faq] / [jy_faq] 短代码；开合标签两种别名都兼容，避免正则对不上导致 FAQPage 永不输出)
-    if (is_singular() && preg_match_all('/\[(?:jinyu_|jy_)faq_item\s*q="([^"]+)"\](.*?)\[\/(?:jinyu_|jy_)faq_item\]/s', get_the_content(), $faqMatches)) {
+    // FAQ (检测 [jinyu_faq] / [jinyu_faq_item] 短代码，生成 FAQPage 结构化数据)
+    if (is_singular() && preg_match_all('/\[jinyu_faq_item\s*q="([^"]+)"\](.*?)\[\/jinyu_faq_item\]/s', get_the_content(), $faqMatches)) {
         $faqs = [];
         foreach ($faqMatches[1] as $i => $q) {
             $faqs[] = [
@@ -336,9 +336,11 @@ function jinyu_json_ld()
     }
 
     if ($data) {
-        // 中和 </script> 闭合标签，防止任意值（标题/FAQ 问题/HowTo 步骤名）提前闭合脚本注入标记
-        $json = str_replace('</', '<\/', wp_json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        echo "\n<script type='application/ld+json'>" . $json . "</script>\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
+        // 中和 </script> 闭合标签，防止任意值（标题/FAQ 问题/HowTo 步骤名）提前闭合脚本注入标记。
+        // 必须大小写不敏感：HTML 解析器把 </SCRIPT> 同样当闭合标签，只替换小写 </ 会漏掉混合大小写。
+        $json = str_ireplace('</', '<\/', (string) wp_json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        // 用 WP 的 inline script 构造函数输出（不再手写 <script> 标签）。
+        echo "\n" . wp_get_inline_script_tag( $json, array( 'type' => 'application/ld+json' ) ) . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_get_inline_script_tag 生成的标签；JSON 已做大小写不敏感的 </ 中和
     }
 }
 
@@ -346,7 +348,7 @@ function jinyu_json_ld()
 $jinyu_faq = function($atts, $c=''){
     global $jinyu_faq_index;
     $jinyu_faq_index = -1; // 每个 FAQ 块独立计数，首条展开
-    return '<div class="jinyu-faq">' . do_shortcode($c) . '</div>';
+    return '<div class="jinyu-faq">' . wp_kses_post( do_shortcode( $c ) ) . '</div>';
 };
 // FAQ 项：默认折叠；首条自动展开（open 属性显式传 0 可强制折叠）
 $jinyu_faq_item = function($atts, $c=''){
@@ -358,19 +360,16 @@ $jinyu_faq_item = function($atts, $c=''){
     } else {
         $is_open = ($jinyu_faq_index === 0);
     }
-    return '<details class="jinyu-faq-item"' . ($is_open ? ' open' : '') . '><summary>' . esc_html($a['q']) . '</summary><div class="jinyu-faq-ans">' . do_shortcode($c) . '</div></details>';
+    return '<details class="jinyu-faq-item"' . ($is_open ? ' open' : '') . '><summary>' . esc_html($a['q']) . '</summary><div class="jinyu-faq-ans">' . wp_kses_post( do_shortcode( $c ) ) . '</div></details>';
 };
 add_shortcode('jinyu_faq', $jinyu_faq);
 add_shortcode('jinyu_faq_item', $jinyu_faq_item);
-// 旧标签别名（向后兼容）
-add_shortcode('jy_faq', $jinyu_faq);
-add_shortcode('jy_faq_item', $jinyu_faq_item);
 
 // HowTo 步骤短代码：[jinyu_howto][jinyu_step name="..."]...[/jinyu_step]...[/jinyu_howto]
 add_shortcode('jinyu_howto', function ($atts, $c = '') {
-    return '<div class="jinyu-howto"><ol class="jinyu-steps">' . do_shortcode($c) . '</ol></div>';
+    return '<div class="jinyu-howto"><ol class="jinyu-steps">' . wp_kses_post( do_shortcode( $c ) ) . '</ol></div>';
 });
 add_shortcode('jinyu_step', function ($atts, $c = '') {
     $a = shortcode_atts(['name' => ''], $atts);
-    return '<li class="jinyu-step"><span class="jinyu-step-name">' . esc_html($a['name']) . '</span><div class="jinyu-step-text">' . do_shortcode($c) . '</div></li>';
+    return '<li class="jinyu-step"><span class="jinyu-step-name">' . esc_html($a['name']) . '</span><div class="jinyu-step-text">' . wp_kses_post( do_shortcode( $c ) ) . '</div></li>';
 });

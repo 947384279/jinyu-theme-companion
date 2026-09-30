@@ -31,12 +31,15 @@ function jinyu_stats_should_track()
 {
     if (wp_doing_ajax() || wp_doing_cron() || (defined('REST_REQUEST') && REST_REQUEST)) return false;
 
-    $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    $ua = isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'])) : '';
     if ($ua === '' || preg_match('/bot|crawl|spider|slurp|curl|wget|python|java\/|httpclient|go-http|facebookexternalhit|bingpreview|ahrefs|semrush|mj12|dotbot|petalbot|bytespider|headlesschrome|phantomjs|okhttp|libwww/i', $ua)) {
         return false;
     }
 
-    $purpose = strtolower(($_SERVER['HTTP_SEC_PURPOSE'] ?? '') . ' ' . ($_SERVER['HTTP_PURPOSE'] ?? ''));
+    $purpose = strtolower(
+        (isset($_SERVER['HTTP_SEC_PURPOSE']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_SEC_PURPOSE'])) : '')
+        . ' ' . (isset($_SERVER['HTTP_PURPOSE']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_PURPOSE'])) : '')
+    );
     if (strpos($purpose, 'prefetch') !== false || strpos($purpose, 'prerender') !== false) {
         return false;
     }

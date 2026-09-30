@@ -158,7 +158,7 @@ function jinyu_page_cache_identity(): string
         $host = (string) wp_parse_url(home_url(), PHP_URL_HOST);
     }
     if ('' === $host) {
-        $host = trim((string) preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')));
+        $host = trim((string) preg_replace('/:\d+$/', '', isset($_SERVER['HTTP_HOST']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_HOST'])) : ''));
     }
 
     $blog = function_exists('is_multisite') && is_multisite() ? ':' . (int) get_current_blog_id() : '';
@@ -418,8 +418,8 @@ function jinyu_page_cache_etag_hint(): string
  */
 function jinyu_page_cache_uri_parts(): array
 {
-    $uri = $_SERVER['REQUEST_URI'] ?? '/';
-    if (!is_string($uri) || '' === $uri) {
+    $uri = isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '/';
+    if ('' === $uri) {
         return ['/', []];
     }
     $path = wp_parse_url($uri, PHP_URL_PATH);
@@ -546,7 +546,7 @@ function jinyu_page_cache_is_excluded(): bool
  */
 function jinyu_page_cache_is_search_uri(): bool
 {
-    $uri = $_SERVER['REQUEST_URI'] ?? '';
+    $uri = isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '';
     if ('' === $uri) return false;
     return (bool) (preg_match('#[?&]s=[^&]*#', $uri) || stripos($uri, '/search/') !== false);
 }
@@ -674,10 +674,12 @@ function jinyu_page_cache_serve(): void
     if ( function_exists( 'wp_installing' ) && wp_installing() ) {
         return;
     }
-    if (empty($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'GET') return;
+    $req_method = isset($_SERVER['REQUEST_METHOD']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_METHOD'])) : '';
+    $req_uri    = isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '';
+    if ('GET' !== $req_method) return;
     if (is_user_logged_in() || is_admin() || jinyu_page_cache_has_commenter_cookie()) return;
-    if (strpos($_SERVER['REQUEST_URI'] ?? '', 'wp-admin') !== false) return;
-    if (strpos($_SERVER['REQUEST_URI'] ?? '', 'wp-login') !== false) return;
+    if (strpos($req_uri, 'wp-admin') !== false) return;
+    if (strpos($req_uri, 'wp-login') !== false) return;
     // 搜索页不缓存：serve 端早于 WP 查询（is_search() 不可用），按 URI 特征判定；
     // 每个搜索词一个 URI，缓存只会膨胀且命中意义不大。
     if (jinyu_page_cache_is_search_uri()) return;
@@ -722,7 +724,8 @@ function jinyu_page_cache_serve(): void
     // 复用已读进内存的正文算摘要，避免 md5_file 再把同一份文件读一遍
     $etag = '"' . md5($body) . '"';
 
-    if (isset($_SERVER['HTTP_IF_NONE_MATCH']) && jinyu_page_cache_if_none_match_match((string) $_SERVER['HTTP_IF_NONE_MATCH'], $etag)) {
+    $if_none_match = isset($_SERVER['HTTP_IF_NONE_MATCH']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_IF_NONE_MATCH'])) : '';
+    if ('' !== $if_none_match && jinyu_page_cache_if_none_match_match($if_none_match, $etag)) {
         header('HTTP/1.1 304 Not Modified', true, 304);
         jinyu_page_cache_send_headers($etag);
         exit;
@@ -760,7 +763,8 @@ function jinyu_page_cache_capture(): void
     }
     // 检测到第三方整页缓存插件时自动让位，避免两层 HTML 缓存冲突 / 内容不同步。
     if (function_exists('jinyu_has_external_page_cache') && jinyu_has_external_page_cache()) return;
-    if (empty($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'GET') return;
+    $req_method = isset($_SERVER['REQUEST_METHOD']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_METHOD'])) : '';
+    if ('GET' !== $req_method) return;
     if (is_user_logged_in() || is_admin() || jinyu_page_cache_has_commenter_cookie()) return;
     // 这些响应体不该进整页缓存：404 / feed / 预览 / robots / trackback / 搜索
     if (is_404() || is_feed() || is_preview() || is_robots() || is_trackback() || is_search()) return;
@@ -770,6 +774,7 @@ function jinyu_page_cache_capture(): void
     if (jinyu_page_cache_is_non_html_uri()) return;
     if (jinyu_page_cache_is_excluded()) return;
 
+    $buffer_level = ob_get_level();
     ob_start(static function ($html) {
         if (strlen($html) < 500) {
             return $html;
@@ -795,4 +800,13 @@ function jinyu_page_cache_capture(): void
 
         return $html;
     });
+
+    // 显式闭合本函数打开的缓冲区（wp.org：不允许 ob_start 留到请求结束由 PHP 关闭）。
+    // shutdown 里兜底统一收尾：已由其他代码关闭时，下面的循环自然不执行；回调仍在该步写入缓存文件，
+    // 写入时机与「靠 PHP 请求结束隐式关闭」完全一致，行为不变。
+    add_action('shutdown', static function () use ($buffer_level): void {
+        while (ob_get_level() > $buffer_level) {
+            ob_end_flush();
+        }
+    }, 999);
 }

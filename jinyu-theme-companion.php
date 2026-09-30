@@ -2,11 +2,8 @@
 /**
  * Plugin Name: Jinyu Theme Companion
  * Plugin URI:  https://www.qicaiyun.top/4698.html
- * Description: Official companion plugin for the Jinyu WordPress theme. After the theme was split into a
- *              three-part structure, this plugin takes over all functional capabilities (SEO, structured
- *              data, social, related posts, shortcodes, cache, anti-spam, index ping, and more) so the
- *              theme stays a pure presentation layer. All outbound features are off by default.
- * Version:     1.2.3
+ * Description: Companion plugin for the Jinyu theme. It supplies the functional layer (SEO, structured data, social, related posts, shortcodes, cache and anti-spam) so the theme stays presentation-only. All outbound features are off by default.
+ * Version:     1.2.4
  * Author:      金玉
  * Author URI:  https://www.qicaiyun.top
  * License:     GPL-2.0-or-later
@@ -14,7 +11,6 @@
  * Text Domain: jinyu-theme-companion
  * Domain Path: /languages
  * Requires at least: 6.2
- * Tested up to: 7.1
  * Requires PHP: 8.0
  *
  * @package Jinyu_Theme_Companion
@@ -30,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 插件先于主题载入，抢先定义会让主题读到的版本号变成插件版本，造成版本漂移。
  * ------------------------------------------------------------------------ */
 if ( ! defined( 'JINYU_COMPANION_VER' ) ) {
-	define( 'JINYU_COMPANION_VER', '1.2.3' );
+	define( 'JINYU_COMPANION_VER', '1.2.4' );
 }
 
 /* 插件自有路径常量：模块（shortcode-ui / poster 等）一律引用插件自身资源，
@@ -104,10 +100,8 @@ add_action( 'init', static function (): void {
 	}
 }, 99 );
 
-/* 翻译加载：.org 审查硬性要求（languages/ 目录已随包发布） */
-add_action( 'init', static function (): void {
-	load_plugin_textdomain( 'jinyu-theme-companion', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-} );
+/* 翻译加载：自 WP 4.6 起，托管在 WordPress.org 的插件由核心自动按 slug 加载语言包，
+ * 无需再调用 load_plugin_textdomain（wp.org 审查明确要求移除）。 */
 
 /* --------------------------------------------------------------------------
  * 模块加载：下列文件原属主题，拆为独立外发插件；各文件顶部自行注册钩子。
@@ -253,23 +247,21 @@ add_action( 'wp_ajax_jinyu_companion_dismiss_theme_notice', function (): void {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_die();
 	}
+	check_ajax_referer( 'jinyu_companion_dismiss_theme_notice' );
 	update_user_meta( get_current_user_id(), 'jinyu_companion_theme_notice_dismissed', 1 );
 	wp_die();
 } );
 
-add_action( 'admin_footer', function (): void {
-	?>
-	<script>
-		(function () {
-			var n = document.getElementById('jinyu-companion-theme-notice');
-			if (!n) return;
-			n.querySelector('.notice-dismiss').addEventListener('click', function () {
-				var x = new XMLHttpRequest();
-				x.open('POST', '<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>');
-				x.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-				x.send('action=jinyu_companion_dismiss_theme_notice');
-			});
-		})();
-	</script>
-	<?php
+// 用 wp_print_inline_script_tag() 输出内联脚本（wp.org 要求：不要手写 <script> 标签）。
+add_action( 'admin_print_footer_scripts', function (): void {
+	$js = '(function(){'
+		. "var n=document.getElementById('jinyu-companion-theme-notice');"
+		. 'if(!n)return;'
+		. "n.querySelector('.notice-dismiss').addEventListener('click',function(){"
+		. 'var x=new XMLHttpRequest();'
+		. 'x.open("POST",' . wp_json_encode( esc_url_raw( admin_url( 'admin-ajax.php' ) ) ) . ');'
+		. 'x.setRequestHeader("Content-Type","application/x-www-form-urlencoded");'
+		. 'x.send(' . wp_json_encode( 'action=jinyu_companion_dismiss_theme_notice&_ajax_nonce=' . wp_create_nonce( 'jinyu_companion_dismiss_theme_notice' ) ) . ');'
+		. '});})();';
+	wp_print_inline_script_tag( $js );
 } );

@@ -46,9 +46,9 @@ function jinyu_anti_spam($approved, $commentdata)
     if ( jinyu_companion_is_checked( 'comment_freq_enable', true ) ) {
         $freq_window = max( 1, (int) jinyu_companion_get_option( 'comment_freq_window', 10 ) );
         $freq_max    = max( 1, (int) jinyu_companion_get_option( 'comment_freq_max', 5 ) );
-        $ip          = $_SERVER['REMOTE_ADDR'] ?? '';
+        $ip          = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
         if ( '' !== $ip ) {
-            $transient = 'jy_comment_ips_' . md5( $ip );
+            $transient = 'jinyu_companion_comment_ips_' . md5( $ip );
             $count     = (int) ( get_transient( $transient ) ?: 0 );
             if ( $count >= $freq_max ) {
                 return 'spam';

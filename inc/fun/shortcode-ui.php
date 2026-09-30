@@ -66,7 +66,7 @@ add_action( 'admin_head', function () {
 		return;
 	}
 	$list = jinyu_sc_editor_list();
-	echo '<script' . jinyu_companion_csp_nonce_attr() . '>window.JINYU_SC=' . wp_json_encode( [ 'list' => $list ] ) . ';</script>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
+	echo jinyu_companion_inline_script_tag( 'window.JINYU_SC=' . wp_json_encode( [ 'list' => $list ] ) . ';' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_get_inline_script_tag 生成的标签
 } );
 
 // 文本模式（QuickTags）按钮
@@ -76,17 +76,14 @@ add_action( 'admin_print_footer_scripts', function () {
 		return;
 	}
 	$list = jinyu_sc_editor_list();
-	?>
-	<script<?php echo jinyu_companion_csp_nonce_attr(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 对外输出 CSP nonce 属性，无需转义 ?>>
-	(function () {
-		if (typeof QTags === 'undefined') return;
-		var list = <?php echo wp_json_encode( $list ); ?>;
-		list.forEach(function (item) {
-			QTags.addButton('jinyu_' + item.key, item.label, item.tpl, '', '', item.label, 300);
-		});
-	})();
-	</script>
-	<?php
+	$js   = '(function () {'
+		. 'if (typeof QTags === "undefined") return;'
+		. 'var list = ' . wp_json_encode( $list ) . ';'
+		. 'list.forEach(function (item) {'
+		. 'QTags.addButton("jinyu_" + item.key, item.label, item.tpl, "", "", item.label, 300);'
+		. '});'
+		. '})();';
+	echo jinyu_companion_inline_script_tag( $js ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_get_inline_script_tag 生成的标签
 } );
 
 // 块编辑器（Gutenberg）快捷入口：仅块编辑器加载，注入数据并注册侧栏面板

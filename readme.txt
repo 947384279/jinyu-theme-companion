@@ -4,35 +4,35 @@ Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.2.3
+Stable tag: 1.2.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Official companion for the Jinyu theme: SEO, structured data, social, related posts, shortcodes, cache, anti-spam. Outbound features off by default.
+Companion plugin for the Jinyu theme: SEO, structured data, social, related posts, shortcodes, cache, anti-spam. Every outbound feature is off by default.
 
 == Description ==
 
-The official companion plugin for the Jinyu (jinyu) WordPress theme. After the theme was split into a three-part structure under the 2026 WordPress.org theme guidelines, this plugin takes over all "functional" capabilities so the theme itself stays a pure presentation layer (no custom post types, shortcodes, or plugin functionality baked in).
+The companion plugin for the Jinyu (jinyu) WordPress theme. After the theme was split into a three-part structure under the 2026 WordPress.org theme guidelines, this plugin takes over all "functional" capabilities so the theme itself stays a pure presentation layer (no custom post types, shortcodes, or plugin functionality baked in).
+
+The plugin works on any theme: every module guards its theme-specific calls with `function_exists()`, so it degrades gracefully instead of breaking the site.
 
 Features:
 
 * SEO: title optimization, structured data (JSON-LD), category-description SEO, llms.txt, no-category base cleanup
-* Indexing / ping: IndexNow and Baidu active submission (both can be turned off in settings)
+* Indexing / ping: IndexNow and Baidu active submission (both off by default, enabled per site in Settings)
 * Social: user follow / unfollow, message center, unread counts
-* Content enhancement: related posts, popular posts, the "series" taxonomy, the "moments" custom post type, automatic internal linking, shortcodes with a visual UI, and Web Vitals metrics
+* Content enhancement: related posts, popular posts, the "series" taxonomy, the "moments" (时光圈) custom post type, automatic internal linking, shortcodes with a visual UI, and Web Vitals metrics
 * Comments & interaction: comment notifications and anti-spam
 * Performance & system: page cache (with path / query-parameter exclusion rules), database optimization, mail (SMTP configuration), HTTP transport check (compression, cache headers, HTTP/3), and post posters
+* Performance center: OPcache / Memcached status boards, reversible performance toggles, per-layer cache flushing (OPcache / Memcached / page cache), one-click optimization, and a real-user Web Vitals board
+* Theme updates: an optional, off-by-default update channel for the Jinyu theme (see "External Services")
 * Third-party login (social login): optional sign-in with GitHub / Gitee / QQ / Apple — off by default. Each provider stores only the OAuth credentials you configure (encrypted at rest); no personal data leaves the site except the standard OAuth exchange when a user signs in.
-
-* Performance center (migrated from the theme): OPcache / Memcached status boards, reversible performance toggles, per-layer cache flushing (OPcache / Memcached / page cache), one-click optimization, and real-user Web Vitals board
-
-This plugin works best when paired with the Jinyu theme. When the theme is not active, every feature degrades gracefully and will not white-screen the site.
 
 == Installation ==
 
 1. Upload the plugin via Plugins → Add New, or extract it to wp-content/plugins/jinyu-theme-companion.
-2. Enabling the Jinyu theme alongside is recommended for the full experience.
-3. Enable outbound features such as index ping and stats in Settings as desired (all are off by default).
+2. Enabling the Jinyu theme alongside is recommended for the full experience, but not required.
+3. Open the "Jinyu" settings screen and turn on the features you want. Every outbound feature (index ping, theme update check, WeChat share, social login, remote storage, stats) is off by default.
 
 == Frequently Asked Questions ==
 
@@ -42,32 +42,83 @@ No. Every module guards its theme-function calls with function_exists(), degradi
 
 = Which features send data externally? =
 
-Only index ping (IndexNow, Baidu) and optional stats send URLs or basic visit data after being enabled. These are off by default and must be turned on by the administrator; when off, no outbound requests are made.
+None by default. Only the features you explicitly enable talk to an external service: index ping (IndexNow, Baidu), the optional theme update check, the WeChat JS-SDK share, third-party login, and the object-storage endpoint you configure yourself. Each one is listed with its terms and privacy policy under "External Services". When a feature is off, no request is made at all.
 
-= Why the jinyu_ prefix? =
+= Why the jinyu_companion_ prefix? =
 
-To comply with the WordPress.org plugin prefix rule (at least 4 characters and not conflicting with others), the jinyu_ prefix is used consistently, matching the Jinyu theme.
+To comply with the WordPress.org prefix rules (prefixes must be at least 4 characters and must not collide with other plugins), all functions, constants, options, transients, cookies, shortcodes, scripts and registered post types use a unique prefix: `jinyu_companion_` (or `jinyu_` for the compatibility helpers it shares with the Jinyu theme, which are all wrapped in `function_exists()` guards).
 
 == External Services ==
 
-The optional "Third-party Login (Social Login)" feature connects to external OAuth providers only when it is enabled AND a visitor uses it to sign in. No requests are made unless both conditions are true.
+All connections below are opt-in: they stay completely inactive until an administrator enables the matching feature (and, where relevant, supplies credentials). No request is made while a feature is off.
 
-For each enabled provider, the plugin exchanges the OAuth authorization code for an access token and retrieves the user's public profile (id, display name, avatar, and a verified email when the provider supplies one). Only the data the OAuth protocol requires is transmitted.
+= 1. Third-party login (social login) — off by default =
 
-* GitHub — https://github.com/login/oauth/authorize ; Privacy: https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement
-* Gitee — https://gitee.com/oauth ; Privacy: https://gitee.com/terms/privacy
-* QQ — https://graph.qq.com/oauth2.0/authorize ; Privacy: https://privacy.qq.com/
-* Apple — https://appleid.apple.com/auth/authorize ; Privacy: https://www.apple.com/legal/privacy/
+When enabled, and only when a visitor chooses to sign in with a provider, the plugin exchanges the OAuth authorization code for an access token and reads the user's basic public profile: account id, display name, avatar, and a verified e-mail address where the provider supplies one. That is the only data transmitted, and it is sent directly to the provider — never to the plugin author.
+
+* GitHub (GitHub, Inc.) — https://github.com/login/oauth/authorize — Terms: https://docs.github.com/en/site-policy/github-terms/github-terms-of-service — Privacy: https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement
+* Gitee (开源中国 OSChina) — https://gitee.com/oauth/authorize — Terms and Privacy: https://gitee.com/terms
+* QQ (Tencent) — https://graph.qq.com/oauth2.0/authorize — Terms: https://wiki.connect.qq.com/ — Privacy: https://privacy.qq.com/
+* Apple — https://appleid.apple.com/auth/authorize — Terms: https://www.apple.com/legal/internet-services/itunes/ — Privacy: https://www.apple.com/legal/privacy/
 
 Client secrets are encrypted (AES-256-CBC with HMAC) in your site's own database using WordPress salts; they are never transmitted to any party other than the provider they belong to.
 
-Additional outbound connections:
+= 2. Jinyu theme update service — off by default =
 
-* Theme update check — when the Jinyu theme is active, the plugin periodically requests `https://update.qicaiyun.top/jinyu-update.json` to check for (and download) theme updates; the package is verified with an RSA signature and SHA-256 before any install. Only the request is sent; no site data leaves your server.
-* WeChat JS-SDK share — when the WeChat share feature is enabled, the plugin fetches a short-lived access token and ticket from `https://api.weixin.qq.com` to sign the share card. No personal data is transmitted.
-* Remote object storage — when you configure UpYun / Aliyun OSS / Tencent COS / Qiniu / S3, media files are uploaded to and served from the endpoint you specify. The endpoint is chosen by you; nothing is sent to the plugin author.
+The plugin can check for updates of the Jinyu theme. This is disabled by default and starts only after you enable "Enable theme update check" on the plugin's "Theme Updates" screen. When enabled, and only while the Jinyu theme is active, the plugin periodically requests `https://update.qicaiyun.top/jinyu-update.json` (at most once per hour) to read the latest version number, changelog and package URL. The request contains no site data, no user data and no statistics — it is a plain version lookup. Update packages are verified with an RSA signature and a SHA-256 checksum before WordPress is allowed to install them.
+
+This service is provided by the Jinyu theme author (七彩云博客): Terms and Privacy — https://www.qicaiyun.top/privacy-policy
+
+= 3. WeChat JS-SDK share — off by default =
+
+When the WeChat share feature is enabled, the plugin requests a short-lived access token and JSAPI ticket from `https://api.weixin.qq.com` and loads the WeChat JS-SDK from `https://res.wx.qq.com/open/js/jweixin-1.6.0.js`, so an article shared inside WeChat shows the right title, description and thumbnail. Only your own WeChat Official Account credentials are sent; no visitor data is transmitted.
+
+This service is provided by Tencent (WeChat): Terms — https://weixin.qq.com/agreement?lang=zh_CN — Privacy — https://weixin.qq.com/cgi-bin/readtemplate?lang=zh_CN&t=weixin_agreement&s=privacy
+
+= 4. IndexNow — off by default =
+
+When "Index ping" is enabled, the plugin submits the public URL of a published post to `https://api.indexnow.org/indexnow` so participating search engines can re-crawl it. Only the post URL and your site key are sent — never post content, user data or statistics.
+
+IndexNow is operated by Microsoft Bing: Terms and documentation — https://www.indexnow.org/documentation — Privacy — https://privacy.microsoft.com/privacystatement
+
+= 5. Baidu URL submission — off by default =
+
+When "Index ping" is enabled and you have saved your Baidu submission token, the plugin posts the public URL of a published post to Baidu's URL submission endpoint (`data.zz.baidu.com`). Only the post URL is sent.
+
+This service is provided by Baidu: Terms — https://www.baidu.com/duty/ — Privacy — https://privacy.baidu.com/
+
+= 6. Remote object storage — off by default, you choose the endpoint =
+
+When you configure an object-storage backend (UpYun / Aliyun OSS / Tencent COS / Qiniu / Amazon S3), media files you upload are sent to, and served from, the endpoint you specify. The endpoint is under your control; nothing is sent to the plugin author.
+
+== Privacy ==
+
+This plugin does not collect, store or transmit any personal data by default, and it contains no analytics or telemetry of any kind.
+
+* Index ping (IndexNow / Baidu): only after you enable it, it submits the public URLs of published posts to the corresponding search-engine endpoints. It does not include post bodies or user information.
+* Theme update check: only after you enable it. It sends no site data — a plain request for a version file.
+* Stats (off by default): if enabled, it records only anonymous aggregate visit counts in your own database. The IP address is used transiently for rate limiting and bot filtering and is not stored with the visit record.
+* Social follow / messages: it stores only the follow and message relationships between your site's users in your local database and sends nothing to third parties.
+* Third-party login (social login): when enabled and a user signs in with a provider, the plugin sends the standard OAuth parameters to that provider and receives back the user's id, display name, avatar, and verified email (where applicable). No data is shared unless the user initiates a login. Auto-registration only happens when your site has "Anyone can register" enabled, and new accounts always get the site's default role.
+* Provider privacy policies are listed in the External Services section.
+
+Administrators can disable any of the above outbound features at any time in the corresponding settings; once disabled, the related requests stop entirely.
 
 == Changelog ==
+
+= 1.2.4 =
+* Compliance: the theme update check is now opt-in and off by default (new "Theme Updates" settings screen). The plugin no longer contacts its own update server without the administrator's consent.
+* Compliance: removed `Tested up to` from the plugin header (it belongs in this readme only) and removed the redundant `load_plugin_textdomain()` call.
+* Compliance: the "moments" (时光圈) post type is now registered as `jinyu_moments`; existing posts are migrated automatically on the next page load and the front-end URLs are unchanged.
+* Compliance: replaced the short two-letter `jy_` prefix on transients, cookies and constants with `jinyu_companion_`; the captcha cookie and login-failure counters are renamed accordingly.
+* Compliance: social-login auto-registration now requires the site's "Anyone can register" option and always assigns the site's default role, instead of a configurable role that could exceed the site's registration policy.
+* Security: sanitized every `$_SERVER` value before use (host, URI, request method, user agent, client IP, conditional-request header), and the nonce passed to `wp_verify_nonce()`.
+* Security: JSON-LD now neutralises `</` case-insensitively, so a mixed-case `</SCRIPT>` in a post title or FAQ answer can no longer break out of the script tag.
+* Security: shortcode output is escaped with `wp_kses_post()`; the admin notice script is emitted through `wp_print_inline_script_tag()` and its dismiss endpoint now verifies a nonce.
+* Fix: the temporary theme update package is now moved with the WP_Filesystem API instead of a raw `rename()` call, and never leaves the WordPress temporary directory.
+* Fix: `uninstall.php` and the object-cache drop-in now resolve paths with `wp_upload_dir()` / `WP_CONTENT_DIR` instead of assuming a default `wp-content` layout.
+* Fix: the page-cache output buffer is now explicitly closed within the request.
+* I18n: the plugin now ships only the `languages/` placeholder; translations are handled by the WordPress.org language packs.
 
 = 1.2.3 =
 * Security: Storage pull/push tasks now reject path-traversal keys via a shared `jinyu_storage_safe_rel()` guard (no `..` segments), so a compromised bucket cannot write files outside the uploads directory.
@@ -112,7 +163,7 @@ Additional outbound connections:
 * Tweak: comment notification panel hint now states that each notice can be toggled separately.
 
 = 1.0.4 =
-* New: Social login — configurable auto-registration gate and default role for new users (Subscriber / Contributor / Author), replacing the hardcoded Contributor role.
+* New: Social login — configurable auto-registration gate and default role for new users, replacing the hardcoded Contributor role.
 * New: Comment email notification toggles — separately enable/disable reply notifications and post-author notifications.
 * New: SMTP "From name" field (falls back to the site name when empty).
 * New: IndexNow key is now visible and copyable on the Content pane, along with its verification file URL.
@@ -133,6 +184,9 @@ Additional outbound connections:
 
 == Upgrade Notice ==
 
+= 1.2.4 =
+The theme update check is now opt-in and off by default — enable it on the new "Theme Updates" screen if you want the companion to keep the Jinyu theme up to date. The "moments" posts are migrated to the new `jinyu_moments` post type automatically on the next page load; front-end URLs do not change.
+
 = 1.2.2 =
 Adds the floating save bar (no page reload when saving) and the image watermark engine. Watermarking is off by default and runs on new uploads only until you start a batch from the Media pane; original images are preserved as `*-jywmo.*` sidecars. Settings and existing metadata are unaffected.
 
@@ -150,14 +204,3 @@ First release: the functional companion plugin split out from the Jinyu theme.
 This plugin no longer depends on any external or theme-provided icon font. All front-end icons (for example the captcha refresh button and the "comment to view" hint) are inlined as self-contained SVG, so the plugin works fully standalone.
 
 * Previously this plugin referenced Font Awesome on the front end; that dependency has been removed. Font Awesome Free remains under the CC BY 4.0 license (https://creativecommons.org/licenses/by/4.0/) and SIL OFL 1.1 (https://scripts.sil.org/OFL); its trademark belongs to Dave Gandy.
-
-== Privacy ==
-
-This plugin does not collect or upload any personal data by default.
-
-* Index ping (IndexNow / Baidu): only after you enable it, it submits the public URLs of published posts to the corresponding search-engine endpoints. It does not include post bodies or user information.
-* Stats (off by default): if enabled, it records only anonymized basic visit counts and does not record personal identity beyond the IP address.
-* Social follow / messages: it stores only the follow and message relationships between your site's users in your local database and sends nothing to third parties.
-* Third-party login (social login): when enabled and a user signs in with a provider, the plugin sends the standard OAuth parameters to that provider and receives back the user's id, display name, avatar, and verified email (where applicable). No data is shared unless the user initiates a login. Provider privacy policies are listed in the External Services section.
-
-Administrators can disable any of the above outbound features at any time in the corresponding settings; once disabled, the related requests stop.

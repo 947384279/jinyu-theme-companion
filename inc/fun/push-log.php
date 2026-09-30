@@ -121,6 +121,19 @@ function jinyu_push_log_render( int $limit = 8 ): void {
 
 /* ---------------- AJAX：刷新 / 清空 ---------------- */
 
+/**
+ * 把推送记录表格渲染成字符串。
+ * ob_start() 与 ob_get_clean() 成对出现在同一函数内，缓冲区不会跨函数/跨钩子遗留。
+ *
+ * @param int $limit 最多渲染多少行。
+ * @return string
+ */
+function jinyu_push_log_capture( int $limit ): string {
+	ob_start();
+	jinyu_push_log_render( $limit );
+	return (string) ob_get_clean();
+}
+
 add_action( 'wp_ajax_jinyu_push_log_refresh', 'jinyu_push_log_ajax_refresh' );
 
 function jinyu_push_log_ajax_refresh(): void {
@@ -129,9 +142,7 @@ function jinyu_push_log_ajax_refresh(): void {
 	}
 	check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 
-	ob_start();
-	jinyu_push_log_render( 8 );
-	wp_send_json_success( [ 'html' => (string) ob_get_clean() ] );
+	wp_send_json_success( [ 'html' => jinyu_push_log_capture( 8 ) ] );
 }
 
 add_action( 'wp_ajax_jinyu_push_log_clear', 'jinyu_push_log_ajax_clear' );
@@ -144,12 +155,10 @@ function jinyu_push_log_ajax_clear(): void {
 
 	jinyu_push_log_clear();
 
-	ob_start();
-	jinyu_push_log_render( 8 );
 	wp_send_json_success(
 		[
 			'msg'  => __( '推送记录已清空', 'jinyu-theme-companion' ),
-			'html' => (string) ob_get_clean(),
+			'html' => jinyu_push_log_capture( 8 ),
 		]
 	);
 }
