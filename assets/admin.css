@@ -359,7 +359,7 @@
 .jyc-checks .jyc-dot.jyc-on { background: var(--ok); box-shadow: 0 0 0 3px rgba(15,157,107,.18); }
 
 /* ===================== Form controls ===================== */
-.jyc-frow { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; padding: 16px 0; }
+.jyc-frow { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; padding: 13px 0; }
 .jyc-frow + .jyc-frow { border-top: 1px solid var(--line-2); }
 .jyc-frow .jyc-grow { flex: 1 1 220px; min-width: 0; }
 /* 行尾数字字段：收窄输入框，避免内容固有宽度把说明列挤成一字一行 */
@@ -378,7 +378,7 @@
 .jyc-app[data-theme="dark"] .jyc-switch .jyc-track { background: #41527c; box-shadow: inset 0 0 0 1px #5f73a0, inset 0 1px 3px rgba(0,0,0,.4); }
 .jyc-app[data-theme="dark"] .jyc-switch .jyc-track::after { background: #f4f7fd; box-shadow: 0 1px 4px rgba(0,0,0,.55); }
 .jyc-app[data-theme="dark"] .jyc-color-row input[type=color] { background-color: #111a2c; border-color: #4a5a80; }
-.jyc-fl { font-size: 12.5px; color: var(--ink-2); font-weight: 500; display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
+.jyc-fl { font-size: 12.5px; color: var(--ink-2); font-weight: 500; display: flex; flex-direction: column; gap: 6px; margin-bottom: 11px; }
 .jyc-fl:last-child { margin-bottom: 0; }
 /* 注意：WP 后台 forms.min.css 的 input[type=text/url/number/password/email],select,textarea
    组规则（background:#fff 等，特异性 0,1,1）会压过裸 .jyc-inp（0,1,0）——浅色下白底恰好看不出，
@@ -703,8 +703,147 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 }
 /* ===================== 表单辅助：小节分隔 + 并排字段 ===================== */
 .jyc-fsep { font-size: 12px; font-weight: 700; color: var(--ink-3); letter-spacing: .04em;
-  margin: 16px 0 10px; padding-top: 12px; border-top: 1px dashed var(--line-2); }
+  margin: 13px 0 7px; padding-top: 9px; border-top: 1px dashed var(--line-2); }
 .jyc-fpair { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+
+/* ===================== 整页缓存面板（重设计） ===================== */
+/* 模式选择：两枚 radio 卡片（简单 / 边缘），选中态用 :has 高亮 + 勾 */
+.jyc-mode-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 2px 0; }
+.jyc-mode-card {
+  position: relative; display: flex; align-items: flex-start; gap: 12px;
+  padding: 13px 42px 13px 13px; border: 1.5px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface); cursor: pointer;
+  transition: border-color .2s var(--ease), box-shadow .2s var(--ease), background .2s var(--ease), transform .15s var(--spring);
+}
+.jyc-mode-card:hover { border-color: #c6cede; box-shadow: var(--elev-2); transform: translateY(-1px); }
+/* 原生 radio 移出视觉流但仍参与表单提交；放在卡片前，用相邻兄弟选择器驱动选中态 */
+.jyc-mode-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; margin: 0; }
+.jyc-mode-ico {
+  flex-shrink: 0; width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center;
+  background: var(--surface-3); color: var(--ink-3); transition: background .2s var(--ease), color .2s var(--ease);
+}
+.jyc-mode-ico svg { width: 19px; height: 19px; }
+.jyc-mode-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.jyc-mode-t { font-size: 14px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
+.jyc-mode-d { font-size: 12px; color: var(--ink-3); line-height: 1.5; }
+/* 右上角选中标记：未选中为空心圈，选中变实心勾（由 :checked + 相邻兄弟驱动） */
+.jyc-mode-check {
+  position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--surface); color: transparent;
+  border: 2px solid var(--line); transition: all .2s var(--spring);
+}
+.jyc-mode-check svg { width: 13px; height: 13px; }
+/* 选中态：原生 :checked + 相邻兄弟（纯 CSS，兼容所有浏览器，不依赖 :has / JS） */
+.jyc-mode-input:checked + .jyc-mode-card {
+  border-color: var(--brand); background: var(--brand-soft);
+  box-shadow: inset 0 0 0 1px var(--brand), var(--elev-1);
+}
+.jyc-mode-input:checked + .jyc-mode-card .jyc-mode-ico { background: var(--brand); color: #fff; }
+.jyc-mode-input:checked + .jyc-mode-card .jyc-mode-check { background: var(--brand); border-color: var(--brand); color: #fff; }
+.jyc-mode-input:checked + .jyc-mode-card .jyc-mode-t { color: var(--brand-d); }
+.jyc-mode-input:focus-visible + .jyc-mode-card { outline: 2px solid var(--brand); outline-offset: 2px; }
+/* 「当前模式」徽标：选中卡片显示，强化辨识 */
+.jyc-mode-flag {
+  display: none; align-items: center; gap: 4px; margin-left: 8px; padding: 1px 8px; border-radius: 99px;
+  font-size: 11px; font-weight: 700; letter-spacing: .02em; color: #fff; background: var(--brand); vertical-align: middle;
+}
+.jyc-mode-input:checked + .jyc-mode-card .jyc-mode-flag { display: inline-flex; }
+
+/* 状态提示条：左侧色条 + 浅底，ok / warn / info 三态 */
+.jyc-cache-note { position: relative; margin: 10px 0 3px; padding: 10px 13px 10px 16px; border-radius: var(--r-md);
+  font-size: 13px; line-height: 1.5; border: 1px solid transparent; }
+.jyc-cache-note::before { content: ""; position: absolute; left: 0; top: 11px; bottom: 11px; width: 3px; border-radius: 99px; background: var(--brand); }
+.jyc-cache-note.is-ok { background: rgba(15,157,107,.10); border-color: rgba(15,157,107,.22); color: #0c7a53; }
+.jyc-cache-note.is-ok::before { background: var(--ok); }
+.jyc-cache-note.is-warn { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.24); color: #92600a; }
+.jyc-cache-note.is-warn::before { background: var(--warn); }
+.jyc-cache-note.is-info { background: rgba(28,96,243,.09); border-color: rgba(28,96,243,.20); color: #1746c4; }
+.jyc-cache-note.is-info::before { background: var(--brand); }
+.jyc-cache-note strong { font-weight: 700; }
+.jyc-cache-sub { margin-top: 6px; font-size: 12px; line-height: 1.55; opacity: .92; }
+.jyc-cache-sub code, .jyc-cache-note code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px;
+  background: rgba(16,24,40,.07); padding: 1px 5px; border-radius: 5px; color: inherit;
+}
+
+/* 字段小标题、字段说明（纵排字段内部） */
+.jyc-fname-sm { font-size: 13px; font-weight: 600; color: var(--ink); }
+.jyc-fnote { font-size: 12px; color: var(--ink-3); line-height: 1.5; }
+
+/* ============ 整页缓存面板：二次压缩（仅作用域内，不动其它面板） ============ */
+.jyc-panel--pc .jyc-panel-b { padding: 16px 20px; }
+.jyc-panel--pc .jyc-frow { padding: 9px 0; gap: 12px; }
+.jyc-panel--pc .jyc-frow + .jyc-frow { border-top: none; }
+.jyc-panel--pc .jyc-fdesc { margin-top: 2px; }
+.jyc-panel--pc .jyc-fsep { margin: 9px 0 4px; padding-top: 6px; }
+.jyc-panel--pc .jyc-fl { gap: 5px; margin-bottom: 8px; }
+.jyc-panel--pc .jyc-fnote { margin-top: 1px; line-height: 1.45; }
+.jyc-panel--pc .jyc-fpair { gap: 12px; }
+/* 模式卡片：内边距、图标、行距再收 */
+.jyc-panel--pc .jyc-mode-grid { gap: 8px; margin: 1px 0; }
+.jyc-panel--pc .jyc-mode-card { padding: 11px 38px 11px 12px; gap: 10px; }
+.jyc-panel--pc .jyc-mode-ico { width: 34px; height: 34px; border-radius: 10px; }
+.jyc-panel--pc .jyc-mode-ico svg { width: 17px; height: 17px; }
+.jyc-panel--pc .jyc-mode-body { gap: 2px; }
+.jyc-panel--pc .jyc-mode-d { line-height: 1.42; }
+.jyc-panel--pc .jyc-mode-check { top: 10px; right: 10px; width: 20px; height: 20px; }
+/* 状态条 */
+.jyc-panel--pc .jyc-cache-note { margin: 7px 0 2px; padding: 9px 12px 9px 15px; }
+.jyc-panel--pc .jyc-cache-sub { margin-top: 4px; line-height: 1.5; }
+/* 片段查看器 + 边缘配置 */
+.jyc-panel--pc .jyc-code-viewer { margin: 8px 0 3px; }
+.jyc-panel--pc .jyc-code-head { padding: 8px 11px; }
+.jyc-panel--pc .jyc-edge-box { margin-top: 2px; }
+.jyc-panel--pc .jyc-slider-wrap { gap: 14px; }
+.jyc-panel--pc .jyc-slider-val { font-size: 13px; }
+
+/* 配置片段查看器：Nginx / Apache 用标签页切换，避免两段同时铺开撑长页面 */
+.jyc-code-viewer { margin: 10px 0 4px; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+.jyc-code-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px;
+  background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.jyc-code-tabs { display: inline-flex; gap: 4px; background: var(--surface-3); border-radius: 10px; padding: 3px; }
+.jyc-code-tab { border: none; background: transparent; font-family: inherit; font-size: 12.5px; font-weight: 600;
+  color: var(--ink-3); padding: 5px 14px; border-radius: 8px; cursor: pointer; transition: all .18s var(--ease); }
+.jyc-code-tab:hover { color: var(--ink); }
+.jyc-code-tab.is-active { background: var(--surface); color: var(--brand); box-shadow: var(--elev-1); }
+.jyc-code-copy { flex-shrink: 0; padding: 6px 12px !important; font-size: 12px !important; }
+.jyc-code-hint { display: none; padding: 8px 13px 0; font-size: 11.5px; color: var(--ink-3); }
+.jyc-code-hint.is-shown { display: block; }
+.jyc-inp.jyc-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, "Cascadia Code", Consolas, monospace;
+  font-size: 12px; line-height: 1.55; color: var(--ink-2); background: var(--surface-2);
+  white-space: pre; cursor: text; border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+  max-height: 340px; overflow: auto; resize: vertical;
+}
+.jyc-inp.jyc-code:focus { transform: none; box-shadow: none !important; }
+
+/* 边缘配置折叠框 */
+.jyc-edge-box { margin-top: 4px; }
+.jyc-edge-box[hidden], .jyc-edge-box.js-edge-hidden { display: none !important; }
+
+/* 深色适配 */
+.jyc-app[data-theme="dark"] .jyc-mode-input:checked + .jyc-mode-card { background: var(--brand-soft); }
+.jyc-app[data-theme="dark"] .jyc-mode-ico { background: #263349; color: var(--ink-3); }
+.jyc-app[data-theme="dark"] .jyc-mode-input:checked + .jyc-mode-card .jyc-mode-ico { background: var(--brand); color: #fff; }
+.jyc-app[data-theme="dark"] .jyc-mode-input:checked + .jyc-mode-card .jyc-mode-t { color: var(--brand-on-dark); }
+.jyc-app[data-theme="dark"] .jyc-cache-note.is-ok { background: rgba(15,157,107,.16); border-color: rgba(15,157,107,.34); color: #51d3a8; }
+.jyc-app[data-theme="dark"] .jyc-cache-note.is-warn { background: rgba(245,158,11,.16); border-color: rgba(245,158,11,.34); color: #f4c166; }
+.jyc-app[data-theme="dark"] .jyc-cache-note.is-info { background: rgba(91,140,255,.16); border-color: rgba(91,140,255,.34); color: #9db8ff; }
+.jyc-app[data-theme="dark"] .jyc-cache-sub code, .jyc-app[data-theme="dark"] .jyc-cache-note code { background: rgba(255,255,255,.10); }
+.jyc-app[data-theme="dark"] .jyc-code-viewer { background: #111a2c; border-color: #34415b; }
+.jyc-app[data-theme="dark"] .jyc-code-head { background: #1e2a42; border-color: #34415b; }
+.jyc-app[data-theme="dark"] .jyc-code-tabs { background: #263349; }
+.jyc-app[data-theme="dark"] .jyc-code-tab.is-active { background: #111a2c; color: var(--brand-on-dark); }
+.jyc-app[data-theme="dark"] .jyc-inp.jyc-code { background: #111a2c; }
+
+/* 手机端：模式卡片转单列，提示条字号收紧，片段查看器头部换行 */
+@media (max-width: 560px) {
+  .jyc-mode-grid { grid-template-columns: 1fr; }
+  .jyc-mode-card { align-items: center; }
+  .jyc-cache-note { font-size: 12.5px; }
+  .jyc-code-head { flex-wrap: wrap; }
+  .jyc-code-viewer .jyc-inp.jyc-code { font-size: 11.5px; max-height: 260px; }
+}
 
 /* ===================== 传输体检（前台加速分区） ===================== */
 /* 每行两段：上排「指标 + 结果值」，下排灰色说明。说明独占一行而非右对齐 ——
@@ -730,15 +869,16 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
  *    等高后每行是一个完整矩形；内容量差异通过压平卡片本身解决（如站点验证改两列内栅格）。
  * 3) 卡片高度要尽量接近：同一分区的卡片内容量差异大时，先把内容压平再配对。 */
 @media (min-width: 1280px) {
-  #pane-seo.jyc-shown, #pane-content.jyc-shown, #pane-perf.jyc-shown,
+  /* 注：#pane-perf 不在此通用 2×2 网格内——它有专属的非对称两列布局（见下方「前台加速」段） */
+  #pane-seo.jyc-shown, #pane-content.jyc-shown,
   #pane-comment.jyc-shown, #pane-smtp.jyc-shown, #pane-storage.jyc-shown,
   #pane-wechat.jyc-shown, #pane-io.jyc-shown {
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px;
   }
-  #pane-seo > .jyc-mod-head, #pane-content > .jyc-mod-head, #pane-perf > .jyc-mod-head,
+  #pane-seo > .jyc-mod-head, #pane-content > .jyc-mod-head,
   #pane-comment > .jyc-mod-head, #pane-smtp > .jyc-mod-head, #pane-storage > .jyc-mod-head,
   #pane-wechat > .jyc-mod-head, #pane-io > .jyc-mod-head { grid-column: 1 / -1; margin-bottom: 0; }
-  #pane-seo > .jyc-panel, #pane-content > .jyc-panel, #pane-perf > .jyc-panel,
+  #pane-seo > .jyc-panel, #pane-content > .jyc-panel,
   #pane-comment > .jyc-panel, #pane-smtp > .jyc-panel, #pane-storage > .jyc-panel,
   #pane-wechat > .jyc-panel, #pane-io > .jyc-panel { margin-bottom: 0; }
   /* 邮件 SMTP 只有一张卡片，整行铺满，内部本就是两列栅格 */
@@ -746,6 +886,33 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
   /* .jyc-span：整行铺满。用于内容宽度需求大的独立工具型卡片
      （如历史垃圾评论清理，扫描结果需要横向空间）。 */
   .jyc-pane > .jyc-panel.jyc-span { grid-column: 1 / -1; }
+}
+/* 前台加速：右列三块（预取加速 / 数据库优化 / 传输体检）包进 .jyc-perf-right 竖向堆叠；整页缓存独占左列。
+   布局用 flex-wrap 两列（不用 grid 的自动放置——grid 会把整页缓存顶到第二行起，导致左列上方出现大片空白、整体错位）：
+   mod-head 占满整行（flex-basis:100%）后换行；两列各 flex:1 1 0 顶端对齐、各自独立高度；order 把整页缓存放左。
+   窄屏回落单列（.jyc-pane.jyc-shown{display:block}），wrapper 退化为普通块级堆叠。 */
+#pane-perf.jyc-shown > .jyc-perf-right {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
+#pane-perf.jyc-shown > .jyc-perf-right > .jyc-panel { margin: 0; }
+@media (min-width: 1080px) {
+  #pane-perf.jyc-shown {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 22px;
+  }
+  /* 标题行独占一整行，逼两列换到下一行 */
+  #pane-perf.jyc-shown > .jyc-mod-head { flex: 0 0 100%; margin-bottom: 0; }
+  /* 两列等宽、顶端对齐；min-width:0 防止内容撑破 */
+  #pane-perf.jyc-shown > .jyc-panel--pc,
+  #pane-perf.jyc-shown > .jyc-perf-right { flex: 1 1 0; min-width: 0; }
+  /* DOM 里 wrapper 在前、整页缓存在后；用 order 把整页缓存排到左侧 */
+  #pane-perf.jyc-shown > .jyc-panel--pc { order: 1; }
+  #pane-perf.jyc-shown > .jyc-perf-right { order: 2; }
 }
 
 /* 图片水印分区自成一套断点：它有 3 张卡且首卡含实时预览（横向空间需求最大），

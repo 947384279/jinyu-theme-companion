@@ -61,14 +61,33 @@ if (!function_exists('jinyu_og_image_dims')) {
         if (empty($url)) {
             return false;
         }
-        $id = function_exists('attachment_url_to_postid') ? attachment_url_to_postid($url) : 0;
+
+        // 请求内 memo：head 里多处（og:image / twitter:image / 各平台声明）会问到同一个 URL，
+        // 不 memo 就会把 attachment_url_to_postid 的 postmeta 查询重复打一遍。
+        static $memo = [];
+        $key         = (string) $url;
+        if (array_key_exists($key, $memo)) {
+            return $memo[$key];
+        }
+
+        // 复用插件已有的两级缓存包装（请求内 memo + 24h transient），
+        // 避免同一张图在 alt 处理与 OG 声明处各查一次 postmeta。
+        if (function_exists('jinyu_img_alt_postid_cached')) {
+            $id = jinyu_img_alt_postid_cached($key);
+        } else {
+            $id = function_exists('attachment_url_to_postid') ? attachment_url_to_postid($key) : 0;
+        }
+
+        $dims = false;
         if ($id) {
             $meta = wp_get_attachment_metadata($id);
             if (!empty($meta['width']) && !empty($meta['height'])) {
-                return [(int)$meta['width'], (int)$meta['height']];
+                $dims = [(int)$meta['width'], (int)$meta['height']];
             }
         }
-        return false;
+
+        $memo[$key] = $dims;
+        return $dims;
     }
 }
 

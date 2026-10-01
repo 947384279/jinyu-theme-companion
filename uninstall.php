@@ -88,6 +88,12 @@ function jinyu_companion_uninstall_site( array $options, array $tables ): void {
 	);
 	jinyu_companion_uninstall_wm_files();
 
+	// 整页缓存落地目录：wp-content/cache/jinyu/（仅删本插件前缀目录，不动其它缓存）。
+	$jinyu_cache = ( defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : '' ) . '/cache/jinyu';
+	if ( '' !== $jinyu_cache && is_dir( $jinyu_cache ) ) {
+		jinyu_companion_uninstall_dir( $jinyu_cache );
+	}
+
 	foreach ( $tables as $table ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- 表名来自本文件硬编码，非用户输入
 		$wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
@@ -120,4 +126,31 @@ function jinyu_companion_uninstall_wm_files(): void {
 			@wp_delete_file( $path );
 		}
 	}
+}
+
+/**
+ * 递归删除本插件缓存目录（仅限传入目录之内，不越界）。
+ *
+ * @param string $dir
+ */
+function jinyu_companion_uninstall_dir( string $dir ): void {
+	if ( ! is_dir( $dir ) ) {
+		return;
+	}
+	$items = @scandir( $dir );
+	if ( false === $items ) {
+		return;
+	}
+	foreach ( $items as $item ) {
+		if ( '.' === $item || '..' === $item ) {
+			continue;
+		}
+		$path = $dir . '/' . $item;
+		if ( is_dir( $path ) ) {
+			jinyu_companion_uninstall_dir( $path );
+		} else {
+			@wp_delete_file( $path );
+		}
+	}
+	@rmdir( $dir ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir,WordPress.PHP.NoSilencedErrors -- 卸载时递归删除插件自有缓存目录，WP_Filesystem 在卸载上下文不可用
 }

@@ -10,13 +10,15 @@
  *
  * 能力（覆盖并超越常见第三方 drop-in）：
  *   - 请求内本地缓存（避免同一请求重复打 Memcached）
- *   - 批量获取（wp_cache_get_multiple / Memcached::getMulti）
+ *   - 批量读写（get_multiple / add_multiple / set_multiple / delete_multiple）
  *   - CAS 乐观锁（get_with_cas / cas，高并发计数防竞争）
  *   - 一致性哈希（OPT_LIBKETAMA_COMPATIBLE，多客户端分布一致）
  *   - 缓存加法挂起（兼容 wp_suspend_cache_addition）
  *   - Memcached 扩展缺失时优雅降级（回退核心缓存，绝不白屏）
  *   - 统计接口（getStats）+ 命中/未命中计数
  *   - 持久连接池 + 多服务器/键盐可配 + 多站点前缀隔离
+ *   - 代际式清空：wp_cache_flush() 只让本站缓存整体失效，不做服务器级 flush，
+ *     不会殃及同一台 Memcached 上的其它站点 / 应用
  *
  * 可选常量（在 wp-config.php 中定义以覆盖默认配置）：
  *   JINYU_MEMCACHED_SERVERS  => [ ['127.0.0.1', 11211] ]   服务器列表
@@ -30,12 +32,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// 优雅降级：若 Memcached 扩展被禁用/卸载，回退到 WordPress 核心缓存，
-// 保证站点永不因扩展缺失而白屏（多数第三方 drop-in 在此场景下会 fatal）。
+// 优雅降级：若 Memcached 扩展被禁用/卸载，什么都不做直接返回，
+// 由 WordPress 自己加载 wp-includes/cache.php 走默认缓存（多数第三方 drop-in 在此场景下会 fatal）。
+//
+// 注意：这里绝不能 require cache.php —— 那会让 load.php 紧接着看到的 function_exists('wp_cache_init')
+// 变成 true，从而把 wp_using_ext_object_cache() 置为 true。后果是整站「声称在用外部对象缓存」，
+// 实际用的是核心 WP_Object_Cache，缓存类插件会据此显示错误状态、wp_cache_flush_runtime() 等
+// 语义也会跟着错。什么都不做，才是真正的回退。
 if ( ! class_exists( 'Memcached', false ) ) {
-	if ( file_exists( ABSPATH . WPINC . '/cache.php' ) ) {
-		require_once ABSPATH . WPINC . '/cache.php';
-	}
 	return;
 }
 
@@ -50,6 +54,9 @@ class Jinyu_Memcached_Object_Cache {
 	private $global_prefix;
 	private $blog_prefix;
 	private $key_salt = '';
+
+	/** 本安装的缓存代际：wp_cache_flush() 时推进，使全部旧键一次性失效 */
+	private $flush_gen = '';
 
 	protected $global_groups         = [];
 	protected $non_persistent_groups = [];
@@ -104,7 +111,44 @@ class Jinyu_Memcached_Object_Cache {
 		// 非持久组：仅本次请求内有效（计数/插件加载态），不写 Memcached。
 		$this->non_persistent_groups = [ 'counts', 'plugins' ];
 
+		// 代际：本安装独占（$site 由 ABSPATH + 键盐派生），同机其它 WordPress 安装互不影响。
+		$this->flush_gen = $this->read_flush_generation();
+
 		$this->switch_to_blog( is_multisite() ? get_current_blog_id() : (int) ( $GLOBALS['table_prefix'] ?? 0 ) );
+	}
+
+	// ───────────────────────── 缓存代际（wp_cache_flush 的实现） ─────────────────────────
+
+	/**
+	 * 生成一个新的代际值。
+	 *
+	 * 用「时间戳 + 唯一后缀」而不是自增数字：一旦代际键被淘汰或 Memcached 重启，读不到旧值时
+	 * 无论回退到哪个固定值都可能让更早写入的旧键重新可见，从而读到过期数据；时间戳只增不减，
+	 * 回退时生成的必然大于历史值，最坏结果只是缓存整体冷一次。
+	 */
+	private function new_generation() {
+		return (string) time() . '-' . str_replace( '.', '', uniqid( '', true ) );
+	}
+
+	/**
+	 * 读取本安装的缓存代际；键不存在时原子地新建一个。
+	 */
+	private function read_flush_generation() {
+		$key = $this->global_prefix . 'flush-gen';
+		$gen = $this->mc->get( $key );
+		if ( Memcached::RES_SUCCESS === $this->mc->getResultCode() && is_string( $gen ) && '' !== $gen ) {
+			return $gen;
+		}
+
+		$gen = $this->new_generation();
+		// add 是原子写入，避免并发请求各写各的代际把缓存劈成两份。
+		if ( ! $this->mc->add( $key, $gen ) ) {
+			$existing = $this->mc->get( $key );
+			if ( Memcached::RES_SUCCESS === $this->mc->getResultCode() && is_string( $existing ) && '' !== $existing ) {
+				return $existing;
+			}
+		}
+		return $gen;
 	}
 
 	// ───────────────────────── 本地缓存（请求内） ─────────────────────────
@@ -136,7 +180,18 @@ class Jinyu_Memcached_Object_Cache {
 	private function build_key( $id, $group = 'default' ) {
 		$group  = $group ?: 'default';
 		$prefix = isset( $this->global_groups[ $group ] ) ? $this->global_prefix : $this->blog_prefix;
-		return $this->key_salt . $prefix . $group . ':' . $id;
+		$key    = $this->key_salt . $prefix . $this->flush_gen . ':' . $group . ':' . $id;
+
+		// Memcached 的 key 有两个硬限制：长度上限 250 **字节**，且不允许空格 / 控制字符
+		// （实测超限时服务端回 CLIENT_ERROR bad command line format）。踩中后 get/set 全部失败，
+		// 而调用方只看到「永远不命中」—— 该条目每次请求都重算、不报任何错，是最难排查的一类问题。
+		// 常见触发场景：WP_CACHE_KEY_SALT 配了长盐、插件用超长 transient 名、多站点长前缀。
+		// 统一降级为定长摘要：对同一个 id 结果稳定，get 与 set 仍指向同一个键。
+		// 注意必须用 strlen（字节）而不是字符数，中文/百分号编码的键按字节算。
+		if ( strlen( $key ) > 250 || preg_match( '/[\x00-\x20\x7f]/', $key ) ) {
+			$key = 'jy:' . md5( $key );
+		}
+		return $key;
 	}
 
 	// ───────────────────────── 基础读写 ─────────────────────────
@@ -209,7 +264,9 @@ class Jinyu_Memcached_Object_Cache {
 		}
 
 		$value = $this->mc->get( $key );
-		if ( Memcached::RES_NOTFOUND === $this->mc->getResultCode() ) {
+		// 只有 RES_SUCCESS 才算命中。把超时 / 连接失败 / 部分读到等故障也当成命中，
+		// 会以 $found = true 返回 false，调用方据此认为「缓存里存的就是空值」，造成数据丢失。
+		if ( Memcached::RES_SUCCESS !== $this->mc->getResultCode() ) {
 			$found = false;
 			++$this->cache_misses;
 			return false;
@@ -265,18 +322,46 @@ class Jinyu_Memcached_Object_Cache {
 		return $caches;
 	}
 
+	// ───────────────────────── 批量写 / 删 ─────────────────────────
+	// Memcached 没有原子 addMulti；批量写在语义上等价于逐个调用，故逐个转发，
+	// 返回值形状（成功项为 true）与核心 `wp_cache_*_multiple()` 的约定一致。
+
+	public function add_multiple( array $data, $group = 'default', $expire = 0 ) {
+		$values = [];
+		foreach ( $data as $id => $value ) {
+			$values[ $id ] = $this->add( $id, $value, $group, $expire );
+		}
+		return $values;
+	}
+
+	public function set_multiple( array $data, $group = 'default', $expire = 0 ) {
+		$values = [];
+		foreach ( $data as $id => $value ) {
+			$values[ $id ] = $this->set( $id, $value, $group, $expire );
+		}
+		return $values;
+	}
+
+	public function delete_multiple( array $keys, $group = 'default' ) {
+		$values = [];
+		foreach ( $keys as $id ) {
+			$values[ $id ] = $this->delete( $id, $group );
+		}
+		return $values;
+	}
+
 	public function get_with_cas( $id, $group = 'default', &$cas_token = null ) {
 		$key = $this->build_key( $id, $group );
 		if ( defined( 'Memcached::GET_EXTENDED' ) ) {
 			$result = $this->mc->get( $key, null, Memcached::GET_EXTENDED );
-			if ( Memcached::RES_NOTFOUND === $this->mc->getResultCode() ) {
+			if ( Memcached::RES_SUCCESS !== $this->mc->getResultCode() ) {
 				return false;
 			}
 			$cas_token = $result['cas'];
 			return $result['value'];
 		}
 		$result = $this->mc->get( $key, null, $cas_token );
-		if ( Memcached::RES_NOTFOUND === $this->mc->getResultCode() ) {
+		if ( Memcached::RES_SUCCESS !== $this->mc->getResultCode() ) {
 			return false;
 		}
 		return $result;
@@ -322,9 +407,37 @@ class Jinyu_Memcached_Object_Cache {
 		return $this->mc->delete( $key );
 	}
 
+	/**
+	 * 清空对象缓存。
+	 *
+	 * 不用 Memcached::flush()：那是**服务器级**清空，同一台 Memcached 上其它站点与应用的
+	 * 数据会被一起抹掉（很多插件会在保存设置、重建索引时调用 wp_cache_flush，殃及面很大）。
+	 * 这里改为推进本安装的缓存代际 —— 键前缀一变，全部旧键即刻读不到，再由各自 TTL 自然回收；
+	 * 对同机其它安装零影响。
+	 */
 	public function flush() {
 		$this->cache = [];
-		return $this->mc->flush();
+
+		$key  = $this->global_prefix . 'flush-gen';
+		$next = $this->new_generation();
+
+		$ok = $this->mc->set( $key, $next );
+		if ( ! $ok ) {
+			// 写入失败（连接异常等）时再试一次 add，尽量不留「代际没推进但调用方以为清了」的状态。
+			$ok = $this->mc->add( $key, $next );
+		}
+		$this->flush_gen = $next;
+
+		return (bool) $ok;
+	}
+
+	/**
+	 * 只清空请求内的本地缓存，不动 Memcached。
+	 * 对应 WP 6.1+ 的 wp_cache_flush_runtime()（核心以「是否存在本方法」判断实现能力）。
+	 */
+	public function flush_runtime() {
+		$this->cache = [];
+		return true;
 	}
 
 	public function add_global_groups( $groups ) {
@@ -371,6 +484,7 @@ class Jinyu_Memcached_Object_Cache {
 	}
 }
 
+if ( ! function_exists( 'wp_cache_init' ) ) {
 function wp_cache_init() {
 	$GLOBALS['wp_object_cache'] = new Jinyu_Memcached_Object_Cache();
 }
@@ -401,6 +515,42 @@ function wp_cache_flush() {
 
 function wp_cache_get_multiple( $keys, $group = 'default', $force = false ) {
 	return $GLOBALS['wp_object_cache']->get_multiple( $keys, $group, $force );
+}
+
+function wp_cache_add_multiple( array $data, $group = 'default', $expire = 0 ) {
+	return $GLOBALS['wp_object_cache']->add_multiple( $data, $group, $expire );
+}
+
+function wp_cache_set_multiple( array $data, $group = 'default', $expire = 0 ) {
+	return $GLOBALS['wp_object_cache']->set_multiple( $data, $group, $expire );
+}
+
+function wp_cache_delete_multiple( array $keys, $group = 'default' ) {
+	return $GLOBALS['wp_object_cache']->delete_multiple( $keys, $group );
+}
+
+function wp_cache_flush_runtime() {
+	return $GLOBALS['wp_object_cache']->flush_runtime();
+}
+
+/**
+ * 本实现支持的能力集。核心（含 wp-includes/cache-compat.php）据此决定是否走本实现，
+ * 缺了它核心会判定「不支持」并对 wp_cache_flush_runtime() 抛 _doing_it_wrong。
+ *
+ * @param string $feature 能力名。
+ * @return bool
+ */
+function wp_cache_supports( $feature ) {
+	switch ( $feature ) {
+		case 'add_multiple':
+		case 'set_multiple':
+		case 'get_multiple':
+		case 'delete_multiple':
+		case 'flush_runtime':
+			return true;
+		default:
+			return false;
+	}
 }
 
 function wp_cache_add_global_groups( $groups ) {
@@ -443,4 +593,6 @@ function wp_cache_close() {
 
 function wp_cache_reset() {
 	wp_cache_init();
+}
+
 }

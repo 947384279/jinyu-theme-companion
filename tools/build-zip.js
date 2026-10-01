@@ -73,9 +73,37 @@ function checkVersion() {
 
 /* ---------------------------------------------------------------- 文件清单 */
 
-/** 与 .gitignore 等价的排除项。git ls-files 不可用时用它兜底。 */
+/**
+ * 与 .gitignore 等价的排除项。git ls-files 不可用时用它兜底。
+ * ⚠️ 发布包路径只允许 [A-Za-z0-9._-]：任何中文/空格/特殊字符文件名都会触发 wp.org 自动扫描的
+ *   `badly_named_files` ERROR（阻塞上传）。详见下方 gateEntry()。
+ */
 const SKIP_DIRS = new Set(['.git', '.workbuddy', 'node_modules', '_deploy', '_theme_ref', '预览与脚本']);
 const SKIP_FILE_RE = /^(_build\.js|_shot_.*\.png|settings-preview\.html|.*\.log)$/;
+
+/** 本地专用、不进发布包的文档（非插件代码，且文件名含中文会被 wp.org 判 badly_named_files / unexpected_markdown_file）。 */
+const LOCAL_ONLY_FILES = new Set(['_先读我-恢复说明.md']);
+
+/** 发布包允许的文件/目录名字符集（ASCII 字母/数字/点/下划线/连字符）。 */
+const SAFE_NAME_RE = /^[A-Za-z0-9._-]+$/;
+
+/**
+ * 校验单个条目能否进发布包：
+ * - 本地专用文档 → 静默跳过（不进包）；
+ * - 任一路径段含非 ASCII/空格/特殊字符 → 直接让构建失败，杜绝把 wp.org 会拒收的包传上去。
+ * @returns {boolean} true=保留，false=跳过
+ */
+function gateEntry(rel) {
+    const segs = rel.split('/');
+    for (const seg of segs) {
+        if (!SAFE_NAME_RE.test(seg)) {
+            console.error('[zip] FAIL: 路径含非 ASCII/空格/特殊字符，wp.org 自动扫描会判 badly_named_files（阻塞上传）：' + rel);
+            process.exit(1);
+        }
+    }
+    if (LOCAL_ONLY_FILES.has(segs[segs.length - 1])) return false;
+    return true;
+}
 
 function walk(dir, base, out) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -83,6 +111,7 @@ function walk(dir, base, out) {
         const rel = base ? base + '/' + name : name;
         if (name.startsWith('.')) continue;   // 点文件/点目录（.gitignore、.git 等）一律不进包
         if (SKIP_DIRS.has(name)) continue;
+        if (!gateEntry(rel)) continue;        // 本地专用文档跳过；非法文件名直接失败
         const abs = path.join(dir, name);
         if (name.includes('.')) {
             if (SKIP_FILE_RE.test(name)) continue;
@@ -219,7 +248,7 @@ function main() {
     const files = listFiles().filter((rel) => {
         if (rel.split('/').some((seg) => seg.startsWith('.'))) return false;
         if (rel === 'tools' || rel.startsWith('tools/')) return false; // 打包脚本等开发件不发用户
-        return true;
+        return gateEntry(rel);   // 本地专用文档跳过；含中文/特殊字符的文件名直接构建失败
     });
     const entries = files.map((rel) => ({
         name: SLUG + '/' + rel.replace(/\\/g, '/'),

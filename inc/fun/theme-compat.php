@@ -63,15 +63,9 @@ if ( ! function_exists( 'jinyu_companion_rate_limit_check' ) ) {
 	 * @return bool true=放行，false=已超限需拒绝
 	 */
 	function jinyu_companion_rate_limit_check( string $action, int $max = 10, int $seconds = 60 ): bool {
-		$ip    = function_exists( 'jinyu_companion_client_ip' ) ? jinyu_companion_client_ip() : ( isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '0.0.0.0' );
-		$key   = 'jinyu_rl_' . md5( $action . '|' . $ip );
-		$count = (int) get_transient( $key );
-		if ( $count >= $max ) {
-			return false;
-		}
-		// 计数 +1；首次写入带 TTL，自然过期后窗口重置.
-		set_transient( $key, $count + 1, $seconds );
-		return true;
+		$ip = function_exists( 'jinyu_companion_client_ip' ) ? jinyu_companion_client_ip() : ( isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '0.0.0.0' );
+		// 统一走原语里的原子计数（有持久对象缓存时用 add + incr，避免读-改-写丢计数）。
+		return jinyu_companion_rate_limit_hit( 'jinyu_rl_' . md5( $action . '|' . $ip ), $max, $seconds );
 	}
 }
 
@@ -127,13 +121,11 @@ add_filter( 'the_generator', '__return_empty_string' );
 	$jinyu_brute_ttl = 15 * MINUTE_IN_SECONDS; // 锁定时长（秒）.
 	$jinyu_brute_min = (int) ceil( $jinyu_brute_ttl / MINUTE_IN_SECONDS ); // 用于提示文案，随 TTL 联动.
 
-	// 登录失败时累计该 IP 的失败次数（锁定窗口内持续刷新）.
+	// 登录失败时累计该 IP 的失败次数（锁定窗口内持续刷新）. 走原子计数，避免并发下丢计数。
 	add_action(
 		'wp_login_failed',
 		function () use ( $jinyu_brute_ttl ) {
-			$key   = 'jinyu_brute_' . md5( jinyu_companion_client_ip() );
-			$fails = (int) get_transient( $key ) + 1;
-			set_transient( $key, $fails, $jinyu_brute_ttl );
+			jinyu_companion_counter_incr( 'jinyu_brute_' . md5( jinyu_companion_client_ip() ), $jinyu_brute_ttl );
 		}
 	);
 
@@ -141,7 +133,7 @@ add_filter( 'the_generator', '__return_empty_string' );
 	add_filter(
 		'authenticate',
 		function ( $user, $username, $password ) use ( $jinyu_brute_max, $jinyu_brute_min ) {
-			$fails = (int) get_transient( 'jinyu_brute_' . md5( jinyu_companion_client_ip() ) );
+			$fails = jinyu_companion_counter_get( 'jinyu_brute_' . md5( jinyu_companion_client_ip() ) );
 			if ( $fails >= $jinyu_brute_max ) {
 				return new WP_Error(
 					'jinyu_brute',
@@ -162,7 +154,7 @@ add_filter( 'the_generator', '__return_empty_string' );
 	add_action(
 		'wp_login',
 		function () {
-			delete_transient( 'jinyu_brute_' . md5( jinyu_companion_client_ip() ) );
+			jinyu_companion_counter_delete( 'jinyu_brute_' . md5( jinyu_companion_client_ip() ) );
 		}
 	);
 }

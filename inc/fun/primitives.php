@@ -154,8 +154,89 @@ function jinyu_companion_inline_script_tag( string $js ): string {
 	return wp_get_inline_script_tag( $js, $args );
 }
 
-/* ── A7. 限流（滑动窗口计数）──────────────────────────────────────────────
- * 供海报生成 / Web Vitals / 验证码等匿名端点防滥用。 */
+/* ── A7. 限流 / 计数（固定窗口）───────────────────────────────────────────
+ * 供海报生成 / Web Vitals / 验证码等匿名端点防滥用，也供登录失败计数复用。
+ * 三个入口共用同一介质，避免「写进了对象缓存、却用 transient 去删」这类不一致。 */
+
+/**
+ * 计数键所属的对象缓存组。
+ */
+function jinyu_companion_counter_group(): string {
+	return 'jinyu_rate_limit';
+}
+
+/**
+ * 原子自增计数（固定窗口 TTL），返回自增后的值。
+ *
+ * 有持久对象缓存时走 add + incr 两步原子操作（Memcached / Redis 的 incr 本身是原子命令），
+ * 并发下不丢计数；无对象缓存时退回 transient 的读-改-写 —— 那是无对象缓存场景下唯一可用的
+ * 介质，并发丢计数属已知降级，不是隐形缺陷。
+ *
+ * 固定窗口：incr 不重置过期时间，窗口自该键首次写入起算。
+ *
+ * @param string $key 计数键。
+ * @param int    $ttl 窗口长度（秒）。
+ * @return int 自增后的计数
+ */
+function jinyu_companion_counter_incr( string $key, int $ttl ): int {
+	if ( wp_using_ext_object_cache() ) {
+		$group = jinyu_companion_counter_group();
+		// add 仅在键不存在时写入（原子），天然拿到「首次命中」语义；已存在则走原子自增。
+		if ( ! wp_cache_add( $key, 1, $group, $ttl ) ) {
+			$n = wp_cache_incr( $key, 1, $group );
+			if ( false === $n ) {
+				// 键在 add 与 incr 之间过期：重新起窗。
+				wp_cache_set( $key, 1, $group, $ttl );
+				return 1;
+			}
+			return (int) $n;
+		}
+		return 1;
+	}
+
+	$n = (int) get_transient( $key ) + 1;
+	set_transient( $key, $n, $ttl );
+	return $n;
+}
+
+/**
+ * 读取当前计数（无记录返回 0）。
+ *
+ * @param string $key 计数键。
+ * @return int
+ */
+function jinyu_companion_counter_get( string $key ): int {
+	if ( wp_using_ext_object_cache() ) {
+		$val = wp_cache_get( $key, jinyu_companion_counter_group() );
+		return false === $val ? 0 : (int) $val;
+	}
+	return (int) get_transient( $key );
+}
+
+/**
+ * 清除计数（如登录成功后解除锁定）。
+ *
+ * @param string $key 计数键。
+ */
+function jinyu_companion_counter_delete( string $key ): void {
+	if ( wp_using_ext_object_cache() ) {
+		wp_cache_delete( $key, jinyu_companion_counter_group() );
+		return;
+	}
+	delete_transient( $key );
+}
+
+/**
+ * 限流判定：命中一次并返回是否仍在配额内。
+ *
+ * @param string $key    计数键（调用方已并入动作与来源标识）。
+ * @param int    $limit  窗口内允许的最大次数。
+ * @param int    $window 窗口长度（秒）。
+ * @return bool true = 放行，false = 已超限
+ */
+function jinyu_companion_rate_limit_hit( string $key, int $limit, int $window ): bool {
+	return jinyu_companion_counter_incr( $key, $window ) <= $limit;
+}
 
 function jinyu_companion_rate_limit( string $action, int $limit, int $window ): bool {
 	// 默认只信 REMOTE_ADDR（不可伪造）。XFF 可被客户端任意伪造，仅当站点确实部署了
@@ -172,13 +253,7 @@ function jinyu_companion_rate_limit( string $action, int $limit, int $window ): 
 	if ( '' === $ip ) {
 		return true; // 无法识别来源时放行，避免误杀.
 	}
-	$key = 'jyc_rl_' . md5( $action . '|' . $ip );
-	$n   = (int) get_transient( $key );
-	if ( $n >= $limit ) {
-		return false;
-	}
-	set_transient( $key, $n + 1, $window );
-	return true;
+	return jinyu_companion_rate_limit_hit( 'jyc_rl_' . md5( $action . '|' . $ip ), $limit, $window );
 }
 
 /* ── B. 扩展点契约（公开给任意主题 / 插件实现，本插件只给空实现兜底）───────── */

@@ -3,7 +3,7 @@
  * Plugin Name: Jinyu Theme Companion
  * Plugin URI:  https://www.qicaiyun.top/4698.html
  * Description: Companion plugin for the Jinyu theme. It supplies the functional layer (SEO, structured data, social, related posts, shortcodes, cache and anti-spam) so the theme stays presentation-only. All outbound features are off by default.
- * Version:     1.2.5
+ * Version:     1.2.6
  * Author:      金玉
  * Author URI:  https://www.qicaiyun.top
  * License:     GPL-2.0-or-later
@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 插件先于主题载入，抢先定义会让主题读到的版本号变成插件版本，造成版本漂移。
  * ------------------------------------------------------------------------ */
 if ( ! defined( 'JINYU_COMPANION_VER' ) ) {
-	define( 'JINYU_COMPANION_VER', '1.2.5' );
+	define( 'JINYU_COMPANION_VER', '1.2.6' );
 }
 
 /* 插件自有路径常量：模块（shortcode-ui / poster 等）一律引用插件自身资源，
@@ -191,14 +191,6 @@ require_once __DIR__ . '/inc/fun/baidu-push.php';
 	require_once __DIR__ . '/inc/fun/comment-notify.php';
 	require_once __DIR__ . '/inc/fun/anti-spam.php';
 	require_once __DIR__ . '/inc/fun/comment-cleanup.php';
-
-	// 主题更新通道：补回后台「检查更新」的 AJAX 处理端（wp_ajax_jinyu_check_update）
-	// 与 WP 原生主题更新注入（含 RSA 验签 + 更新包 sha256 校验）。原属主题 inc/fun/update.php，
-	// 因更新源/下载服务器属 plugin-territory 迁入本插件；主题侧只保留按钮 UI。
-	// 用 file_exists 包裹：存量站点增量部署时缺文件静默跳过，不整站 500。
-	if ( file_exists( __DIR__ . '/inc/fun/theme-update.php' ) ) {
-		require_once __DIR__ . '/inc/fun/theme-update.php';
-	}
 
 	// 性能 / 系统
 	require_once __DIR__ . '/inc/fun/speculation.php';

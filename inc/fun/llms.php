@@ -70,6 +70,42 @@ function jinyu_llms_flush(): void {
 	flush_rewrite_rules();
 }
 
+/* ── 内容变更失效 ─────────────────────────────────────────────────────────
+ * llms.txt / llms-full.txt 的输出缓存必须随内容变更立即失效。
+ * 这里显式挂 save_post 等钩子 —— jinyu_companion_cache_flush() 只挂在设置面板的「清空缓存」
+ * 按钮、导入与存储切换上，并没有 save_post 钩子；不补这一段，发文后两个端点最长 6 小时
+ * （transient TTL）仍会吐出旧内容。
+ * 只删 transient（一次 DELETE），重建发生在下次真正被抓取时，不对发文流程增加开销。
+ */
+
+/**
+ * 删除 llms.txt / llms-full.txt 的输出缓存，下次请求重建。
+ */
+function jinyu_llms_invalidate_cache(): void {
+	delete_transient( 'jinyu_llms_index_cache' );
+	delete_transient( 'jinyu_llms_full_cache' );
+}
+
+add_action( 'save_post', 'jinyu_llms_invalidate_cache', 999 );
+add_action( 'deleted_post', 'jinyu_llms_invalidate_cache' );
+add_action( 'edit_terms', 'jinyu_llms_invalidate_cache' );
+add_action( 'create_term', 'jinyu_llms_invalidate_cache' );
+add_action( 'edit_term', 'jinyu_llms_invalidate_cache' );
+add_action( 'delete_term', 'jinyu_llms_invalidate_cache' );
+
+/**
+ * 站点标识类选项变更会影响 llms.txt 头部（站点名 / 简介 / 作者与档案地址）。
+ *
+ * @param string $option 变更的选项名（update_option 动作首参）。
+ */
+function jinyu_llms_maybe_invalidate_on_option( $option ): void {
+	$affecting = [ 'blogname', 'blogdescription', 'permalink_structure' ];
+	if ( in_array( (string) $option, $affecting, true ) ) {
+		jinyu_llms_invalidate_cache();
+	}
+}
+add_action( 'update_option', 'jinyu_llms_maybe_invalidate_on_option', 10, 1 );
+
 add_action( 'template_redirect', 'jinyu_llms_serve' );
 function jinyu_llms_serve(): void {
 	$mode = '';
@@ -97,7 +133,8 @@ function jinyu_llms_serve(): void {
 	header( 'X-Robots-Tag: index, follow' );
 
 	// 输出缓存：AI 爬虫抓取 /llms-full.txt 曾每次触发全量文章查询 + HTML→MD 转换（CPU 尖峰）。
-	// 内容变更由 jinyu_companion_cache_flush()（save_post 等钩子）清掉，TTL 仅兜底。
+	// 内容变更由本文件挂的 save_post / 术语 / 站点选项钩子立即清掉（见 jinyu_llms_invalidate_cache），
+	// 插件设置面板的「清空缓存」走的 jinyu_companion_cache_flush() 也会一并删除，TTL 仅作兜底。
 	$cache_key = 'full' === $mode ? 'jinyu_llms_full_cache' : 'jinyu_llms_index_cache';
 	$cached    = get_transient( $cache_key );
 	if ( is_string( $cached ) && '' !== $cached ) {

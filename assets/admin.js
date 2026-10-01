@@ -17,7 +17,6 @@
 		content: document.getElementById('pane-content'),
 		perf: document.getElementById('pane-perf'),
 		perfcenter: document.getElementById('pane-perfcenter'),
-		update: document.getElementById('pane-update'),
 		comment: document.getElementById('pane-comment'),
 		smtp: document.getElementById('pane-smtp'),
 		storage: document.getElementById('pane-storage'),
@@ -355,6 +354,72 @@ if (nav) {
 		if (secEl) { secEl.textContent = s + ' 秒'; }
 	}
 	if (range) { range.addEventListener('input', updateTtl); updateTtl(); }
+
+	/* ---------------- 整页缓存：模式切换显隐边缘配置 ---------------- */
+	/* 选中态由原生 :checked + 相邻兄弟 CSS 驱动，无需 JS 打类；此处只管边缘配置的显隐。 */
+	window.jycToggleCacheMode = function () {
+		var checked = document.querySelector('input[name="page_cache_mode"]:checked');
+		var box = document.getElementById('jycEdgeBox');
+		if (!box) { return; }
+		var isEdge = !!(checked && checked.value === 'edge');
+		box.hidden = !isEdge;
+		box.classList.toggle('js-edge-hidden', !isEdge);
+	};
+	window.jycToggleCacheMode();
+
+	/* ---------------- 整页缓存：配置片段标签页（Nginx / Apache） ---------------- */
+	var codeText = document.getElementById('jycCodeText');
+	var codeViewer = document.getElementById('jycCodeViewer');
+	var codeCache = null;
+	if (codeViewer) {
+		try { codeCache = JSON.parse(codeViewer.getAttribute('data-snippets') || '') || {}; } catch (e) { codeCache = {}; }
+	}
+	function edgeCodeRender(key) {
+		if (!codeViewer || !codeText || !codeCache) { return; }
+		var val = codeCache[key] || '';
+		codeText.value = val;
+		codeViewer.setAttribute('data-active', key);
+		var tabs = codeViewer.querySelectorAll('.jyc-code-tab');
+		for (var i = 0; i < tabs.length; i++) {
+			tabs[i].classList.toggle('is-active', tabs[i].getAttribute('data-code') === key);
+		}
+		var hints = codeViewer.querySelectorAll('.jyc-code-hint');
+		for (var j = 0; j < hints.length; j++) {
+			hints[j].classList.toggle('is-shown', hints[j].getAttribute('data-code') === key);
+		}
+	}
+	window.jycEdgeCodeTab = function (key) { edgeCodeRender(key); };
+	window.jycEdgeCodeCopy = function (btn) {
+		if (!codeText) { return; }
+		var done = function () {
+			if (!btn) { return; }
+			var old = btn.textContent;
+			btn.textContent = '已复制';
+			if (window.jycToast) { window.jycToast('已复制到剪贴板'); }
+			setTimeout(function () { btn.textContent = old; }, 1400);
+		};
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			navigator.clipboard.writeText(codeText.value).then(done, function () {
+				codeText.select();
+				try { document.execCommand('copy'); } catch (e) {}
+				done();
+			});
+		} else {
+			codeText.select();
+			try { document.execCommand('copy'); } catch (e) {}
+			done();
+		}
+	};
+	if (codeViewer) { edgeCodeRender(codeViewer.getAttribute('data-active') || 'nginx'); }
+
+	/* 服务器类型下拉切换时，同步把片段查看器切到对应标签 */
+	var edgeServerSel = document.querySelector('select[name="page_cache_edge_server"]');
+	if (edgeServerSel) {
+		edgeServerSel.addEventListener('change', function () {
+			var v = edgeServerSel.value;
+			if ('nginx' === v || 'apache' === v) { edgeCodeRender(v); }
+		});
+	}
 
 	/* ---------------- 颜色 chip ---------------- */
 	var color = document.querySelector('input[name="style_color_primary"]');

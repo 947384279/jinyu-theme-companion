@@ -838,24 +838,25 @@ function jyc_perf_reset_opcache(): string {
 }
 
 /**
- * 清空 Memcached 对象缓存。
- * 优先走 WP drop-in 的 wp_cache_flush()（本站底层即 Memcached::flush()，
- * 等价于 flush_all）；drop-in 不在时降级为直连 stats 探测的清空。
+ * 清空对象缓存。
+ * 有 drop-in 时走 wp_cache_flush()：本插件的 drop-in 用「推进本站缓存代际」实现，
+ * 只失效本安装的键，不会像 Memcached::flush() 那样清空整台服务器上其它站点的数据。
+ * 没有 drop-in 时降级为直连缓存服务清空（那是服务器级操作，结果里如实标注）。
  *
  * @return string 人类可读结果
  */
 function jyc_perf_flush_memcached(): string {
 	if ( function_exists( 'wp_cache_flush' ) && wp_using_ext_object_cache() ) {
 		$ok = wp_cache_flush();
-		return $ok ? __( 'Memcached 对象缓存已清空', 'jinyu-theme-companion' ) : __( 'Memcached 清空失败', 'jinyu-theme-companion' );
+		return $ok ? __( '对象缓存已清空（仅本站，不影响同机其它站点）', 'jinyu-theme-companion' ) : __( '对象缓存清空失败', 'jinyu-theme-companion' );
 	}
-	// 降级路径：没有 drop-in 但扩展可用时直连清空
+	// 降级路径：没有 drop-in 但扩展可用时直连清空（服务器级，会波及同机其它应用）
 	if ( class_exists( 'Memcached' ) ) {
 		$m = new Memcached( 'jyc-perf-flush' );
 		if ( ! $m->getServerList() ) {
 			$m->addServers( apply_filters( 'jyc_perf_memcached_servers', [ [ '127.0.0.1', 11211 ] ] ) );
 		}
-		return $m->flush() ? __( 'Memcached 已清空（直连）', 'jinyu-theme-companion' ) : __( 'Memcached 清空失败', 'jinyu-theme-companion' );
+		return $m->flush() ? __( '已直连清空 Memcached（服务器级，同机其它站点也会被清）', 'jinyu-theme-companion' ) : __( 'Memcached 清空失败', 'jinyu-theme-companion' );
 	}
 	return __( '对象缓存未启用（无 drop-in 也无 Memcached 扩展）', 'jinyu-theme-companion' );
 }
@@ -918,7 +919,7 @@ function jyc_perf_object_cache_analyze_external(): array {
 		'cas'          => [ 'label' => __( 'CAS 乐观锁（高并发计数防竞争）', 'jinyu-theme-companion' ), 'token' => 'get_with_cas(' ],
 		'libketama'    => [ 'label' => __( '一致性哈希（多客户端分布一致）', 'jinyu-theme-companion' ), 'token' => 'OPT_LIBKETAMA_COMPATIBLE' ],
 		'suspend'      => [ 'label' => __( '缓存加法挂起（wp_suspend_cache_addition 兼容）', 'jinyu-theme-companion' ), 'token' => 'wp_suspend_cache_addition(' ],
-		'graceful'     => [ 'label' => __( 'Memcached 扩展缺失时优雅降级（不白屏）', 'jinyu-theme-companion' ), 'token' => "WPINC . '/cache.php'" ],
+		'graceful'     => [ 'label' => __( 'Memcached 扩展缺失时优雅降级（回退核心缓存，不白屏）', 'jinyu-theme-companion' ), 'token' => "class_exists( 'Memcached', false )" ],
 		'get_stats'    => [ 'label' => __( '统计接口（getStats）', 'jinyu-theme-companion' ), 'token' => 'getStats(' ],
 		'counters'     => [ 'label' => __( '命中 / 未命中计数', 'jinyu-theme-companion' ), 'token' => '++$this->cache_hits' ],
 	];
@@ -997,6 +998,65 @@ function jyc_perf_deploy_object_cache( $force = false, $backup = false ): array 
 	}
 	return [ 'ok' => true, 'msg' => __( '已部署 object-cache.php，下次请求起 WordPress 启用 Memcached 对象缓存', 'jinyu-theme-companion' ) . $msg_bak ];
 }
+
+/**
+ * 把已部署的 object-cache.php 同步成当前模板。
+ *
+ * 为什么需要：object-cache.php 是「由插件分发、落在 wp-content 根目录」的代码副本，唯一来源是同目录的
+ * object-cache-dropin.tpl。模板随插件升级修好后，已经部署过的站点不会自己更新 —— 老站会一直跑旧副本，
+ * drop-in 的任何缺陷「修了也到不了用户手里」。这里按内容比对做幂等同步。
+ *
+ * 只覆盖「确认是本插件部署的」drop-in；外部 drop-in 一律不碰。写入用「临时文件 + rename」：
+ * drop-in 每个请求都会被执行，半截文件会让整站 fatal，绝不能直接覆盖写。
+ *
+ * @return bool true = 已无差异（或无事可做），false = 写入失败需下次重试。
+ */
+function jyc_perf_sync_object_cache_dropin(): bool {
+	$target = ( defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : ABSPATH . 'wp-content' ) . '/object-cache.php';
+	if ( ! file_exists( $target ) || ! jyc_perf_object_cache_is_jinyu( $target ) ) {
+		return true; // 没部署过 / 不是我们部署的：无事可做，不重试。
+	}
+	$tpl = __DIR__ . '/object-cache-dropin.tpl';
+	if ( ! is_readable( $tpl ) ) {
+		return false;
+	}
+	$want = (string) file_get_contents( $tpl );
+	$have = (string) file_get_contents( $target );
+	if ( '' === $want || $want === $have ) {
+		return true;
+	}
+
+	$tmp = $target . '.' . str_replace( '.', '', uniqid( '', true ) ) . '.tmp';
+	// phpcs:ignore PluginCheck.CodeAnalysis.WriteFile.PluginDirectoryWrite -- 详见 jyc_perf_deploy_object_cache()：缓存插件的 drop-in 只能落在 WP_CONTENT_DIR 根目录。
+	if ( false === @file_put_contents( $tmp, $want, LOCK_EX ) ) {
+		return false;
+	}
+	// rename 在同一文件系统内是原子的：要么旧文件、要么新文件，不存在半截状态。
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename,PluginCheck.CodeAnalysis.WriteFile.PluginDirectoryWrite -- drop-in 只能落在 WP_CONTENT_DIR 根目录；同盘 rename 的原子替换是避免半截 drop-in 导致整站致命错误的唯一手段（WP_Filesystem::move 无原子保证）。
+	if ( ! @rename( $tmp, $target ) ) {
+		@wp_delete_file( $tmp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors -- 清理临时文件失败不影响结果，无可替代 WP API
+		return false;
+	}
+	return true;
+}
+
+/**
+ * 插件版本变化时触发一次 drop-in 同步。
+ *
+ * 挂在 admin_init：此时 object-cache.php 已加载完毕（改写它不影响当前请求），且只在后台访问时做，
+ * 前台零额外开销。同步失败就不记录版本，下次后台访问自动重试。
+ */
+function jyc_perf_maybe_sync_object_cache_dropin(): void {
+	if ( (string) get_option( 'jinyu_oc_dropin_synced_ver', '' ) === JINYU_COMPANION_VER ) {
+		return;
+	}
+	if ( ! jyc_perf_sync_object_cache_dropin() ) {
+		return;
+	}
+	// 不参与 autoload：只在后台读一次，没必要让前台每个请求都带上它。
+	update_option( 'jinyu_oc_dropin_synced_ver', JINYU_COMPANION_VER, false );
+}
+add_action( 'admin_init', 'jyc_perf_maybe_sync_object_cache_dropin' );
 
 /** 回滚：仅删除本插件部署的 drop-in。 */
 function jyc_perf_remove_object_cache(): array {
