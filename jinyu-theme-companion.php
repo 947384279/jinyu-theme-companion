@@ -153,6 +153,8 @@ add_action( 'after_setup_theme', static function (): void {
 	require_once __DIR__ . '/inc/fun/post-seo.php';
 	require_once __DIR__ . '/inc/fun/llms.php';
 	require_once __DIR__ . '/inc/fun/geo-robots.php';
+	require_once __DIR__ . '/inc/fun/ai-crawl-stats.php';
+	require_once __DIR__ . '/inc/fun/privacy.php';
 // 推送记录：IndexNow / 百度每次提交的留痕，供后台「推送记录」卡片回溯
 require_once __DIR__ . '/inc/fun/push-log.php';
 require_once __DIR__ . '/inc/fun/indexnow.php';

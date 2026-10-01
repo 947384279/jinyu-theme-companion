@@ -552,6 +552,28 @@ if (nav) {
 	// 保存成功后由服务端渲染 .jyc-show 进场，这里只接管自动隐藏
 	if (toastEl && toastEl.classList.contains('jyc-show')) { scheduleHide(3000); }
 
+	/* ---------------- AI 爬虫统计清零 ---------------- */
+	window.jycAiCrawlReset = function (btn) {
+		if (!window.confirm('确定清零 AI 爬虫到访统计？')) { return; }
+		var form = document.getElementById('jyc-form');
+		var aurl = (typeof ajaxurl !== 'undefined') ? ajaxurl : '';
+		var fd = new FormData(form);
+		fd.append('action', 'jinyu_ai_crawl_reset');
+		var oldTxt = btn.textContent;
+		btn.disabled = true; btn.textContent = '清零中…';
+		fetch(aurl, { method: 'POST', body: fd, credentials: 'same-origin' })
+			.then(function (r) { return r.json(); })
+			.then(function (res) {
+				if (res && res.success) {
+					jycToast(res.data && res.data.msg ? res.data.msg : '已清零');
+					var box = btn.closest('.jyc-crawlers');
+					if (box) { box.remove(); }
+				} else { jycToast((res && res.data) ? String(res.data) : '清零失败，请重试'); }
+			})
+			.catch(function () { jycToast('请求失败，请重试'); })
+			.then(function () { btn.disabled = false; btn.textContent = oldTxt; });
+	};
+
 	/* ---------------- 数据库优化 ---------------- */
 	window.jycDbOptimize = function (btn) {
 		var form = document.getElementById('jyc-form');

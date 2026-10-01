@@ -743,6 +743,40 @@ function jinyu_companion_settings_page_html(): void {
 										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '说明', 'jinyu-theme-companion' ); ?></div>
 											<div class="jyc-fdesc"><?php echo esc_html__( '本站的 robots.txt 由站点根目录的文件提供（而非插件生成），插件侧不接管输出。本清单仅供随时核对：若你调整过 robots.txt，请让这里与实际内容保持一致。注意两种部署的差别——根目录有静态 robots.txt 时，Web 服务器直接返回它、插件改不动；若你的站点由 WordPress 生成 robots.txt，规则同样不由本插件输出。迁移或重建站点时，请照此内容原样写回新的 robots.txt，否则 AI 与社交抓取会被拦截。', 'jinyu-theme-companion' ); ?></div></div>
 									</div>
+									<div class="jyc-frow">
+										<div class="jyc-grow">
+											<div class="jyc-fname"><?php echo esc_html__( 'AI 爬虫到访统计', 'jinyu-theme-companion' ); ?></div>
+											<div class="jyc-fdesc"><?php echo esc_html__( '按上方清单的 UA 识别并聚合计数（只记品牌、次数与最后到访时间，不记录 IP 与完整访问日志）。清零后从下一次到访重新累计。', 'jinyu-theme-companion' ); ?></div>
+											<?php $jyc_ai_rows = jinyu_ai_crawl_stats_rows(); ?>
+											<?php if ( $jyc_ai_rows ) : ?>
+												<div class="jyc-crawlers" style="margin-top:10px">
+													<table style="width:100%;border-collapse:collapse;font-size:13px">
+														<thead><tr>
+															<th style="text-align:left;padding:6px 8px"><?php echo esc_html__( '品牌', 'jinyu-theme-companion' ); ?></th>
+															<th style="text-align:left;padding:6px 8px"><?php echo esc_html__( '命中 UA', 'jinyu-theme-companion' ); ?></th>
+															<th style="text-align:right;padding:6px 8px"><?php echo esc_html__( '次数', 'jinyu-theme-companion' ); ?></th>
+															<th style="text-align:right;padding:6px 8px"><?php echo esc_html__( '最后到访', 'jinyu-theme-companion' ); ?></th>
+														</tr></thead>
+														<tbody>
+														<?php foreach ( $jyc_ai_rows as $jyc_ai_row ) : ?>
+															<tr>
+																<td style="padding:6px 8px"><?php echo esc_html( $jyc_ai_row['brand'] ); ?></td>
+																<td style="padding:6px 8px"><code><?php echo esc_html( $jyc_ai_row['ua'] ); ?></code></td>
+																<td style="padding:6px 8px;text-align:right"><?php echo esc_html( number_format_i18n( $jyc_ai_row['n'] ) ); ?></td>
+																<td style="padding:6px 8px;text-align:right"><?php echo esc_html( $jyc_ai_row['last'] ); ?></td>
+															</tr>
+														<?php endforeach; ?>
+														</tbody>
+													</table>
+													<div style="margin-top:10px">
+														<button type="button" class="jyc-btn" id="jyc-aiCrawlReset" onclick="jycAiCrawlReset(this)"><?php echo esc_html__( '清零统计', 'jinyu-theme-companion' ); ?></button>
+													</div>
+												</div>
+											<?php else : ?>
+												<div style="font-size:13px;color:var(--muted,#6b7280);margin-top:6px"><?php echo esc_html__( '暂无记录——AI 爬虫到访后这里会出现按品牌聚合的计数。', 'jinyu-theme-companion' ); ?></div>
+											<?php endif; ?>
+										</div>
+									</div>
 								</div>
 							</div>
 
