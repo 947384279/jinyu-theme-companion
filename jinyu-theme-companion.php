@@ -82,8 +82,12 @@ register_activation_hook( __FILE__, static function (): void {
 	if ( function_exists( 'jinyu_stats_install' ) ) {
 		jinyu_stats_install();
 	}
-	// storage 任务表：原先拖到首次 AJAX 才建，批处理前必有一次空跑
-	require_once __DIR__ . '/inc/fun/storage.php';
+	// storage 任务表：原先拖到首次 AJAX 才建，批处理前必有一次空跑。
+	// 与历史私有插件 wordpress-plugin-jinyu 互斥：其 storage 同源（旧版），
+	// 若其已加载（私有插件先激活），此处跳过，共享函数由先加载方提供。
+	if ( ! function_exists( 'jinyu_is_storage_enabled' ) && ! class_exists( 'Jinyu_Storage_Factory' ) ) {
+		require_once __DIR__ . '/inc/fun/storage.php';
+	}
 	if ( function_exists( 'jinyu_storage_install_table' ) ) {
 		jinyu_storage_install_table();
 	}
@@ -138,10 +142,14 @@ add_action( 'after_setup_theme', static function (): void {
 
 	// 对象存储引擎（又拍云 / 阿里云 OSS / 腾讯云 COS / 七牛 / S3）：
 	// 从主题拆出迁入本插件，提供 jinyu_is_storage_enabled / jinyu_storage_config / Jinyu_Storage_Factory，
-	// 主题 media.php 经 function_exists 守卫自动接管。与历史私有插件 wordpress-plugin-jinyu 的互斥
-	// 由其主文件 require 处守卫保证（PHP 8.5 编译期早绑定使文件级 return 守卫不可用，本文件禁用之）。
+	// 主题 media.php 经 function_exists 守卫自动接管。与历史私有插件 wordpress-plugin-jinyu 互斥：
+	// 双向守卫——私有插件主文件 require 处有守卫（companion 先加载时其跳过），
+	// 此处反向守卫（私有插件先加载时本插件跳过，避免 redeclare fatal）。
+	// 独有函数仅 storage.php 内部使用，两版共享函数签名一致，先加载方生效即安全。
 	// 配置存本插件独立选项 jinyu_companion_settings（首次运行自动从主题 JINYU_OPT 平移），不依赖主题函数。
-	require_once __DIR__ . '/inc/fun/storage.php';
+	if ( ! function_exists( 'jinyu_is_storage_enabled' ) && ! class_exists( 'Jinyu_Storage_Factory' ) ) {
+		require_once __DIR__ . '/inc/fun/storage.php';
+	}
 
 	// SEO / 结构化数据 / 索引推送
 	require_once __DIR__ . '/inc/seo.php';
