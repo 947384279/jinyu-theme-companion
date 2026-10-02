@@ -701,6 +701,18 @@ function jinyu_companion_settings_page_html(): void {
 										<div class="jyc-grow">
 											<div class="jyc-crawlers">
 												<?php
+												$jyc_ai_rows   = jinyu_ai_crawl_stats_rows();
+												$jyc_ai_brands = array();
+												foreach ( $jyc_ai_rows as $jyc_ai_row ) {
+													$jyc_b = $jyc_ai_row['brand'];
+													if ( ! isset( $jyc_ai_brands[ $jyc_b ] ) ) {
+														$jyc_ai_brands[ $jyc_b ] = array( 'n' => 0, 'last' => '' );
+													}
+													$jyc_ai_brands[ $jyc_b ]['n'] += $jyc_ai_row['n'];
+													if ( $jyc_ai_row['last'] > $jyc_ai_brands[ $jyc_b ]['last'] ) {
+														$jyc_ai_brands[ $jyc_b ]['last'] = $jyc_ai_row['last'];
+													}
+												}
 												foreach ( jinyu_geo_crawler_groups() as $jyc_region => $jyc_groups ) :
 													$jyc_ua_count = 0;
 													foreach ( $jyc_groups as $jyc_group ) {
@@ -731,6 +743,15 @@ function jinyu_companion_settings_page_html(): void {
 																			<code class="jyc-ua"><?php echo esc_html( $jyc_ua ); ?></code>
 																		<?php endforeach; ?>
 																	</span>
+																	<?php if ( isset( $jyc_ai_brands[ $jyc_group['label'] ] ) ) : ?>
+																		<span class="jyc-aistat" style="margin-left:auto;white-space:nowrap;font-size:12px;color:var(--muted,#6b7280)">
+																			<?php
+																			$jyc_ai_b = $jyc_ai_brands[ $jyc_group['label'] ];
+																			/* translators: 1: visit count, 2: last visit time. */
+																			echo esc_html( sprintf( __( '%1$s 次到访 · 最近 %2$s', 'jinyu-theme-companion' ), number_format_i18n( $jyc_ai_b['n'] ), $jyc_ai_b['last'] ) );
+																			?>
+																		</span>
+																	<?php endif; ?>
 																</div>
 															<?php endforeach; ?>
 														</div>
@@ -746,34 +767,23 @@ function jinyu_companion_settings_page_html(): void {
 									<div class="jyc-frow">
 										<div class="jyc-grow">
 											<div class="jyc-fname"><?php echo esc_html__( 'AI 爬虫到访统计', 'jinyu-theme-companion' ); ?></div>
-											<div class="jyc-fdesc"><?php echo esc_html__( '按上方清单的 UA 识别并聚合计数（只记品牌、次数与最后到访时间，不记录 IP 与完整访问日志）。清零后从下一次到访重新累计。', 'jinyu-theme-companion' ); ?></div>
-											<?php $jyc_ai_rows = jinyu_ai_crawl_stats_rows(); ?>
+											<div class="jyc-fdesc"><?php echo esc_html__( '按上方清单的 UA 识别并聚合计数（只记品牌、次数与最后到访时间，不记录 IP 与完整访问日志），明细显示在上方各品牌行内。清零后从下一次到访重新累计。', 'jinyu-theme-companion' ); ?></div>
 											<?php if ( $jyc_ai_rows ) : ?>
-												<div class="jyc-crawlers" style="margin-top:10px">
-													<table style="width:100%;border-collapse:collapse;font-size:13px">
-														<thead><tr>
-															<th style="text-align:left;padding:6px 8px"><?php echo esc_html__( '品牌', 'jinyu-theme-companion' ); ?></th>
-															<th style="text-align:left;padding:6px 8px"><?php echo esc_html__( '命中 UA', 'jinyu-theme-companion' ); ?></th>
-															<th style="text-align:right;padding:6px 8px"><?php echo esc_html__( '次数', 'jinyu-theme-companion' ); ?></th>
-															<th style="text-align:right;padding:6px 8px"><?php echo esc_html__( '最后到访', 'jinyu-theme-companion' ); ?></th>
-														</tr></thead>
-														<tbody>
-														<?php foreach ( $jyc_ai_rows as $jyc_ai_row ) : ?>
-															<tr>
-																<td style="padding:6px 8px"><?php echo esc_html( $jyc_ai_row['brand'] ); ?></td>
-																<td style="padding:6px 8px"><code><?php echo esc_html( $jyc_ai_row['ua'] ); ?></code></td>
-																<td style="padding:6px 8px;text-align:right"><?php echo esc_html( number_format_i18n( $jyc_ai_row['n'] ) ); ?></td>
-																<td style="padding:6px 8px;text-align:right"><?php echo esc_html( $jyc_ai_row['last'] ); ?></td>
-															</tr>
-														<?php endforeach; ?>
-														</tbody>
-													</table>
-													<div style="margin-top:10px">
-														<button type="button" class="jyc-btn" id="jyc-aiCrawlReset" onclick="jycAiCrawlReset(this)"><?php echo esc_html__( '清零统计', 'jinyu-theme-companion' ); ?></button>
-													</div>
+												<div style="margin-top:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+													<span style="font-size:13px">
+														<?php
+														$jyc_ai_total = 0;
+														foreach ( $jyc_ai_rows as $jyc_ai_row ) {
+															$jyc_ai_total += $jyc_ai_row['n'];
+														}
+														/* translators: 1: brand count, 2: total visit count. */
+														echo esc_html( sprintf( __( '已记录 %1$d 个品牌、共 %2$s 次到访。', 'jinyu-theme-companion' ), count( $jyc_ai_brands ), number_format_i18n( $jyc_ai_total ) ) );
+														?>
+													</span>
+													<button type="button" class="jyc-btn" id="jyc-aiCrawlReset" onclick="jycAiCrawlReset(this)"><?php echo esc_html__( '清零统计', 'jinyu-theme-companion' ); ?></button>
 												</div>
 											<?php else : ?>
-												<div style="font-size:13px;color:var(--muted,#6b7280);margin-top:6px"><?php echo esc_html__( '暂无记录——AI 爬虫到访后这里会出现按品牌聚合的计数。', 'jinyu-theme-companion' ); ?></div>
+												<div style="font-size:13px;color:var(--muted,#6b7280);margin-top:6px"><?php echo esc_html__( '暂无记录——AI 爬虫到访后，计数会出现在上方对应品牌行内。', 'jinyu-theme-companion' ); ?></div>
 											<?php endif; ?>
 										</div>
 									</div>
