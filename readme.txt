@@ -2,7 +2,7 @@
 Contributors: jinyu888
 Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
-Tested up to: 7.1.2
+Tested up to: 7.1
 Requires PHP: 8.0
 Stable tag: 1.2.9
 License: GPL-2.0-or-later
