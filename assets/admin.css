@@ -1797,6 +1797,9 @@ body.jyc-dark { background: #0a111c; }
 .jyc-csect-b { padding: 0 14px 10px; border-top: 1px solid var(--line-2); }
 .jyc-cgroup { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line-2); }
 .jyc-csect-b .jyc-cgroup:first-child { border-top: none; }
+.jyc-aistat { margin-left: auto; white-space: nowrap; font-size: 12px; color: var(--ink-3); }
+.jyc-aistat--none { opacity: .7; }
+.jyc-btn-sm { padding: 5px 12px; font-size: 12.5px; border-radius: 9px; }
 .jyc-brand { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; min-width: 152px; white-space: nowrap;
   padding: 3px 12px 3px 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
   font-size: 12.5px; font-weight: 600; color: var(--ink); }
