@@ -298,13 +298,29 @@ function jyc_perf_apply(): void {
 	//     每次后台更新检查 / 翻译拉取 / 版本探测都同步卡数秒。pre_http_request
 	//     直接返回 WP_Error，WP 更新检查立即失败跳过、不再阻塞后台。
 	//     仅拦截 wordpress.org 主机，站点自身接口与国内头像源不受影响。
+	//
+	//     【只拦「详情 / 安装类」路径】这里用拦截清单，不用放行清单：放行清单必然随 WP
+	//     版本演进被新的更新链路端点击穿 —— 2026-10-02 一天内连续漏掉 /core/version-check、
+	//     /release/ 升级包、/translations/ 语言包索引与本体，表现为「后台看不到更新提示」
+	//     「点升级后下载失败」「更新翻译失败」，而报错文案正是本插件抛的，极难定位。
+	//     收敛后只拦真正拖慢后台的两类：
+	//       /plugins/  插件详情、插件安装弹窗
+	//       /themes/   主题详情、主题安装弹窗
+	//     其余一律放行：核心版本探测 /core/version-check、更新检查 /core/update-check、
+	//     语言包索引 /translations/、升级包 downloads.wordpress.org/release/ 与
+	//     /translation/ 等整条更新链路。屏蔽的仍是慢请求，收益不变；
+	//     更新通道不会因 WP 新增端点而被自己掐死。
 	if ( ! empty( $o['disable_wp_org_api'] ) ) {
 		add_filter( 'pre_http_request', static function ( $preempt, $args, $url ) {
 			if ( ! is_string( $url ) ) {
 				return $preempt;
 			}
 			$host = wp_parse_url( $url, PHP_URL_HOST );
-			if ( $host && preg_match( '/(\.|^)WordPress\.org$/i', $host ) ) {
+			if ( ! $host || ! preg_match( '/(\.|^)WordPress\.org$/i', $host ) ) {
+				return $preempt;
+			}
+			$path = (string) wp_parse_url( $url, PHP_URL_PATH );
+			if ( str_starts_with( $path, '/plugins/' ) || str_starts_with( $path, '/themes/' ) ) {
 				return new WP_Error(
 					'jyc_perf_wp_org_blocked',
 					__( 'WordPress.org 外部 API 已被性能优化开关屏蔽', 'jinyu-theme-companion' )

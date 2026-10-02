@@ -3,7 +3,7 @@
  * Plugin Name: Jinyu Theme Companion
  * Plugin URI:  https://www.qicaiyun.top/4698.html
  * Description: Companion plugin for the Jinyu theme. It supplies the functional layer (SEO, structured data, social, related posts, shortcodes, cache and anti-spam) so the theme stays presentation-only. All outbound features are off by default.
- * Version:     1.2.6
+ * Version:     1.2.7
  * Author:      金玉
  * Author URI:  https://www.qicaiyun.top
  * License:     GPL-2.0-or-later
@@ -26,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 插件先于主题载入，抢先定义会让主题读到的版本号变成插件版本，造成版本漂移。
  * ------------------------------------------------------------------------ */
 if ( ! defined( 'JINYU_COMPANION_VER' ) ) {
-	define( 'JINYU_COMPANION_VER', '1.2.6' );
+	define( 'JINYU_COMPANION_VER', '1.2.7' );
 }
 
 /* 插件自有路径常量：模块（shortcode-ui / poster 等）一律引用插件自身资源，

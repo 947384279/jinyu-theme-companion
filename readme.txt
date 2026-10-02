@@ -2,9 +2,9 @@
 Contributors: jinyu888
 Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
-Tested up to: 7.1
+Tested up to: 7.1.2
 Requires PHP: 8.0
-Stable tag: 1.2.6
+Stable tag: 1.2.7
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,6 +25,7 @@ Features:
 * Comments & interaction: comment notifications and anti-spam
 * Performance & system: page cache (with path / query-parameter exclusion rules), database optimization, mail (SMTP configuration), HTTP transport check (compression, cache headers, HTTP/3), and post posters
 * Performance center: OPcache / Memcached status boards, reversible performance toggles, per-layer cache flushing (OPcache / Memcached / page cache), one-click optimization, and a real-user Web Vitals board
+* AI crawler statistics: per-brand visit counts for known AI crawlers (privacy-safe — stores only the canonical UA name / count / last visit triple, never IP, raw UA or URI)
 * Third-party login (social login): optional sign-in with GitHub / Gitee / QQ / Apple — off by default. Each provider stores only the OAuth credentials you configure (encrypted at rest); no personal data leaves the site except the standard OAuth exchange when a user signs in.
 
 == Installation ==
@@ -97,6 +98,12 @@ This plugin does not collect, store or transmit any personal data by default, an
 Administrators can disable any of the above outbound features at any time in the corresponding settings; once disabled, the related requests stop entirely.
 
 == Changelog ==
+
+= 1.2.7 =
+* Fix (performance center): the "block outbound WordPress.org API" toggle now uses a deny-list instead of a permit-list — it blocks only `/plugins/` and `/themes/` (plugin/theme details and install modals, the slow requests that actually stall the admin). Everything on the update path stays reachable: core version check `/core/version-check`, update checks `/core/update-check`, translation index `/translations/`, and package downloads on `downloads.wordpress.org`. Previously each new update endpoint silently fell outside the permit-list and broke the update channel with an error the plugin itself emitted ("download failed… blocked by the performance toggle"); the deny-list can no longer drift out of sync with WordPress.
+* Fix (storage): two-way mutual-exclusion guard with the legacy private plugin `wordpress-plugin-jinyu`, so load order can no longer produce a fatal redeclaration of `jinyu_storage_ssl_verify`.
+* Feature: AI crawler statistics with privacy exporters/erasers — aggregate counts per crawler brand (no IP, no full UA, no URI stored), plus the per-brand in-panel readout and an "idle brand" state.
+* Tested up to WordPress 7.1.2.
 
 = 1.2.6 =
 * Removed: the optional "Jinyu theme update" channel (the custom `update.qicaiyun.top` updater, RSA/SHA-256 verification, and the "Theme Updates" settings screen). The Jinyu theme now updates through the official WordPress.org theme directory, so the companion plugin no longer contacts a private update server. This also clears the Plugin Check `update_modification_detected` notice.
