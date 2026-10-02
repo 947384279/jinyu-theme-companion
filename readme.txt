@@ -4,7 +4,7 @@ Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
 Tested up to: 7.1.2
 Requires PHP: 8.0
-Stable tag: 1.2.8
+Stable tag: 1.2.9
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,12 @@ This plugin does not collect, store or transmit any personal data by default, an
 Administrators can disable any of the above outbound features at any time in the corresponding settings; once disabled, the related requests stop entirely.
 
 == Changelog ==
+
+= 1.2.9 =
+* 后台设置面板：修复顶栏品牌区误套用 SEO 面板「爬虫品牌」药丸容器样式（背景+边框+圆角），改为无容器的纯 logo + 文字。
+* 设置面板：移除「浏览量采集」设置卡片——同一 IP 冷却秒数旋钮对用户无价值，现写死 10 秒；浏览量采集功能本身保留（热门/相关文章依赖）。
+* 性能中心：新增「一键打开推荐开关」按钮，按推荐组合点亮界面开关（不自动落库，需再点「保存设置」）；推荐组合同时作为全新站点默认值。
+* 性能中心：保存成功提示改为顶部居中胶囊浮层（蓝底白字、3.2s 自动消失）；「一键优化」结果列表 10 秒后自动收起，点击即收。
 
 = 1.2.8 =
 * 常规维护与缺陷修复。；code style: WPCS 全量合规治理
