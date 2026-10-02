@@ -80,3 +80,29 @@ if ( ! function_exists( 'jinyu_companion_decrypt' ) ) {
 		return $val;
 	}
 }
+
+/*
+ * 响应主题的需求广播：主题只声明「这个字段要加密 / 这串要解密」，不认识本插件函数名。
+ * 契约方向：主题 apply_filters( 'jinyu_encrypt' / 'jinyu_decrypt' ) → 本插件 add_filter 响应。
+ */
+add_filter( 'jinyu_encrypt', 'jinyu_companion_filter_encrypt' );
+/**
+ * 过滤器回调：为主题提供加密实现。
+ *
+ * @param mixed $plain 明文。
+ * @return mixed 密文（带 jinyu_enc2:: 前缀）。
+ */
+function jinyu_companion_filter_encrypt( $plain ) {
+	return jinyu_companion_encrypt( $plain );
+}
+
+add_filter( 'jinyu_decrypt', 'jinyu_companion_filter_decrypt' );
+/**
+ * 过滤器回调：为主题提供解密实现（含历史格式兼容）。
+ *
+ * @param mixed $val 密文或历史明文。
+ * @return mixed
+ */
+function jinyu_companion_filter_decrypt( $val ) {
+	return jinyu_companion_decrypt( $val );
+}

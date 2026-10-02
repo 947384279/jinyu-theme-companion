@@ -67,13 +67,14 @@ class Jinyu_OAuth_Provider_QQ extends Jinyu_OAuth_Provider {
 		}
 		if ( ! empty( $data['error'] ) ) {
 			// 诊断用：仅记录 client_id / secret 长度，不记录任何密钥明文或前缀，避免日志泄露凭证。
-			error_log(
+			jinyu_companion_log(
 				sprintf(
-					'Jinyu QQ token error: desc=%s client_id_len=%d secret_len=%d',
+					'QQ token error: desc=%s client_id_len=%d secret_len=%d',
 					$data['error_description'] ?? $data['error'],
 					strlen( $this->conf['client_id'] ?? '' ),
 					strlen( $this->conf['client_secret'] ?? '' )
-				)
+				),
+				'sl-qq'
 			);
 			return new WP_Error(
 				'jinyu_oauth_qq_token',

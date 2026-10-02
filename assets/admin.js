@@ -367,6 +367,17 @@ if (nav) {
 	};
 	window.jycToggleCacheMode();
 
+	/* ---------------- 整页缓存：边缘配置片段折叠 ---------------- */
+	/* 默认收起，展开时才占高度，避免常驻片段撑高「整页缓存」卡片。 */
+	window.jycEdgeSnippetToggle = function (btn) {
+		var box = document.getElementById('jycEdgeSnippet');
+		var body = document.getElementById('jycEdgeSnippetBody');
+		if (!box || !body) { return; }
+		var open = box.classList.toggle('is-open');
+		body.hidden = !open;
+		if (btn) { btn.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+	};
+
 	/* ---------------- 整页缓存：配置片段标签页（Nginx / Apache） ---------------- */
 	var codeText = document.getElementById('jycCodeText');
 	var codeViewer = document.getElementById('jycCodeViewer');
@@ -480,44 +491,122 @@ if (nav) {
 	})();
 
 	/* ---------------- 概览联动 ---------------- */
-	var toggleKeys = [
-		['seo_open', 'SEO / OG'], ['twitter_card_enable', 'Twitter 卡片'], ['llms_enable', 'llms.txt'],
-		['no_category_enable', '去除 /category/'], ['ld_json_enable', 'JSON-LD'],
-		['auto_link_enable', '自动内链'], ['indexnow_enable', 'IndexNow'], ['page_cache_enable', '整页缓存'],
-		['speculation_enable', 'Speculation 预取'], ['img_alt_enable', '图片 alt 补全'], ['close_comments_old', '旧文关评'],
-		['storage_auto_upload', '附件自动上云'], ['storage_delete_local', '推送后删本地'],
-	['img_wm_enable', '图片水印']
+	var featureGroups = [
+		{
+			key: 'seo',
+			label: 'SEO / 社交',
+			icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>',
+			items: [
+				['seo_open', 'SEO / OG', 'seo'],
+				['twitter_card_enable', 'Twitter 卡片', 'seo'],
+				['llms_enable', 'llms.txt', 'seo'],
+				['no_category_enable', '去除 /category/', 'seo'],
+				['ld_json_enable', 'JSON-LD', 'seo'],
+				['img_alt_enable', '图片 alt 补全', 'seo']
+			]
+		},
+		{
+			key: 'content',
+			label: '内容 / 推送',
+			icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+			items: [
+				['auto_link_enable', '自动内链', 'content'],
+				['indexnow_enable', 'IndexNow', 'content']
+			]
+		},
+		{
+			key: 'perf',
+			label: '性能加速',
+			icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+			items: [
+				['speculation_enable', 'Speculation 预取', 'perf'],
+				['page_cache_enable', '整页缓存', 'perf']
+			]
+		},
+		{
+			key: 'extra',
+			label: '评论 / 媒体 / 存储',
+			icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>',
+			items: [
+				['close_comments_old', '旧文关评', 'comment'],
+				['img_wm_enable', '图片水印', 'media'],
+				['storage_auto_upload', '附件自动上云', 'storage'],
+				['storage_delete_local', '推送后删本地', 'storage']
+			]
+		}
 	];
+
 	function computeOverview() {
-		var on = 0;
 		var checks = document.getElementById('jyc-checks');
+		var meter = document.getElementById('jyc-meter');
 		if (checks) { checks.innerHTML = ''; }
-		toggleKeys.forEach(function (pair) {
-			var el = document.querySelector('input[name="' + pair[0] + '"]');
-			var isOn = el && el.checked;
-			if (isOn) { on++; }
-			if (checks) {
-				// 生成「状态点 + 文字」整行（此前误只 append firstChild，文字节点被丢弃 → 只剩圆点）
-				var d = document.createElement('div');
-				d.className = 'jyc-check';
-				var dot = document.createElement('span');
-				dot.className = 'jyc-dot' + (isOn ? ' jyc-on' : '');
+		if (meter) { meter.innerHTML = ''; }
+
+		var total = 0, on = 0;
+		var flat = [];
+		featureGroups.forEach(function (g) {
+			var gOn = 0;
+			g.items.forEach(function (it) {
+				var el = document.querySelector('input[name="' + it[0] + '"]');
+				var isOn = !!(el && el.checked);
+				if (isOn) { gOn++; on++; }
+				total++;
+				flat.push(isOn);
+			});
+			if (!checks) { return; }
+			var group = document.createElement('div');
+			group.className = 'jyc-group';
+			group.setAttribute('data-category', g.key);
+			var head = document.createElement('div');
+			head.className = 'jyc-group-h';
+			head.innerHTML = '<span>' + g.label + '</span><span class="jyc-group-cnt">' + gOn + '/' + g.items.length + '</span>';
+			var list = document.createElement('ul');
+			g.items.forEach(function (it) {
+				var el = document.querySelector('input[name="' + it[0] + '"]');
+				var isOn = !!(el && el.checked);
+				var li = document.createElement('li');
+				li.className = 'jyc-check' + (isOn ? ' jyc-on' : '');
+				li.setAttribute('data-goto', it[2]);
+				li.setAttribute('role', 'button');
+				li.setAttribute('tabindex', '0');
+				li.title = '点击跳转至“' + it[1] + '”设置';
+				var icon = document.createElement('span');
+				icon.className = 'jyc-check-icon';
+				icon.innerHTML = isOn
+					? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+					: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 				var lbl = document.createElement('span');
 				lbl.className = 'jyc-check-label';
-				lbl.textContent = pair[1];
-				d.appendChild(dot);
-				d.appendChild(lbl);
-				checks.appendChild(d);
-			}
+				lbl.textContent = it[1];
+				var arrow = document.createElement('span');
+				arrow.className = 'jyc-check-arrow';
+				arrow.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
+				arrow.setAttribute('aria-hidden', 'true');
+				li.appendChild(icon);
+				li.appendChild(lbl);
+				li.appendChild(arrow);
+			list.appendChild(li);
+			});
+			group.appendChild(head);
+			group.appendChild(list);
+		checks.appendChild(group);
 		});
-		var pct = Math.round(on / toggleKeys.length * 100);
+		/* 分段进度计：每格一项功能 */
+		if (meter) {
+			flat.forEach(function (isOn, i) {
+				var seg = document.createElement('span');
+				seg.className = 'jyc-seg' + (isOn ? ' jyc-on' : '');
+				seg.style.transitionDelay = (i * 28) + 'ms';
+			meter.appendChild(seg);
+		});
+		}
+		var pct = total ? Math.round(on / total * 100) : 0;
 		var set = function (id, v) { var e = document.getElementById(id); if (e) { e.textContent = v; } };
-		set('jyc-pct', pct + '%');
 		set('jyc-bentoPct', pct + '%');
-		var fill = document.getElementById('jyc-pbarFill');
-		if (fill) { fill.style.width = pct + '%'; }
+		set('jyc-pc-on', on);
+		set('jyc-pc-total', total);
+		set('jyc-pct', '启用率 ' + pct + '%');
 		set('jyc-hsOn', on);
-		/* 可配置字段总数：按面板真实控件数动态统计，避免硬编码失真 */
 		set('jyc-hsFields', document.querySelectorAll('.jyc-pane input, .jyc-pane select, .jyc-pane textarea').length);
 		var seoEl = document.querySelector('input[name="seo_open"]');
 		var pushEl = document.querySelector('input[name="indexnow_enable"]');
@@ -534,6 +623,23 @@ if (nav) {
 		el.addEventListener('change', computeOverview);
 	});
 	computeOverview();
+
+	/* 功能明细项点击跳转 */
+	(function () {
+		var checks = document.getElementById('jyc-checks');
+		if (!checks) { return; }
+		checks.addEventListener('click', function (e) {
+			var item = e.target.closest('.jyc-check');
+			if (item) { gotoPane(item.getAttribute('data-goto')); }
+		});
+		checks.addEventListener('keydown', function (e) {
+			var item = e.target.closest('.jyc-check');
+			if (item && (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar')) {
+				e.preventDefault();
+				gotoPane(item.getAttribute('data-goto'));
+			}
+		});
+	})();
 
 	/* ---------------- Toast ---------------- */
 	var toastEl = document.getElementById('jyc-toast');
@@ -566,9 +672,17 @@ if (nav) {
 			.then(function (res) {
 				if (res && res.success) {
 					jycToast(res.data && res.data.msg ? res.data.msg : '已清零');
-					var box = btn.closest('.jyc-crawlers');
-					if (box) { box.remove(); }
-				} else { jycToast((res && res.data) ? String(res.data) : '清零失败，请重试'); }
+					// 统计区与各品牌行内的「N 次到访」标签是两处独立 DOM，必须一起重置。
+					// 旧实现只 closest('.jyc-crawlers') 去找容器，但那个容器在按钮所在
+					// 行的上方且早已闭合，closest 恒为 null —— 服务端已清零，界面却纹丝不动，
+					// 用户只会以为清零失败再点一次。
+					var box = document.getElementById('jyc-aiCrawlStatBox');
+					if (box) { box.innerHTML = jycAiEmptyHtml(); }
+					Array.prototype.forEach.call(document.querySelectorAll('.jyc-aistat'), function (el) {
+						el.textContent = '近期无到访';
+						el.className = 'jyc-aistat jyc-aistat--none';
+					});
+				} else { jycToast(jycMsg(res, '清零失败，请重试')); }
 			})
 			.catch(function () { jycToast('请求失败，请重试'); })
 			.then(function () { btn.disabled = false; btn.textContent = oldTxt; });
@@ -588,7 +702,7 @@ if (nav) {
 			.then(function (r) { return r.json(); })
 			.then(function (res) {
 				if (res && res.success) { jycToast(res.data && res.data.msg ? res.data.msg : '数据库优化完成'); }
-				else { jycToast((res && res.data) ? String(res.data) : '优化失败，请重试'); }
+				else { jycToast(jycMsg(res, '优化失败，请重试')); }
 			})
 			.catch(function () { jycToast('请求失败，请重试'); })
 			.then(function () {
@@ -610,7 +724,7 @@ if (nav) {
 			.then(function (r) { return r.json(); })
 			.then(function (res) {
 				if (!(res && res.success)) {
-					jycToast((res && res.data) ? String(res.data) : '扫描失败，请重试');
+					jycToast(jycMsg(res, '扫描失败，请重试'));
 					return;
 				}
 				var items = (res.data && res.data.items) ? res.data.items : [];
@@ -662,7 +776,7 @@ if (nav) {
 					else { btn.textContent = '恢复'; btn.setAttribute('data-undo', '1'); }
 					btn.disabled = false;
 				} else {
-					jycToast((res && res.data) ? String(res.data) : '操作失败，请重试');
+					jycToast(jycMsg(res, '操作失败，请重试'));
 					btn.disabled = false; btn.textContent = oldTxt;
 				}
 			})
@@ -690,8 +804,8 @@ if (nav) {
 					box.innerHTML = res.data.html;
 					if (ago) { ago.textContent = res.data.ago ? ('上次 ' + res.data.ago) : ''; }
 				} else {
-					box.innerHTML = '<div class="jyc-tp-empty">' + esc((res && res.data) ? String(res.data) : '请求失败，请重试') + '</div>';
-					jycToast((res && res.data) ? String(res.data) : '请求失败，请重试');
+					box.innerHTML = '<div class="jyc-tp-empty">' + esc(jycMsg(res, '请求失败，请重试')) + '</div>';
+					jycToast(jycMsg(res, '请求失败，请重试'));
 				}
 				if (btn) { btn.disabled = false; btn.textContent = oldTxt; }
 			});
@@ -719,7 +833,7 @@ if (nav) {
 			.then(function (r) { return r.json(); })
 			.then(function (res) {
 				if (!(res && res.success)) {
-					jycToast((res && res.data) ? String(res.data) : '扫描失败，请重试');
+					jycToast(jycMsg(res, '扫描失败，请重试'));
 					return;
 				}
 				var items = (res.data && res.data.items) ? res.data.items : [];
@@ -813,7 +927,7 @@ if (nav) {
 					if (all) { all.checked = false; }
 					jycCcUpdateCount();
 				} else {
-					jycToast((res && res.data) ? String(res.data) : '删除失败，请重试');
+					jycToast(jycMsg(res, '删除失败，请重试'));
 				}
 			})
 			.catch(function () { jycToast('请求失败，请重试'); })
@@ -826,6 +940,31 @@ if (nav) {
 		return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
 			return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
 		});
+	}
+
+	/**
+	 * 从 AJAX 响应里取可展示的错误/提示文本。
+	 *
+	 * 为什么要这个：wp_send_json_error( $msg ) 与 wp_send_json_error( ['msg'=>$msg] )
+	 * 两种形态在插件里都存在。前端若一律 String(res.data)，遇到数组形态就会显示
+	 * 字面量 "[object Object]"——用户既看不到「权限不足」也看不到「磁盘不可写」，
+	 * 只知道失败了。此处统一兼容：数组取 msg，字符串直接用，其余走兜底。
+	 *
+	 * @param {Object} res  fetch + json() 的结果
+	 * @param {string} [fallback] 取不到内容时的兜底文案
+	 * @return {string}
+	 */
+	function jycMsg(res, fallback) {
+		var d = res && res.data;
+		if (d && typeof d === 'object') { return String(d.msg || fallback || ''); }
+		if (typeof d === 'string' && d) { return d; }
+		return fallback || '';
+	}
+	window.jycMsg = jycMsg;
+
+	/** AI 爬虫统计清零后的空态 HTML（与服务端 else 分支保持同一套样式与文案）。 */
+	function jycAiEmptyHtml() {
+		return '<div style="font-size:13px;color:var(--ink-3);margin-top:6px">暂无记录——AI 爬虫到访后，计数会出现在上方对应品牌行内。</div>';
 	}
 
 	/* ---------------- 内容 SEO 诊断 ---------------- */
@@ -854,7 +993,7 @@ if (nav) {
 			.then(function (r) { return r.json(); })
 			.then(function (res) {
 				if (!(res && res.success)) {
-					jycToast((res && res.data) ? String(res.data) : '诊断失败，请重试');
+					jycToast(jycMsg(res, '诊断失败，请重试'));
 					btn.classList.remove('is-busy');
 					return;
 				}
@@ -911,7 +1050,7 @@ if (nav) {
 			.then(function (r) { return r.json(); })
 			.then(function (res) {
 				if (res && res.success) { jycPushLogSet(res.data && res.data.html); }
-				else { jycToast((res && res.data) ? String(res.data) : '刷新失败，请重试'); }
+				else { jycToast(jycMsg(res, '刷新失败，请重试')); }
 			})
 			.catch(function () { jycToast('请求失败，请重试'); })
 			.then(function () { if (loading && btn) { btn.disabled = false; btn.textContent = oldTxt; } });
@@ -931,7 +1070,7 @@ if (nav) {
 				if (res && res.success) {
 					jycPushLogSet(res.data && res.data.html);
 					jycToast((res.data && res.data.msg) ? res.data.msg : '推送记录已清空');
-				} else { jycToast((res && res.data) ? String(res.data) : '清空失败，请重试'); }
+				} else { jycToast(jycMsg(res, '清空失败，请重试')); }
 			})
 			.catch(function () { jycToast('请求失败，请重试'); })
 			.then(function () { if (loading && btn) { btn.disabled = false; btn.textContent = oldTxt; } });
@@ -964,7 +1103,7 @@ if (nav) {
 			.then(function (r) { return r.json(); })
 			.then(function (res) {
 				if (!(res && res.success)) {
-					jycToast((res && res.data) ? String(res.data) : '推送失败，请重试');
+					jycToast(jycMsg(res, '推送失败，请重试'));
 					btn.classList.remove('is-busy');
 					return;
 				}
@@ -1034,7 +1173,7 @@ if (nav) {
 			.then(function (r) { return r.json(); })
 			.then(function (res) {
 				if (!(res && res.success)) {
-					jycToast((res && res.data) ? String(res.data) : '体检失败，请重试');
+					jycToast(jycMsg(res, '体检失败，请重试'));
 					btn.classList.remove('is-busy');
 					return;
 				}
@@ -1132,7 +1271,7 @@ if (nav) {
 			.then(function (r) { return r.json(); })
 			.then(function (res) {
 				if (res && res.success) { jycToast(res.data || '测试邮件已发送'); }
-				else { jycToast((res && res.data) ? String(res.data) : '发送失败，请检查配置'); }
+				else { jycToast(jycMsg(res, '发送失败，请检查配置')); }
 			})
 			.catch(function () { jycToast('请求失败，请重试'); })
 			.then(function () {
@@ -1154,7 +1293,7 @@ if (nav) {
 			.then(function (r) { return r.json(); })
 			.then(function (res) {
 				if (res && res.success) { jycToast(res.data || '连接成功'); }
-				else { jycToast((res && res.data) ? String(res.data) : '连接失败，请检查配置'); }
+				else { jycToast(jycMsg(res, '连接失败，请检查配置')); }
 			})
 			.catch(function () { jycToast('请求失败，请重试'); })
 			.then(function () {
@@ -1169,6 +1308,14 @@ if (nav) {
 		var form = document.getElementById('jyc-form');
 		if (!form) { return; }
 		var action = btn.getAttribute('data-action');
+		// 二次确认：这是全站影响最大的一次点击。apply 会把所有文章的正文图片链接
+		// 重写成 CDN 域名并清空整页缓存，unapply 再原路改回。点错一次的代价是
+		// 「全站图片临时失效 + 批量重写/回滚」，且两个方向都没有确认太容易误触。
+		var toCdn = (action === 'jinyu_storage_apply_domain');
+		var tip = toCdn
+			? '将把全站文章的附件链接重写为 CDN 域名，并清空整页缓存。继续？'
+			: '将把全站文章的附件链接改回本地地址，并清空整页缓存。继续？';
+		if (!window.confirm(tip)) { return; }
 		var fd = new FormData(form);
 		fd.append('action', action);
 		var dEl = form.querySelector('input[name="storage_domain"]');
@@ -1183,7 +1330,7 @@ if (nav) {
 					jycToast(res.data || '已完成');
 					flipped = true;
 					jycDomainFlip(action === 'jinyu_storage_apply_domain');
-				} else { jycToast((res && res.data) ? String(res.data) : '操作失败'); }
+				} else { jycToast(jycMsg(res, '操作失败')); }
 			})
 			.catch(function () { jycToast('请求失败，请重试'); })
 			.then(function () { btn.disabled = false; if (!flipped) { btn.textContent = oldTxt; } });
@@ -1245,26 +1392,59 @@ if (nav) {
 		var fd = new FormData(document.getElementById('jyc-form'));
 		fd.append('action', 'jinyu_storage_stop');
 		var e = jycBatchEls();
-		fetch((typeof ajaxurl !== 'undefined') ? ajaxurl : '', { method: 'POST', body: fd, credentials: 'same-origin' })
-			.then(function (r) { return r.json(); })
-			.then(function (res) {
-				if (e.msg) { e.msg.textContent = (res && res.success) ? '已停止（进度保留，可重新开始）' : '已停止'; }
-			})
-			.catch(function () { if (e.msg) { e.msg.textContent = '已停止'; } });
 		if (jycBatch.poll) { clearTimeout(jycBatch.poll); jycBatch.poll = null; }
 		jycBatchLock(false, jycBatch.type || 'push');
 		jycBatch.type = null;
-		jycToast('任务已停止，已处理的进度保留');
+		fetch((typeof ajaxurl !== 'undefined') ? ajaxurl : '', { method: 'POST', body: fd, credentials: 'same-origin' })
+			.then(function (r) { return r.json(); })
+			.then(function (res) {
+				// 只有服务端确认收到停止指令才报成功。此前无论请求成败都弹「已停止」，
+				// 服务器 500 或网络中断时用户以为停了，实际任务还在跑并继续改写文件——
+				// 误报比不报危险得多。
+				if (res && res.success) {
+					if (e.msg) { e.msg.textContent = '已停止（进度保留，可重新开始）'; }
+					jycToast('任务已停止，已处理的进度保留');
+				} else {
+					var why = jycMsg(res, '');
+					if (e.msg) { e.msg.textContent = '停止请求失败：' + (why || '服务端未确认'); }
+					jycToast('停止请求失败，任务可能仍在运行，请刷新页面确认');
+				}
+			})
+			.catch(function () {
+				if (e.msg) { e.msg.textContent = '停止请求失败（网络错误），任务可能仍在运行'; }
+				jycToast('停止请求失败，任务可能仍在运行，请刷新页面确认');
+			});
 	};
-	function jycBatchStart(type, fd) {
+	/**
+	 * 启动存储批量任务。
+	 *
+	 * @param {string}  type    'push' | 'pull' | 'sync'
+	 * @param {FormData} fd     已组装好的请求体
+	 * @param {boolean} resumed true = 页面加载时的自动续跑，跳过确认（那是恢复中断的任务，
+	 *                          不是用户的新决策；弹窗反而会让用户以为任务丢了要重���）
+	 */
+	function jycBatchStart(type, fd, resumed) {
 		if (jycBatch.running) { return; }
 		var form = document.getElementById('jyc-form');
 		if (!form) { return; }
+		// 破坏性确认：push 会搬整个媒体库；pull 会用云端版本覆盖本地同名文件——
+		// 用户本地新上传但未备份的图会被旧版盖掉，且没有任何提示。两个方向都要确认。
+		if (!resumed) {
+			var tips = {
+				push: '将把媒体库文件批量上传到对象存储。数据量大时可能持续较长时间，继续？',
+				pull: '将从对象存储拉回文件并**覆盖本地同名文件**。本地未备份的新图会被云端旧版替换，继续？',
+				sync: '将按填写的路径同步到对象存储。继续？'
+			};
+			if (!window.confirm(tips[type] || '确认执行该批量任务？')) { return; }
+		}
 		jycBatch.running = true;
 		jycBatch.type = type;
 		jycBatchLock(true, type);
 		var aurl = (typeof ajaxurl !== 'undefined') ? ajaxurl : '';
-		// 自动刷新：运行中每 2.5s 拉一次 DB 进度，多标签页/恢复场景下显示保持新鲜
+		// 进度轮询失败计数：连续失败 3 次即中止并提示，不再无限静默轮询。
+		// 静默 .catch 的后果是进度条永久停在最后一次的百分比（会话过期时 nonce 失效，
+		// 每次都返回 HTML 而非 JSON），用户以为卡死，只能手动关页。
+		var pollFail = 0;
 		(function poll() {
 			if (!jycBatch.running) { return; }
 			var sfd = new FormData(form);
@@ -1272,9 +1452,28 @@ if (nav) {
 			fetch(aurl, { method: 'POST', body: sfd, credentials: 'same-origin' })
 				.then(function (r) { return r.json(); })
 				.then(function (res) {
-					if (jycBatch.running && res && res.success && res.data && res.data.active) { jycBatchRender(res.data); }
+					if (!jycBatch.running) { return; }
+					if (res && res.success) {
+						pollFail = 0;
+						if (res.data && res.data.active) { jycBatchRender(res.data); }
+					} else {
+						pollFail++;
+						if (pollFail >= 3) {
+							jycBatch.running = false;
+							jycToast('进度刷新连续失败：' + jycMsg(res, '会话可能已过期') + '，请刷新页面');
+							return;
+						}
+					}
 				})
-				.catch(function () {})
+				.catch(function () {
+					if (!jycBatch.running) { return; }
+					pollFail++;
+					if (pollFail >= 3) {
+						jycBatch.running = false;
+						jycToast('进度刷新连续失败（网络错误），请刷新页面确认任务状态');
+						return;
+					}
+				})
 				.then(function () { if (jycBatch.running) { jycBatch.poll = setTimeout(poll, 2500); } });
 		})();
 		var retries = 0;
@@ -1285,8 +1484,8 @@ if (nav) {
 				.then(function (res) {
 					if (!jycBatch.running) { return; }
 					if (!(res && res.success)) {
-						jycToast((res && res.data) ? String(res.data) : '任务失败');
-						if (jycBatchEls().msg) { jycBatchEls().msg.textContent = String((res && res.data) || '任务失败'); }
+						jycToast(jycMsg(res, '任务失败'));
+						if (jycBatchEls().msg) { jycBatchEls().msg.textContent = jycMsg(res, '任务失败'); }
 						jycBatchAbort(); return;
 					}
 					retries = 0;
@@ -1351,7 +1550,7 @@ if (nav) {
 				} else {
 					ffd.append('action', type === 'pull' ? 'jinyu_storage_pull' : 'jinyu_storage_push');
 				}
-				jycBatchStart(type, ffd);
+				jycBatchStart(type, ffd, true);   // 续跑：不弹确认框
 			})
 			.catch(function () {});
 	})();
@@ -1943,7 +2142,7 @@ if (nav) {
 		wmFetch(fd, function (res) {
 			if (!wmTask.running) { return; }
 			if (!(res && res.success)) {
-				jycToast((res && res.data) ? String(res.data) : '任务失败');
+				jycToast(jycMsg(res, '任务失败'));
 				wmAbort(); return;
 			}
 			var d = res.data || {};
@@ -1964,14 +2163,25 @@ if (nav) {
 		var scope = btn.getAttribute('data-wm') || 'all';
 		var form = document.getElementById('jyc-form');
 		if (!form) { return; }
+		// 破坏性确认：scope=all + mode=remove 会对整站媒体库批量剥离水印。
+		// 用户想「停一下」时容易误点这一项（运行时按钮已变成「停止任务」，
+		// 但停止之后按钮复原成破坏性文案，再点一次就是全库还原）。
+		// 有 -jywmo 备份可回滚，但用户不知道，只能靠提示告知。
+		if ('all' === scope && 'remove' === mode) {
+			if (!window.confirm('将对**全部**已打水印的图片执行还原（逐张覆盖回原始文件）。继续？')) { return; }
+		}
 		var fd = new FormData(form);
 		fd.append('action', 'jinyu_companion_wm_start');
 		fd.set('mode', mode);
+		fd.set('scope', scope);
 		if ('ids' === scope) {
 			var ta = document.getElementById('jyc-wmIds');
 			var ids = (ta ? ta.value : '').split(/[\s,;\n]+/).filter(Boolean);
 			if (!ids.length) { jycToast('请先填写附件 ID（逗号或空格分隔）'); if (ta) { ta.focus(); } return; }
-			fd.set('ids', ids.join(','));
+			// 用 ids[] 重复字段提交数组形态。服务端同时兼容逗号分隔字符串，
+			// 但数组是 HTML 表单的标准形态，不依赖服务端的兼容分支。
+			fd.delete('ids');
+			ids.forEach(function (id) { fd.append('ids[]', id); });
 		}
 		wmTask.running = true; wmTask.mode = mode; wmTask.retries = 0;
 		wmLock(true, mode);
@@ -1981,7 +2191,7 @@ if (nav) {
 		wmFetch(fd, function (res) {
 			if (!wmTask.running) { return; }
 			if (!(res && res.success)) {
-				jycToast((res && res.data) ? String(res.data) : '任务失败');
+				jycToast(jycMsg(res, '任务失败'));
 				wmAbort(); return;
 			}
 			if (!res.data.total) { jycToast('没有需要处理的新图片'); wmAbort(); return; }
@@ -1998,10 +2208,13 @@ if (nav) {
 		fetch((typeof ajaxurl !== 'undefined') ? ajaxurl : '', { method: 'POST', body: fd, credentials: 'same-origin' })
 			.then(function (r) { return r.json(); })
 			.then(function (res) {
-				var d = (res && res.success) ? res.data : null;
 				var txt = document.getElementById('jyc-wmStatTxt');
+				// 统计请求失败时直接返回，不动 DOM。此前会把 '—' 写回去，
+				// 覆盖掉原本正确的数字，用户以为水印被清空了。
+				if (!(res && res.success && res.data)) { return; }
+				var d = res.data;
 				if (txt) {
-					txt.textContent = '媒体库图片 ' + (d ? d.total : '—') + ' 张，已加水印 ' + (d ? d.done : '—') + ' 张';
+					txt.textContent = '媒体库图片 ' + d.total + ' 张，已加水印 ' + d.done + ' 张';
 				}
 				var st = document.getElementById('jyc-wmState');
 				if (st && d) {

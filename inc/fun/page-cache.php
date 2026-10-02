@@ -67,8 +67,8 @@ function jinyu_page_cache_edge_path(): string {
 
 /**
  * 边缘模式服务器片段里的缓存目录：给 nginx/apache 用，必须在“宿主命名空间”可见。
- * 优先采用用户显式配置的 page_cache_edge_path（可填宿主真实路径，如本机
- * /home/wwwroot/.../web/wp-content/cache/jinyu/edge）；未配置时回退 WP_CONTENT_DIR——
+ * 优先采用用户显式配置的 page_cache_edge_path（可填宿主命名空间真实路径，如
+ * /var/www/example.com/web/wp-content/cache/jinyu/edge）；未配置时回退 WP_CONTENT_DIR——
  * 绝大多数服务器两者一致，无需额外处理。
  */
 function jinyu_page_cache_edge_snippet_path(): string {
@@ -568,7 +568,7 @@ function jinyu_page_cache_note_blocked( string $reason ): void {
         $msg = '[jinyu] 整页缓存写入失败：可能是磁盘已满或 inode 耗尽';
     }
     if ( 'write_fail' === $prev || ! in_array( $reason, [ $prev ], true ) ) {
-        @error_log( $msg );
+        jinyu_companion_log( $msg, 'page-cache' );
     }
 }
 
@@ -1299,9 +1299,10 @@ function jinyu_page_cache_emit( string $file, bool $stale ): void {
         }
     }
 
-    // 标记本次为缓存命中：性能采样（inc/fun/live.php）据此跳过，
-    // 否则几毫秒的缓存响应会把「实时心跳」曲线压成一条直线。
-    define( 'JINYU_CACHE_HIT', true );
+    // 注：早前这里定义过 JINYU_CACHE_HIT 供性能采样识别「本次为缓存命中」。
+    // 该常量全仓库零读取方（采样实际由 jinyu_perf_web_vitals_stats 负责），
+    // 且注释指向的 inc/fun/live.php 从未存在，故连同常量一并移除——留着会让后来者
+    // 以为存在一个「按缓存命中跳过采样」的机制。
     echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（缓存页），无需转义
     // 缓存命中时已在 init 阶段 echo+exit，template_redirect 不会触发，
     // 而来源统计(jinyu_track_visit_source)挂在该钩子上，故在此显式调用，

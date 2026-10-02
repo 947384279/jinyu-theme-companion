@@ -17,10 +17,7 @@ add_action(
 add_action(
     'wp_ajax_jinyu_test_smtp',
     function () {
-		check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
-		}
+		jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 
 		$to = wp_get_current_user()->user_email;
 		if ( ! $to ) {
@@ -53,8 +50,9 @@ add_action(
 		];
 		foreach ( $map as $post => $key ) {
 			// 只接受字符串：数组值透传进 SmtpConfig 会触发 PHP 8 的 array-to-string TypeError
+			// 键名 $map 的每一项都是本文件写死的字面量，非用户输入。
 			if ( isset( $_POST[ $post ] ) && is_string( $_POST[ $post ] ) && $_POST[ $post ] !== '' ) {
-				$form[ $key ] = wp_unslash( $_POST[ $post ] );
+				$form[ $key ] = wp_unslash( $_POST[ $post ] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- is_string 已守卫，键名来自本文件硬编码的 $map，随后经 Jinyu_SmtpConfig 逐字段 sanitize
 			}
 		}
 		$useForm = ! empty( $form['host'] );
@@ -83,10 +81,7 @@ add_action(
 add_action(
     'wp_ajax_jinyu_clear_cache',
     function () {
-		check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
-		}
+		jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 		// 走插件独占的失效入口（jinyu_companion_cache_flush 返回清理条目数；
 		// 旧别名 jinyu_cache_flush 签名是 void，拿不到计数）。
 		$n = function_exists( 'jinyu_companion_cache_flush' ) ? jinyu_companion_cache_flush() : 0;

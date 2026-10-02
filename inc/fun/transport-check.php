@@ -349,10 +349,7 @@ function jinyu_transport_ago( int $at ): string {
 add_action(
 	'wp_ajax_jinyu_transport_probe',
 	static function (): void {
-		check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
-		}
+		jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 		$data = jinyu_transport_result( true );
 		wp_send_json_success(
 			array(

@@ -26,11 +26,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 /*
 ── A1. 缓存 ─────────────────────────────────────────────────────────────
  * transient 承载：站点装了持久对象缓存时 WP 自动落到对象缓存，未装则落 options 表，
- * 两种环境都能用，不依赖主题那套 Memcached 封装。 */
-
-function jinyu_companion_cache_key( string $seed ): string {
-	return 'jinyu_' . md5( $seed );
-}
+ * 两种环境都能用，不依赖主题那套 Memcached 封装。
+ *
+ * 键名一律由调用方自带 jinyu_ 前缀的语义串（如 jinyu_series_{id}），本层不再包 md5：
+ * 统一加盐反而让 wp_options / 对象缓存里的键无法按前缀排查。各模块拼接时务必带前缀。 */
 
 function jinyu_companion_cache_get( string $key ) {
 	return get_transient( $key );
@@ -38,6 +37,31 @@ function jinyu_companion_cache_get( string $key ) {
 
 function jinyu_companion_cache_set( string $key, $val, int $ttl = 3600 ): bool {
 	return (bool) set_transient( $key, $val, $ttl );
+}
+
+/*
+── A1.1 请求参数解析原语 ────────────────────────────────────────────────
+ * AJAX 表单里同一语义字段常有多种提交形态：PHP 侧 ids[]=1&ids[]=2 收成数组，
+ * 而 fetch/FormData 里 ids='1,2,3' 收成字符串，还有人用空格或分号分隔。
+ * 各模块各写一遍 is_array 判断，必然有一处漏掉字符串形态——漏掉时该字段被当成
+ * 「用户没填」而静默回落到「处理全部」的分支，是很难发现的数据损坏。
+ */
+
+/**
+ * 把任意形态的 ID 提交解析成去重后的正整数数组。
+ *
+ * @param mixed $raw 数组（ids[]=1）、字符串（'1,2,3' / '1 2 3' / '1;2;3'）、或空。
+ * @return int[] 已去重、已剔除 0 与负数的 ID 列表。
+ */
+function jinyu_companion_parse_ids( $raw ): array {
+	if ( is_string( $raw ) ) {
+		$raw = preg_split( '/[\s,;]+/', $raw, -1, PREG_SPLIT_NO_EMPTY );
+	}
+	if ( ! is_array( $raw ) ) {
+		return array();
+	}
+	$ids = array_map( 'absint', $raw );
+	return array_values( array_unique( array_filter( $ids ) ) );
 }
 
 /* ── A2. 用户 meta ID 列表（社交关注 / 粉丝 / 关注的分类）─────────────────── */
@@ -129,22 +153,16 @@ function jinyu_companion_webp_url( string $url ): string {
 }
 
 /*
-── A6. CSP nonce 属性 ──────────────────────────────────────────────────
+── A6. 内联脚本输出 ────────────────────────────────────────────────────
  * nonce 必须与响应头 Content-Security-Policy 里的值一致才有效。本插件不下发 CSP 头，
  * 默认返回空串（不加属性，脚本照常执行）；站点真启用了 CSP，由下发方经过滤器提供值。
- * 绝不自行生成随机 nonce —— 那会让内联脚本被自己的 CSP 拦掉。 */
-
-function jinyu_companion_csp_nonce_attr(): string {
-	$nonce = (string) apply_filters( 'jinyu_companion_csp_nonce', '' );
-	if ( '' === $nonce ) {
-		return '';
-	}
-	return ' nonce="' . esc_attr( $nonce ) . '"';
-}
+ * 绝不自行生成随机 nonce —— 那会让内联脚本被自己的 CSP 拦掉。
+ *
+ * 输出统一走 jinyu_companion_inline_script_tag()，不要手写 <script> 标签
+ * （wp.org 审查要求使用 inline script API，且手写标签无法带上 CSP nonce）。 */
 
 /**
  * 用 WordPress 的 inline script 构造函数输出内联脚本，并按需带上 CSP nonce 属性。
- * 不要手写 <script> 标签（wp.org 审查要求使用 wp_enqueue / inline script API）。
  *
  * @param string $js 完整 JS 代码（不含 <script> 标签）。
  * @return string
@@ -156,6 +174,130 @@ function jinyu_companion_inline_script_tag( string $js ): string {
 		$args['nonce'] = $nonce;
 	}
 	return wp_get_inline_script_tag( $js, $args );
+}
+
+/*
+── A6.6 表单白名单取值 ─────────────────────────────────────────────────
+ * 下拉 / 单选类字段的通用读法：先 sanitize 再比对白名单，命中则用，不中走默认值。
+ */
+
+/**
+ * 从 POST 读取一个受白名单约束的字段。
+ *
+ * 为什么必须是「先清洗后比对」：直接 `in_array( $_POST['x'], $allow, true )` 比对的是
+ * **未 unslash 的原始值**，而落库用的是 `sanitize_key( wp_unslash( ... ) )` 的结果。
+ * 两者在正常输入下相同，一旦请求里带反斜杠（magic-quotes 遗留插件注入、部分 Windows
+ * 环境的中间层改写），比对失败 → 静默回落默认值，用户选的值被吞掉且无任何提示。
+ * SMTP 加密方式最典型：用户选 tls 被静默改成 ssl，表现为「邮件发不出去」，无从排查。
+ *
+ * @param string       $field    POST 字段名。
+ * @param array        $allowed  允许值。
+ * @param string|array $default  未命中时的默认值。
+ * @return string|array
+ */
+function jinyu_companion_post_enum( string $field, array $allowed, $default = '' ) {
+	if ( ! isset( $_POST[ $field ] ) ) {
+		return $default;
+	}
+	$raw = sanitize_key( wp_unslash( $_POST[ $field ] ) );
+	return in_array( $raw, $allowed, true ) ? $raw : $default;
+}
+
+/*
+── A6.5 后台 AJAX 门卫 ─────────────────────────────────────────────────
+ * 插件内所有后台 AJAX 端点的统一入口：能力检查 + nonce 校验，失败即中断响应。
+ *
+ * 收敛理由：这段守卫曾以字面形式复制在 20 多个回调里（media-batch 5 处、storage 8 处、
+ * db-optimize 3 处……），任何一处漏改或漏加就是一处越权入口。集中到一处后，
+ * 新增端点只需调用它，审阅时也只需审一处。
+ *
+ * 失败一律走 HTTP 200 + success:false，**不返回 4xx**：
+ * 服务器 nginx 的 error_page 会拦截 admin-ajax 的 4xx 响应体并替换成 HTML 错误页，
+ * 前端拿到的就不是 JSON——既看不到真实原因（权限不足 / 磁盘不可写 / 被限流），
+ * 还会被误判成网络故障。业务失败用 success 字段表达，HTTP 状态码只表示
+ * 「请求是否抵达 PHP」。语义（权限 / 参数 / 冲突）编码进 data.code。
+ *
+ * @param string $nonce_action nonce 的 action 名。
+ * @param string $nonce_field  请求里的 nonce 字段名。
+ * @param string $cap          所需能力，默认 manage_options。
+ */
+function jinyu_companion_guard( string $nonce_action, string $nonce_field = 'jinyu_companion_nonce', string $cap = 'manage_options' ): void {
+	// 先查能力再验 nonce：未登录探测者应得到「权限不足」而不是 wp_die 的 nonce 死亡页
+	// （后者在部分配置下会泄露路径，且语义上把「没登录」说成「请求来源非法」）。
+	if ( ! current_user_can( $cap ) ) {
+		wp_send_json_error(
+            [
+				'msg' => __( '权限不足', 'jinyu-theme-companion' ),
+				'code' => 'forbidden',
+			]
+        );
+	}
+	if ( ! check_ajax_referer( $nonce_action, $nonce_field, false ) ) {
+		wp_send_json_error(
+            [
+				'msg' => __( '安全校验失败，请刷新页面后重试', 'jinyu-theme-companion' ),
+				'code' => 'bad_nonce',
+			]
+        );
+	}
+}
+
+/*
+── A6.7 诊断日志 ──────────────────────────────────────────────────────
+ * 全插件唯一的 error_log 出口。直接调 error_log() 有三个问题：
+ *   ① 写进 PHP error_log 的内容可能被日志聚合服务收走，也可能随 display_errors
+ *      暴露给访客——社交登录失败路径会把第三方平台的 errmsg 原文写进去；
+ *   ② 批量任务（水印 / 同步）逐个文件写一次，5000 张图失败就是 5000 行；
+ *   ③ 没有统一开关，站点无法在不改代码的情况下关掉。
+ *
+ * 开关：WP_DEBUG（开发）或 jinyu_companion_debug 过滤器（生产按需开）。
+ * 默认关闭——诊断信息不该在生产站点长期刷盘。
+ */
+
+/**
+ * 写一条诊断日志（仅在调试开关打开时落 error_log）。
+ *
+ * @param string $msg   日志正文（调用方自行脱敏，不要带密钥 / 令牌 / 完整邮箱）。
+ * @param string $group 模块标签，便于在日志里按来源过滤。
+ * @return void
+ */
+function jinyu_companion_log( string $msg, string $group = 'core' ): void {
+	if ( ! jinyu_companion_debug_enabled( $group ) ) {
+		return;
+	}
+	// 单行化：error_log 逐行写，多行内容会撑爆日志格式。
+	$line = str_replace( array( "\r", "\n" ), ' ', $msg );
+	// 截断防爆：第三方 API 的错误响应体可能很长。
+	if ( strlen( $line ) > 500 ) {
+		$line = substr( $line, 0, 500 ) . '…';
+	}
+	error_log( sprintf( '[jinyu/%s] %s', $group, $line ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- 诊断日志的唯一出口，经开关控制
+}
+
+/**
+ * 诊断日志总开关（可按模块单独关闭）。
+ *
+ * 优先级：模块过滤器 > 总开关 > WP_DEBUG。
+ * 模块过滤器放在最前，是为了让「站点开了总开关、但某个模块刷屏」时能单独关掉——
+ * 例如 `add_filter( 'jinyu_companion_debug_watermark', '__return_false' )`。
+ *
+ * @param string $group 模块标签（core / page-cache / watermark / wechat / sl-core / sl-qq …）。
+ * @return bool
+ */
+function jinyu_companion_debug_enabled( string $group = 'core' ): bool {
+	/**
+	 * 允许按模块覆盖总开关：传 jinyu_companion_debug_{$group} 即可单独开/关某模块。
+	 *
+	 * @param bool $enabled 当前状态。
+	 */
+	$override = apply_filters( 'jinyu_companion_debug_' . $group, null );
+	if ( null !== $override ) {
+		return (bool) $override;
+	}
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		return true;
+	}
+	return (bool) apply_filters( 'jinyu_companion_debug', false );
 }
 
 /*

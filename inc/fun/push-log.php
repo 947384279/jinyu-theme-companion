@@ -137,10 +137,7 @@ function jinyu_push_log_capture( int $limit ): string {
 add_action( 'wp_ajax_jinyu_push_log_refresh', 'jinyu_push_log_ajax_refresh' );
 
 function jinyu_push_log_ajax_refresh(): void {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_send_json_error( '权限不足' );
-	}
-	check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
+	jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 
 	wp_send_json_success( [ 'html' => jinyu_push_log_capture( 8 ) ] );
 }
@@ -148,10 +145,7 @@ function jinyu_push_log_ajax_refresh(): void {
 add_action( 'wp_ajax_jinyu_push_log_clear', 'jinyu_push_log_ajax_clear' );
 
 function jinyu_push_log_ajax_clear(): void {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_send_json_error( '权限不足' );
-	}
-	check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
+	jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 
 	jinyu_push_log_clear();
 

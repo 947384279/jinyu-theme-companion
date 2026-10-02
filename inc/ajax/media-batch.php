@@ -58,6 +58,21 @@ function jinyu_companion_wm_set_task( array $task ): void {
 }
 
 /**
+ * 解析面板提交的附件 ID。
+ *
+ * 面板（admin.js）用 FormData.set('ids', '12,34,56') 提交，收到的是**字符串**；
+ * 媒体库批量操作走 ids[]= 形式，收到的是数组。两种都要认：只判 is_array 时
+ * 字符串会被静默当成「用户没填」，进而回落到全库扫描（上限 5000 张）把整站
+ * 媒体库重写一遍，界面上却显示一切正常。
+ *
+ * @param mixed $raw $_POST['ids'] 原始值。
+ * @return int[] 去重后的正整数 ID。
+ */
+function jinyu_companion_wm_parse_ids( $raw ): array {
+	return jinyu_companion_parse_ids( $raw );
+}
+
+/**
  * 建立任务。
  *
  * @param array $ids 指定附件 ID；为空则扫描媒体库全部未打水印的图片。
@@ -113,46 +128,84 @@ function jinyu_companion_wm_start( array $ids, string $mode = 'apply' ): array {
 
 /**
  * 推进一批。$concurrency > 1 时用 curl_multi 并发子请求。
+ *
+ * ## 并发保护
+ *
+ * 任务存在 transient 里（非 DB），没法像 storage 那样用 `UPDATE ... WHERE done = X`
+ * 做原子推进，因此这里用对象缓存的**互斥锁**把整个「取任务 → 处理 → 写回」串行化。
+ *
+ * 不加锁的真实故障：两个进程同时 `array_splice` 同一份 ids，各自取走**相同的 5 个 ID**，
+ * 同一张图被并发处理两次。而 apply_attachment() 内部是「备份原图 → 重写 → 失败则
+ * rename 回滚」，并发下两个进程会同时操作同一个备份文件——典型结果是
+ * 「rename 失败 → 原图丢失」或「备份被覆盖 → 无法回滚」。这不是理论风险，
+ * 前端 600ms 轮询在响应慢时就会重叠，多标签页更是必然重叠。
+ *
+ * 锁用 wp_cache_add（原子 add，仅成功时返回 true），无持久对象缓存时退化为
+ * transient 存储，同样是 add 语义。锁 TTL 短（30s）——宁可极端情况下锁过期
+ * 让人工重跑，也不要因为进程异常退出把任务永久锁死。
  */
 function jinyu_companion_wm_step(): array {
 	$task = jinyu_companion_wm_task();
 	if ( empty( $task['ids'] ) || 'running' !== $task['status'] ) {
 		return $task;
 	}
-	$mode     = isset( $task['mode'] ) && 'remove' === $task['mode'] ? 'remove' : 'apply';
-	$c        = max( 1, min( JINYU_WM_MAX_CONCURRENCY, (int) jinyu_companion_get_option( 'img_wm_concurrency', 1 ) ) );
-	$batch    = array_splice( $task['ids'], 0, ( $c > 1 ? 1 : JINYU_WM_STEP ) * $c );
-	$errors  = 0;
-	$blocked = 0;
 
-	// 并发走 admin-ajax 子请求；无 curl 扩展则退化为串行，避免静默「全成功」的假进度
-	if ( $c > 1 && function_exists( 'curl_multi_init' ) ) {
-		$errors = jinyu_companion_wm_worker_pool( $batch, $c, $mode );
-	} else {
-		foreach ( $batch as $id ) {
-			$r = ( 'remove' === $mode )
-				? Jinyu_Watermark::remove_attachment( (int) $id )
-				: Jinyu_Watermark::apply_attachment( (int) $id );
-			$errors  += (int) $r['errors'];
-			$blocked += (int) ( $r['blocked'] ?? 0 );
-		}
+	$lock_key = jinyu_companion_wm_task_key() . '_lock';
+	if ( ! wp_cache_add( $lock_key, 1, 'jinyu_wm_lock', 30 ) ) {
+		// 另一个进程正在推进本批：原样返回当前进度让前端下一轮重试。
+		// 绝不能在此处也去取任务——那正是重复处理的根源。
+		return $task;
 	}
 
-	$task['done']    = (int) $task['done'] + count( $batch );
-	$task['errors']  = (int) $task['errors'] + (int) $errors;
-	// ?? 0 很关键：任务数组由 jinyu_companion_wm_task() 建立，未必预置 blocked 键，
-	// 直接读会让 CLI/后端日志刷 "Undefined array key blocked"。
-	$task['blocked'] = (int) ( $task['blocked'] ?? 0 ) + (int) $blocked;
-	$task['status'] = empty( $task['ids'] ) ? 'done' : 'running';
-	$task['message'] = sprintf(
-		/* translators: 1: 已完成数 2: 总数 3: 失败数 */
-		__( '已处理 %1$d/%2$d，失败 %3$d', 'jinyu-theme-companion' ),
-		$task['done'],
-		$task['done'] + count( $task['ids'] ),
-		$task['errors']
-	);
-	jinyu_companion_wm_set_task( $task );
-	return $task;
+	try {
+		// 抢到锁后**重新读一次**任务：等锁期间上一个进程可能已推进并写回，
+		// 继续用抢锁前读到的旧快照会基于过期的 ids 数组工作。
+		$task = jinyu_companion_wm_task();
+		if ( empty( $task['ids'] ) || 'running' !== $task['status'] ) {
+			return $task;
+		}
+
+		$mode     = isset( $task['mode'] ) && 'remove' === $task['mode'] ? 'remove' : 'apply';
+		$c        = max( 1, min( JINYU_WM_MAX_CONCURRENCY, (int) jinyu_companion_get_option( 'img_wm_concurrency', 1 ) ) );
+		$batch    = array_splice( $task['ids'], 0, ( $c > 1 ? 1 : JINYU_WM_STEP ) * $c );
+		$errors   = 0;
+		$blocked  = 0;
+
+		// 并发走 admin-ajax 子请求；无 curl 扩展则退化为串行，避免静默「全成功」的假进度
+		if ( $c > 1 && function_exists( 'curl_multi_init' ) ) {
+			$errors = jinyu_companion_wm_worker_pool( $batch, $c, $mode );
+		} else {
+			foreach ( $batch as $id ) {
+				$r = ( 'remove' === $mode )
+					? Jinyu_Watermark::remove_attachment( (int) $id )
+					: Jinyu_Watermark::apply_attachment( (int) $id );
+				$errors  += (int) $r['errors'];
+				$blocked += (int) ( $r['blocked'] ?? 0 );
+			}
+		}
+
+		$task['done']    = (int) $task['done'] + count( $batch );
+		$task['errors']  = (int) $task['errors'] + (int) $errors;
+		// ?? 0 很关键：任务数组由 jinyu_companion_wm_task() 建立，未必预置 blocked 键，
+		// 直接读会让 CLI/后端日志刷 "Undefined array key blocked"。
+		$task['blocked'] = (int) ( $task['blocked'] ?? 0 ) + (int) $blocked;
+		$task['status'] = empty( $task['ids'] ) ? 'done' : 'running';
+		$task['message'] = sprintf(
+			/* translators: 1: 已完成数 2: 总数 3: 失败数 */
+			__( '已处理 %1$d/%2$d，失败 %3$d', 'jinyu-theme-companion' ),
+			$task['done'],
+			// 总数 = 已完成 + 剩余。任务数组由 wm_start 建立时并未存 total
+			// （ids 会被逐步 splice 消耗，存下来的 total 反而会与剩余量不一致），
+			// 所以这里按剩余量实时算，与 splice 后的真实进度一致。
+			(int) $task['done'] + count( $task['ids'] ),
+			$task['errors']
+		);
+		jinyu_companion_wm_set_task( $task );
+		return $task;
+	} finally {
+		// 无论成功、异常还是提前 return，都必须释放锁，否则任务会被锁死 30s。
+		wp_cache_delete( $lock_key, 'jinyu_wm_lock' );
+	}
 }
 
 /**
@@ -250,10 +303,7 @@ function jinyu_companion_wm_stats(): array {
 add_action(
 	'wp_ajax_jinyu_companion_wm_start',
 	function () {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
-		}
-		check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
+		jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 		$mode = isset( $_POST['mode'] ) && 'remove' === $_POST['mode'] ? 'remove' : 'apply';
 		// 还原只是把 -jywmo 备份 rename 回原路径，用不到水印开关，也用不到图像编辑器。
 		// 若沿用 is_enabled 拦截，用户一关掉「启用图片水印」就再也还原不了历史图——
@@ -264,7 +314,16 @@ add_action(
 		if ( ! jinyu_companion_wm_throttle() ) {
 			wp_send_json_error( __( '请求过于频繁，请稍后再试', 'jinyu-theme-companion' ) );
 		}
-		$ids  = isset( $_POST['ids'] ) && is_array( $_POST['ids'] ) ? array_map( 'intval', wp_unslash( $_POST['ids'] ) ) : array();
+		// ids 允许两种形态：数组（ids[]=1&ids[]=2）与逗号/空格分隔的字符串（ids=1,2）。
+		// 面板前端走字符串形态，这里必须两种都认——否则 is_array 对字符串恒 false，
+		// 用户填的 ID 会被当成「没填」，静默回落全库扫描（上限 5000 张）批量改写。
+		$scope = isset( $_POST['scope'] ) ? sanitize_key( wp_unslash( $_POST['scope'] ) ) : '';
+		$ids   = jinyu_companion_wm_parse_ids( wp_unslash( $_POST['ids'] ?? array() ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- parse_ids 内部逐项 absint + 去重 + 剔 0，非字符串无法通过
+		if ( 'ids' === $scope && empty( $ids ) ) {
+			// 用户明确选了「只处理指定 ID」，却一个都没解析出来：必须报错，
+			// 绝不能让它掉进全库分支——那会把整站媒体库重写一遍且界面毫无提示。
+			wp_send_json_error( __( '未解析到任何有效的附件 ID，请检查填写的数字', 'jinyu-theme-companion' ) );
+		}
 		$task = jinyu_companion_wm_start( $ids, $mode );
 		wp_send_json_success(
 			array(
@@ -279,10 +338,7 @@ add_action(
 add_action(
 	'wp_ajax_jinyu_companion_wm_step',
 	function () {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
-		}
-		check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
+		jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 		wp_send_json_success( jinyu_companion_wm_step() );
 	}
 );
@@ -291,10 +347,7 @@ add_action(
 add_action(
 	'wp_ajax_jinyu_companion_wm_status',
 	function () {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
-		}
-		check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
+		jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 		wp_send_json_success( jinyu_companion_wm_task() );
 	}
 );
@@ -303,56 +356,22 @@ add_action(
 add_action(
 	'wp_ajax_jinyu_companion_wm_stats',
 	function () {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
-		}
-		check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
+		jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 		wp_send_json_success( jinyu_companion_wm_stats() );
 	}
 );
 
-/** 单张立即处理 / 还原。 */
-add_action(
-	'wp_ajax_jinyu_companion_wm_one',
-	function () {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
-		}
-		check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
-		if ( ! jinyu_companion_wm_throttle() ) {
-			wp_send_json_error( __( '请求过于频繁，请稍后再试', 'jinyu-theme-companion' ) );
-		}
-		$id   = absint( wp_unslash( $_POST['id'] ?? 0 ) );
-		$mode = isset( $_POST['mode'] ) && 'remove' === $_POST['mode'] ? 'remove' : 'apply';
-		if ( ! $id ) {
-			wp_send_json_error( __( '缺少附件 ID', 'jinyu-theme-companion' ) );
-		}
-		if ( 'remove' === $mode ) {
-			$r = Jinyu_Watermark::remove_attachment( $id );
-		} else {
-			$r = Jinyu_Watermark::apply_attachment( $id );
-		}
-		wp_send_json_success(
-			array(
-				'done'    => (int) $r['done'],
-				'total'   => (int) $r['total'],
-				'errors'  => (int) $r['errors'],
-				'blocked' => (int) ( $r['blocked'] ?? 0 ),
-			)
-		);
-	}
-);
-
-/** 并发子请求 Workers（由 curl_multi 拉起，必须放行 nopriv 校验由 nonce 承担）。 */
+/**
+ * 并发子请求 Worker（由 curl_multi 拉起）。
+ *
+ * 这个端点由服务端自己请求自己，因此 nonce 由 jinyu_companion_wm_start 服务端签发
+ * （见上方 wm 启动逻辑），而不是设置页主表单的 nonce。字段名沿用 'nonce'。
+ * 走统一门卫，与其余端点保持一致。
+ */
 add_action(
 	'wp_ajax_jinyu_companion_wm_worker',
 	function () {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'ok' => false ), 403 );
-		}
-		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'jinyu_companion_wm' ) ) {
-			wp_send_json_error( array( 'ok' => false ), 403 );
-		}
+		jinyu_companion_guard( 'jinyu_companion_wm', 'nonce' );
 		$id   = absint( wp_unslash( $_POST['id'] ?? 0 ) );
 		$mode = isset( $_POST['mode'] ) && 'remove' === $_POST['mode'] ? 'remove' : 'apply';
 		if ( $id <= 0 ) {

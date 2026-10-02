@@ -81,28 +81,36 @@ function checkVersion() {
 const SKIP_DIRS = new Set(['.git', '.workbuddy', 'node_modules', '_deploy', '_theme_ref', '预览与脚本']);
 const SKIP_FILE_RE = /^(_build\.js|_shot_.*\.png|settings-preview\.html|.*\.log)$/;
 
-/** 本地专用、不进发布包的文档（非插件代码，且文件名含中文会被 wp.org 判 badly_named_files / unexpected_markdown_file）。 */
-const LOCAL_ONLY_FILES = new Set(['_先读我-恢复说明.md']);
-
 /** 发布包允许的文件/目录名字符集（ASCII 字母/数字/点/下划线/连字符）。 */
 const SAFE_NAME_RE = /^[A-Za-z0-9._-]+$/;
 
 /**
- * 校验单个条目能否进发布包：
- * - 本地专用文档 → 静默跳过（不进包）；
- * - 任一路径段含非 ASCII/空格/特殊字符 → 直接让构建失败，杜绝把 wp.org 会拒收的包传上去。
- * @returns {boolean} true=保留，false=跳过
+ * 凭据 / 私域文件黑名单：命中即构建失败。
+ *
+ * 为什么在「排除」之外还要「断言」：SKIP_DIRS 属于策略，任何一条被误删或改名都是
+ * **静默放行**——2026-10-02 就手工压缩出过一个 49.5MB 的包，顶层混编了别处的源码、
+ * node_modules、.git 全历史，以及某个含明文 FTP 口令的本地配置目录。排除规则当时是对的，
+ * 失效的是「人没走这个脚本」。断言把静默失败变成响亮崩溃。
+ */
+const FORBIDDEN_RE = /(^|\/)(\.git|\.workbuddy|node_modules|预览与脚本)($|\/)|ftp-config|\.pem$|\.key$|\.env$|(^|\/)(_?backup|dump|export)[-_.]/i;
+
+/**
+ * 发布包准入闸门：任一路径段含非 ASCII/空格/特殊字符 → 直接让构建失败。
+ * wp.org 自动扫描会判 badly_named_files / unexpected_markdown_file（ERROR，阻塞上传），
+ * 与其传上去被拒，不如构建期就崩。
+ * @param {string} rel 相对仓库根的路径
  */
 function gateEntry(rel) {
-    const segs = rel.split('/');
-    for (const seg of segs) {
+    for (const seg of rel.split('/')) {
         if (!SAFE_NAME_RE.test(seg)) {
             console.error('[zip] FAIL: 路径含非 ASCII/空格/特殊字符，wp.org 自动扫描会判 badly_named_files（阻塞上传）：' + rel);
             process.exit(1);
         }
     }
-    if (LOCAL_ONLY_FILES.has(segs[segs.length - 1])) return false;
-    return true;
+    if (FORBIDDEN_RE.test(rel)) {
+        console.error('[zip] FAIL: 命中凭据/私域文件黑名单（.git 历史 / .workbuddy 配置 / node_modules / 备份 / 密钥文件）：' + rel);
+        process.exit(1);
+    }
 }
 
 function walk(dir, base, out) {
@@ -111,7 +119,7 @@ function walk(dir, base, out) {
         const rel = base ? base + '/' + name : name;
         if (name.startsWith('.')) continue;   // 点文件/点目录（.gitignore、.git 等）一律不进包
         if (SKIP_DIRS.has(name)) continue;
-        if (!gateEntry(rel)) continue;        // 本地专用文档跳过；非法文件名直接失败
+        gateEntry(rel);                       // 非法文件名直接 process.exit，不返回
         const abs = path.join(dir, name);
         if (name.includes('.')) {
             if (SKIP_FILE_RE.test(name)) continue;
@@ -248,8 +256,10 @@ function main() {
     const files = listFiles().filter((rel) => {
         if (rel.split('/').some((seg) => seg.startsWith('.'))) return false;
         if (rel === 'tools' || rel.startsWith('tools/')) return false; // 打包脚本等开发件不发用户
-        return gateEntry(rel);   // 本地专用文档跳过；含中文/特殊字符的文件名直接构建失败
+        if (rel === 'phpcs.xml.dist') return false;                     // 开发期规范配置，不进包
+        return true;
     });
+    files.forEach(gateEntry);   // 含中文/特殊字符的文件名直接构建失败（不进过滤器，避免误当返回值）
     const entries = files.map((rel) => ({
         name: SLUG + '/' + rel.replace(/\\/g, '/'),
         data: fs.readFileSync(path.join(ROOT, rel)),

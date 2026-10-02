@@ -544,14 +544,14 @@ final class Jinyu_Watermark {
 				&& (string) @md5_file( $backup ) === (string) $proof[1] ) {
 				// 现图=登记在册的水印版、备份=登记在册的原图：还原（备份→原路径），继续重打
 				if ( ! @rename( $backup, $file ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- 水印备份/还原的原子 rename，保留 @rename 的原子与返回值语义
-					error_log( 'jinyu watermark: rebuild restore failed, skipped file=' . $file );
+					jinyu_companion_log( 'rebuild restore failed, skipped file=' . $file, 'watermark' );
 					return self::skip( $out, 'backup_exists' );
 				}
 				clearstatcache( true, $file );
 			} else {
 				// 按保护性跳过处理：绝不为了打水印去覆盖一份别人的原图。
 				// 留一条日志，否则用户会看到「这张图一直没水印」却查不出原因。
-				error_log( 'jinyu watermark: backup exists, skipped attachment file=' . $file );
+				jinyu_companion_log( 'backup exists, skipped attachment file=' . $file, 'watermark' );
 				return self::skip( $out, 'backup_exists' );
 			}
 		}
@@ -568,7 +568,7 @@ final class Jinyu_Watermark {
 			$bt   = is_file( $sbak ) ? (int) @filemtime( $sbak ) : 0;
 			$ct   = (int) @filemtime( $file );
 			if ( $bt > 0 && $ct > 0 && $ct >= $bt + 2 ) {
-				error_log( 'jinyu watermark: inherited watermark, skipped file=' . $file );
+				jinyu_companion_log( 'inherited watermark, skipped file=' . $file, 'watermark' );
 				return self::skip( $out, 'inherited' );
 			}
 		}
@@ -722,7 +722,7 @@ final class Jinyu_Watermark {
 					if ( self::sync_webp( $f ) ) {
 						++$webp;
 					} else {
-						error_log( 'jinyu watermark: webp sync failed for ' . $f );
+						jinyu_companion_log( 'webp sync failed for ' . $f, 'watermark' );
 					}
 				}
 			} else {
@@ -872,7 +872,7 @@ final class Jinyu_Watermark {
 						if ( self::sync_webp( $f ) ) {
 							++$webp;
 						} else {
-							error_log( 'jinyu watermark: webp sync failed on remove for ' . $f );
+							jinyu_companion_log( 'webp sync failed on remove for ' . $f, 'watermark' );
 						}
 					}
 				}
@@ -1352,7 +1352,7 @@ function jinyu_companion_wm_metadata( $metadata, $attach_id ) {
 	$res = Jinyu_Watermark::apply_attachment( $attach_id );
 	if ( $res['errors'] > 0 ) {
 		// 水印不是内容正确性的前提：上传链路里失败只记日志，绝不阻断上传
-		error_log( 'jinyu watermark skipped: attachment=' . $attach_id . ' errors=' . $res['errors'] );
+		jinyu_companion_log( 'skipped: attachment=' . $attach_id . ' errors=' . $res['errors'], 'watermark' );
 	}
 	/*
 	缩略图必须在这里重建：本回调跑在 wp_generate_attachment_metadata() 的最后一行，

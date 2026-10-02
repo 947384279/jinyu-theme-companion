@@ -11,10 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 add_action( 'wp_ajax_jinyu_bulk_push', 'jinyu_bulk_push_ajax' );
 
 function jinyu_bulk_push_ajax(): void {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_send_json_error( '权限不足' );
-	}
-	check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
+	jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 
 	$result = jinyu_bulk_push_run();
 

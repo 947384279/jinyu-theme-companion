@@ -27,10 +27,7 @@ add_action( 'wp_ajax_jinyu_comment_cleanup_delete', 'jinyu_comment_cleanup_delet
  * 扫描：对已批准评论做加权评分，返回按风险降序的疑似清单。
  */
 function jinyu_comment_cleanup_scan() {
-	check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
-	}
+	jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 
 	global $wpdb;
 
@@ -302,10 +299,7 @@ function jinyu_comment_cleanup_scan() {
  * 仅作用于确为"已批准"的评论，防止误删其它状态。
  */
 function jinyu_comment_cleanup_delete() {
-	check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
-	}
+	jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 
 	$ids_raw = isset( $_POST['ids'] ) ? sanitize_text_field( wp_unslash( $_POST['ids'] ) ) : '';
 	$ids     = array_filter( array_map( 'intval', explode( ',', $ids_raw ) ) );
@@ -318,7 +312,7 @@ function jinyu_comment_cleanup_delete() {
 	}
 
 	global $wpdb;
-	$backup = ! empty( $_POST['backup'] ) && '1' === (string) $_POST['backup'];
+	$backup = ! empty( $_POST['backup'] ) && '1' === (string) wp_unslash( $_POST['backup'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 只与字面量 '1' 严格比较，无注入面
 
 	// 仅作用于确为"已批准"的评论（与扫描口径一致），其余忽略
 	$ph            = implode( ',', array_fill( 0, count( $ids ), '%d' ) );

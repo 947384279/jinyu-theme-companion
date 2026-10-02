@@ -32,7 +32,7 @@ function jinyu_sl_register_privacy(): void {
 /**
  * 整表保存时由 jinyu_companion_handle_save() 调用：处理社交登录配置。
  * 复用主表单 nonce（jinyu_companion_nonce），不在本函数内重定向 / exit。
- * 逻辑与历史私有插件保持一致（含占位掩码与旧密文沿用），保证已存加密密钥无缝接管。
+ * 逻辑与历史版本保持一致（含占位掩码与旧密文沿用），保证已存加密密钥无缝接管。
  */
 function jinyu_sl_process_post(): void {
 	if ( ! isset( $_POST['jinyu_companion_save'] ) ) {
@@ -53,9 +53,7 @@ function jinyu_sl_process_post(): void {
 
 	// 新用户注册闸门（勾选=允许；历史安装未存过该键时渲染层默认勾选）+ 新用户角色
 	$allow_register = ! empty( $_POST['jinyu_sl_allow_register'] );
-	$role           = isset( $_POST['jinyu_sl_role'] ) && in_array( $_POST['jinyu_sl_role'], [ 'subscriber', 'contributor', 'author' ], true )
-		? sanitize_key( wp_unslash( $_POST['jinyu_sl_role'] ) )
-		: ( $old_opt['role'] ?? 'subscriber' );
+	$role           = jinyu_companion_post_enum( 'jinyu_sl_role', [ 'subscriber', 'contributor', 'author' ], $old_opt['role'] ?? 'subscriber' );
 	$old_ruri         = ! empty( $old_opt['redirect_uri'] ) ? $old_opt['redirect_uri'] : '';
 	$ruri             = isset( $_POST['jinyu_sl_redirect_uri'] )
 		? trim( sanitize_text_field( wp_unslash( $_POST['jinyu_sl_redirect_uri'] ) ) )
@@ -69,9 +67,12 @@ function jinyu_sl_process_post(): void {
 	$accounts = [];
 
 	foreach ( jinyu_sl_providers() as $p => $prov ) {
-		$post_id  = $_POST[ 'client_id_' . $p ] ?? '';
-		$post_sec = $_POST[ 'client_secret_' . $p ] ?? '';
-		$old_enc  = $_POST[ 'client_secret_old_' . $p ] ?? '';
+		// 全部走 wp_unslash：$_POST 的值可能带反斜杠（magic-quotes 遗留插件注入、
+		// 或某些 Windows 环境的中间层改写）。client_secret / private_key 会被加密入库，
+		// 反斜杠进了密文就解不回来 → OAuth 永久失败且无任何报错，极难排查。
+		$post_id  = isset( $_POST[ 'client_id_' . $p ] ) ? sanitize_text_field( wp_unslash( $_POST[ 'client_id_' . $p ] ) ) : '';
+		$post_sec = isset( $_POST[ 'client_secret_' . $p ] ) ? sanitize_text_field( wp_unslash( $_POST[ 'client_secret_' . $p ] ) ) : '';
+		$old_enc  = isset( $_POST[ 'client_secret_old_' . $p ] ) ? sanitize_text_field( wp_unslash( $_POST[ 'client_secret_old_' . $p ] ) ) : '';
 
 		$row = [ 'client_id' => sanitize_text_field( $post_id ) ];
 		// 掩码 •••••••• 不是真实密钥：提交它等价于「不修改」，须沿用原密文；
@@ -89,9 +90,9 @@ function jinyu_sl_process_post(): void {
 			if ( 'client_secret' === $fid ) {
 				continue;
 			}
-			$val = $_POST[ $fid . '_' . $p ] ?? '';
+			$val = isset( $_POST[ $fid . '_' . $p ] ) ? sanitize_text_field( wp_unslash( $_POST[ $fid . '_' . $p ] ) ) : '';
 			if ( 'private_key' === $fid ) {
-				$old_pk = $_POST[ 'private_key_old_' . $p ] ?? '';
+				$old_pk = isset( $_POST[ 'private_key_old_' . $p ] ) ? sanitize_text_field( wp_unslash( $_POST[ 'private_key_old_' . $p ] ) ) : '';
 				if ( '' !== $val && ! jinyu_sl_is_placeholder( $val ) ) {
 					$row[ $fid ] = jinyu_sl_encrypt( $val );
 				} elseif ( '' !== $old_pk ) {
@@ -184,7 +185,6 @@ function jinyu_sl_settings_pane(): void {
 		<div class="jyc-sl-hero-side">
 			<div class="jyc-sl-hero-stat" title="<?php echo esc_attr__( '已完整填写凭据的平台数量', 'jinyu-theme-companion' ); ?>">
 				<b class="jyc-num"><?php echo (int) $ready; ?></b>
-// translators: Placeholder values are substituted at runtime.
 				<span><?php echo esc_html( sprintf( __( '/ %d 已配置', 'jinyu-theme-companion' ), count( $provs ) ) ); // phpcs:ignore WordPress.WP.I18n.MissingTranslatorsComment ?></span>
 			</div>
 			<label class="jyc-switch jyc-switch-lg"><input type="checkbox" name="jinyu_sl_enable" <?php checked( $enable ); ?>><span class="jyc-track"></span></label>
@@ -242,20 +242,19 @@ function jinyu_sl_settings_pane(): void {
 					? __( '已配置', 'jinyu-theme-companion' )
 					: ( $partial ? __( '待完善', 'jinyu-theme-companion' ) : __( '未配置', 'jinyu-theme-companion' ) );
 
-				// 字段栅格为两列：半宽字段总数为奇数时（如 Apple 的 client_id + Team ID + Key ID），
-				// 让 client_id 独占一整行，否则行尾会留下一个空白格；字段总数 ≥4 的卡片在宽屏独占一整行。
-				$fields_total = 1 + ( $uses_cs ? 1 : 0 ) + count( $prov->config_fields() );
-				$textarea_num = 0;
-			foreach ( $prov->config_fields() as $f ) {
-				if ( 'textarea' === ( $f['type'] ?? '' ) ) {
-					++$textarea_num;
-				}
+			// 字段栅格为两列：半宽字段总数为奇数时（如 Apple 的 client_id + Team ID + Key ID），
+			// 让 client_id 独占一整行，否则行尾会留下一个空白格。
+			$fields_total = 1 + ( $uses_cs ? 1 : 0 ) + count( $prov->config_fields() );
+			$textarea_num = 0;
+		foreach ( $prov->config_fields() as $f ) {
+			if ( 'textarea' === ( $f['type'] ?? '' ) ) {
+				++$textarea_num;
 			}
-				$cid_full = 1 === ( $fields_total - $textarea_num ) % 2;
-				$wide     = $fields_total >= 4;
-			?>
-			<div class="jyc-sl-card<?php echo $wide ? ' jyc-sl-card-wide' : ''; ?>" style="--pc:<?php echo esc_attr( $pc ); ?>;--pc-l:<?php echo esc_attr( jinyu_sl_hex_rgba( $pc, 0.34 ) ); ?>;--pc-t:<?php echo esc_attr( jinyu_sl_hex_rgba( $pc, 0.13 ) ); ?>">
-				<div class="jyc-sl-card-hd"> // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
+		}
+			$cid_full = 1 === ( $fields_total - $textarea_num ) % 2;
+		?>
+		<div class="jyc-sl-card" style="--pc:<?php echo esc_attr( $pc ); ?>;--pc-l:<?php echo esc_attr( jinyu_sl_hex_rgba( $pc, 0.34 ) ); ?>;--pc-t:<?php echo esc_attr( jinyu_sl_hex_rgba( $pc, 0.13 ) ); ?>">
+				<div class="jyc-sl-card-hd">
 					<span class="jyc-sl-badge" aria-hidden="true"><?php echo jinyu_sl_icon_markup( $prov->icon() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（SVG 图标标记），无需转义 ?></span>
 					<div class="jyc-sl-card-tx">
 						<div class="jyc-sl-name"><?php echo esc_html( $prov->label() ); ?></div>

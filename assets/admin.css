@@ -254,8 +254,6 @@
 /* 破坏性操作的红色图标态 */
 .jyc-icon-danger { color: #d23f3f; border-color: rgba(210,63,63,.35); }
 .jyc-icon-danger:hover { color: #fff; background: #d23f3f; border-color: #d23f3f; }
-/* 卡片整体折叠：收起主体，仅留标题栏 */
-.jyc-panel.jyc-collapsed > .jyc-panel-b { display: none; }
 /* 扫描结果区：常驻工具条（折叠钮 + 标题 + 全选/计数/删除），下方列表可收起 */
 .jyc-cc-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
 .jyc-cc-title { font-size: 13px; font-weight: 600; color: var(--ink-2); }
@@ -345,18 +343,158 @@
 .jyc-bento .jyc-goto svg { display: block; width: 15px; height: 15px; }
 .jyc-bento .jyc-tile-link:hover .jyc-goto { opacity: 1; color: var(--brand); transform: translate(1px,-1px); }
 
-/* ===================== Progress card ===================== */
-.jyc-progress-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px; margin-bottom: 22px; box-shadow: var(--elev-2); }
-.jyc-progress-card .jyc-pc-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
-.jyc-progress-card h3 { font-size: 14px; margin: 0; font-weight: 700; }
-.jyc-progress-card .jyc-pct { font-size: 22px; font-weight: 800; color: var(--brand); font-family: var(--font-display); }
-.jyc-pbar { height: 12px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
-.jyc-pbar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--brand), var(--brand-2));
-  box-shadow: 0 0 12px var(--ring); transition: width .7s var(--spring); }
-.jyc-checks { display: grid; grid-template-columns: repeat(2,1fr); gap: 9px 22px; margin-top: 16px; }
-.jyc-checks .jyc-check, .jyc-checks label { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--ink-2); }
-.jyc-checks .jyc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--ink-3); }
-.jyc-checks .jyc-dot.jyc-on { background: var(--ok); box-shadow: 0 0 0 3px rgba(15,157,107,.18); }
+/* ===================== Progress card (扁平分析风) ===================== */
+.jyc-progress-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  padding: 28px 30px 24px;
+  margin-bottom: 26px;
+  box-shadow: var(--elev-2);
+}
+.jyc-pc-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+.jyc-pc-title { min-width: 0; }
+.jyc-pc-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 7px;
+}
+.jyc-progress-card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -.01em;
+  color: var(--ink);
+}
+.jyc-pc-sub {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin: 7px 0 0;
+  line-height: 1.6;
+}
+.jyc-pc-metric { text-align: right; line-height: 1; flex-shrink: 0; }
+.jyc-pc-big {
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.jyc-pc-big .on { color: var(--brand); }
+.jyc-pc-big .sep { color: var(--ink-3); font-weight: 400; margin: 0 2px; }
+.jyc-pc-pill {
+  display: inline-block;
+  margin-top: 9px;
+  padding: 4px 11px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.jyc-app[data-theme="dark"] .jyc-pc-pill { color: var(--brand-on-dark); }
+
+/* 分段进度计 */
+.jyc-pc-meter { display: flex; gap: 5px; margin: 4px 0 10px; }
+.jyc-seg {
+  flex: 1;
+  height: 7px;
+  border-radius: 99px;
+  background: var(--surface-3);
+  transition: background .4s var(--ease);
+}
+.jyc-seg.jyc-on { background: var(--brand); }
+.jyc-pc-meter-cap {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin: 0 0 22px;
+}
+
+/* 分组列表 */
+.jyc-checks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px 30px; margin-top: 22px; }
+.jyc-group { min-width: 0; }
+.jyc-group-h {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  padding-bottom: 9px;
+  margin-bottom: 11px;
+  border-bottom: 1px solid var(--line-2);
+}
+.jyc-group-cnt { font-size: 11px; font-weight: 600; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.jyc-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.jyc-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  padding: 7px 8px;
+  margin: 0 -8px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background .15s var(--ease), color .15s var(--ease);
+  outline: none;
+}
+.jyc-check:hover { background: var(--surface-2); }
+.jyc-check:focus-visible { box-shadow: 0 0 0 2px var(--ring); }
+.jyc-check-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: transform .2s var(--ease), background .2s var(--ease), color .2s var(--ease);
+}
+.jyc-check.jyc-on .jyc-check-icon { background: var(--brand-soft); color: var(--brand); }
+.jyc-app[data-theme="dark"] .jyc-check.jyc-on .jyc-check-icon { color: var(--brand-on-dark); }
+.jyc-check:not(.jyc-on) .jyc-check-icon { background: var(--surface-3); color: var(--ink-3); }
+.jyc-check:hover .jyc-check-icon { transform: scale(1.12); }
+.jyc-check svg { width: 11px; height: 11px; }
+.jyc-check-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jyc-check.jyc-on .jyc-check-label { color: var(--ink); font-weight: 500; }
+.jyc-check-arrow {
+  width: 14px;
+  height: 14px;
+  color: var(--ink-3);
+  opacity: 0;
+  transform: translateX(-3px);
+  transition: opacity .18s var(--ease), transform .18s var(--ease), color .18s var(--ease);
+}
+.jyc-check:hover .jyc-check-arrow { opacity: 1; transform: translateX(0); color: var(--brand); }
+
+/* 图例 */
+.jyc-pc-legend {
+  display: flex;
+  gap: 18px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-2);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.jyc-pc-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.jyc-dot-on { width: 9px; height: 9px; border-radius: 50%; background: var(--brand); flex-shrink: 0; }
+.jyc-dot-off { width: 9px; height: 9px; border-radius: 50%; background: var(--surface-3); border: 1px solid var(--line); flex-shrink: 0; }
+.jyc-app[data-theme="dark"] .jyc-dot-off { border-color: var(--line); }
+
+@media (max-width: 560px) {
+  .jyc-pc-head { flex-direction: column; gap: 14px; }
+  .jyc-pc-metric { text-align: left; }
+}
 
 /* ===================== Form controls ===================== */
 .jyc-frow { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; padding: 13px 0; }
@@ -821,6 +959,20 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 .jyc-edge-box { margin-top: 4px; }
 .jyc-edge-box[hidden], .jyc-edge-box.js-edge-hidden { display: none !important; }
 
+/* 边缘模式配置折叠区：片段默认收起，仅在展开时占高度 */
+.jyc-collapse { margin: 8px 0 3px; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+.jyc-collapse-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 11px 13px;
+  background: var(--surface-2); border: 0; cursor: pointer; font-family: inherit; text-align: left; transition: background .18s var(--ease); }
+.jyc-collapse-head:hover { background: var(--surface-3); }
+.jyc-collapse-title { font-weight: 600; font-size: 13.5px; color: var(--ink); }
+.jyc-collapse-sub { font-size: 12px; color: var(--ink-3); }
+.jyc-collapse-chev { margin-left: auto; flex-shrink: 0; color: var(--ink-3); transition: transform .2s var(--ease); }
+.jyc-collapse.is-open .jyc-collapse-chev { transform: rotate(90deg); }
+.jyc-collapse-body { padding: 10px 12px 12px; }
+.jyc-collapse-body[hidden] { display: none; }
+.jyc-collapse-body .jyc-code-viewer { margin: 0; }
+.jyc-collapse-body .jyc-fnote { display: block; margin-top: 10px; }
+
 /* 深色适配 */
 .jyc-app[data-theme="dark"] .jyc-mode-input:checked + .jyc-mode-card { background: var(--brand-soft); }
 .jyc-app[data-theme="dark"] .jyc-mode-ico { background: #263349; color: var(--ink-3); }
@@ -835,6 +987,9 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 .jyc-app[data-theme="dark"] .jyc-code-tabs { background: #263349; }
 .jyc-app[data-theme="dark"] .jyc-code-tab.is-active { background: #111a2c; color: var(--brand-on-dark); }
 .jyc-app[data-theme="dark"] .jyc-inp.jyc-code { background: #111a2c; }
+.jyc-app[data-theme="dark"] .jyc-collapse { background: #111a2c; border-color: #34415b; }
+.jyc-app[data-theme="dark"] .jyc-collapse-head { background: #1e2a42; }
+.jyc-app[data-theme="dark"] .jyc-collapse-head:hover { background: #263349; }
 
 /* 手机端：模式卡片转单列，提示条字号收紧，片段查看器头部换行 */
 @media (max-width: 560px) {
@@ -843,6 +998,7 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
   .jyc-cache-note { font-size: 12.5px; }
   .jyc-code-head { flex-wrap: wrap; }
   .jyc-code-viewer .jyc-inp.jyc-code { font-size: 11.5px; max-height: 260px; }
+  .jyc-collapse-sub { display: none; }
 }
 
 /* ===================== 传输体检（前台加速分区） ===================== */
@@ -1089,7 +1245,6 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 .jcard-t{font-size:13.5px;font-weight:550;letter-spacing:-.01em;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .jbadge{font-size:10px;font-weight:600;color:var(--j-accent);background:var(--j-accent-soft);
 	border:1px solid color-mix(in srgb, var(--j-accent) 22%, transparent);border-radius:6px;padding:1px 6px}
-.jcard-c{font-size:11.5px;color:var(--j-muted);margin-top:3px;line-height:1.5}
 /* 帮助气泡：长注释从卡片里移出，点击 ? 弹出，压缩卡片高度 */
 .jperf-help{flex:none;display:inline-flex;align-items:center;justify-content:center;
 	width:15px;height:15px;margin-left:2px;padding:0;border:1px solid var(--j-line);
@@ -1172,6 +1327,15 @@ textarea.jyc-inp{font-weight:400}
 .jperf-result{margin-top:14px;font-size:13px;line-height:1.8;display:none}
 .jperf-result.show{display:block;animation:rise .3s ease}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* 保存成功浮层：顶部居中胶囊，蓝底白字大字号，比内联结果区显眼（3.2s 自动消失） */
+#jperf-toast{position:fixed;top:48px;left:50%;z-index:99999;max-width:min(86vw,560px);
+	display:flex;align-items:center;gap:9px;padding:12px 22px;border-radius:999px;
+	background:#1c60f3;color:#fff;font-size:14px;font-weight:600;letter-spacing:.2px;line-height:1.5;
+	box-shadow:0 14px 34px -12px rgba(28,96,243,.65);
+	opacity:0;visibility:hidden;pointer-events:none;
+	transform:translate(-50%,-14px);transition:opacity .3s ease,transform .3s ease,visibility .3s}
+#jperf-toast.show{opacity:1;visibility:visible;transform:translate(-50%,0)}
 
 .jperf-btnrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
 	border-top:1px solid var(--j-line);margin-top:20px;padding-top:16px}
@@ -1342,7 +1506,6 @@ textarea.jyc-inp{font-weight:400}
 	.jperf-kv{gap:12px 14px}
 	.jperf-cval{font-size:12.5px}
 		.jperf-block-head{flex-direction:column;align-items:flex-start;gap:5px}
-	.jperf-input{width:100%}
 	.jperf-actions{gap:8px}
 	.jperf-actions .jperf-btn{flex:1 1 calc(50% - 4px);justify-content:center}
 }
@@ -1564,17 +1727,12 @@ body.jyc-dark { background: #0a111c; }
 .jyc-sl-console:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 6px; }
 .jyc-app[data-theme="dark"] .jyc-sl-console { color: var(--brand-on-dark); }
 
-/* 超宽屏（≥1560px）：3 张常规卡同排 + 字段多的一行独占整行。
-   独占行内部改 4 列栅格；常规卡内部改单列 —— 卡宽收到 ~600px 后若仍两列，
-   client_id 这类 50+ 字符的长值会被截断，看不到全貌。 */
+/* 超宽屏（≥1560px）：常规卡同排。
+   卡宽收到 ~600px 后若仍两列，client_id 这类 50+ 字符的长值会被截断，看不到全貌，故内部改单列。 */
 @media (min-width: 1560px) {
 	.jyc-sl-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-	.jyc-sl-card-wide { grid-column: 1 / -1; }
-	.jyc-sl-grid > .jyc-sl-card:not(.jyc-sl-card-wide) .jyc-sl-fields { grid-template-columns: 1fr; }
-	.jyc-sl-grid > .jyc-sl-card:not(.jyc-sl-card-wide) .jyc-sl-fields > .jyc-fl { grid-column: auto; }
-	.jyc-sl-card-wide .jyc-sl-fields { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-	.jyc-sl-card-wide .jyc-sl-fields > .jyc-fl { grid-column: auto; }
-	.jyc-sl-card-wide textarea.jyc-inp { min-height: 66px; }
+	.jyc-sl-grid > .jyc-sl-card .jyc-sl-fields { grid-template-columns: 1fr; }
+	.jyc-sl-grid > .jyc-sl-card .jyc-sl-fields > .jyc-fl { grid-column: auto; }
 }
 
 @media (max-width: 760px) {
@@ -1800,7 +1958,7 @@ body.jyc-dark { background: #0a111c; }
 .jyc-aistat { margin-left: auto; white-space: nowrap; font-size: 12px; color: var(--ink-3); }
 .jyc-aistat--none { opacity: .7; }
 .jyc-btn-sm { padding: 5px 12px; font-size: 12.5px; border-radius: 9px; }
-.jyc-brand { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; min-width: 152px; white-space: nowrap;
+.jyc-cgroup .jyc-brand { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; min-width: 152px; white-space: nowrap;
   padding: 3px 12px 3px 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
   font-size: 12.5px; font-weight: 600; color: var(--ink); }
 .jyc-brand-ico { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); }
@@ -1810,7 +1968,7 @@ body.jyc-dark { background: #0a111c; }
   padding: 2px 8px; color: var(--ink-2); background: var(--surface-3); border: 1px solid var(--line); border-radius: 7px; }
 .jyc-app[data-theme="dark"] .jyc-csect { background: var(--surface-3); }
 .jyc-app[data-theme="dark"] .jyc-csect-h:hover { background: var(--surface-2); }
-.jyc-app[data-theme="dark"] .jyc-brand { background: var(--surface-2); }
+.jyc-app[data-theme="dark"] .jyc-cgroup .jyc-brand { background: var(--surface-2); }
 .jyc-app[data-theme="dark"] .jyc-ua { background: var(--surface); }
 /* 手机端：区域卡片贴边、品牌行转纵向；UA 标签缩小并加大行距，避免小字拥挤误触。 */
 @media (max-width: 782px) {
@@ -1819,7 +1977,7 @@ body.jyc-dark { background: #0a111c; }
   .jyc-csect-meta { font-size: 11px; }
   .jyc-csect-b { padding: 0 12px 8px; }
   .jyc-cgroup { flex-direction: column; align-items: stretch; gap: 7px; padding: 9px 0; }
-  .jyc-brand { min-width: 0; align-self: flex-start; font-size: 12px; padding-right: 11px; }
+  .jyc-cgroup .jyc-brand { min-width: 0; align-self: flex-start; font-size: 12px; padding-right: 11px; }
   .jyc-ua-list { padding-top: 0; gap: 5px; }
   .jyc-ua { font-size: 11px; padding: 3px 7px; }
 }

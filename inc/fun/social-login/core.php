@@ -43,6 +43,26 @@ function jinyu_sl_get_accounts(): array {
 	return is_array( $acc ) ? $acc : [];
 }
 
+/**
+ * 是否允许「同邮箱自动绑定到已有账号」。
+ *
+ * 默认 false。邮箱匹配本质是一条无密码的账号接管通道：任何能证明「我控制这个
+ * 平台账号」的人，只要把平台公开邮箱改成 victim@本站，就能借 OAuth 登录进
+ * victim 的站内账号（甚至管理员账号）。平台侧的 verified 校验是第一层防护，
+ * 但它依赖每一个 provider 都实现正确，且依赖平台接口语义不变——不该是唯一屏障。
+ *
+ * 关闭后行为：命中同邮箱时不做任何绑定，转提示让用户先用密码登录、再从用户中心
+ * 主动绑定。这条路径要求用户证明自己拥有站内密码，无法被伪造。
+ *
+ * 保留过滤器作为逃生阀：确有「邮箱唯一可信、且已用其它手段锁死平台账号」的场景
+ * 的站点，可自行打开。默认关是安全姿态，打开是站点自己的责任。
+ *
+ * @return bool
+ */
+function jinyu_sl_auto_bind_by_email(): bool {
+	return (bool) apply_filters( 'jinyu_sl_auto_bind_by_email', false );
+}
+
 /** 单平台已解密配置 */
 function jinyu_sl_get_config( string $platform ): array {
 	$acc = jinyu_sl_get_accounts();
@@ -254,17 +274,20 @@ function jinyu_sl_redirect_uri(): string {
 	return jinyu_sl_default_redirect_uri();
 }
 
-/** 绑定完成后回跳地址：优先主题配置的用户中心页，否则 WP 个人资料页 */
+/**
+ * 绑定完成后回跳地址。
+ *
+ * 默认 WP 个人资料页。站点若有自己的用户中心，通过 jinyu_sl_user_center_url 过滤器
+ * 报名自己的地址即可。
+ *
+ * 为什么不用「读主题 option」的方式：那是**运行期**持续依赖主题的私有数据模型，
+ * 主题换掉或删掉该键，回跳地址就静默漂移到 profile.php；而探测/读取主题 option
+ * 本身就违反三向解耦（插件认识主题的数据模型）。一次性迁移可以读主题 option，
+ * 运行期不行——迁移是「搬一次」，这个是「每次都读」，性质不同。
+ */
 function jinyu_sl_user_center_url(): string {
-	$opt     = get_option( 'jinyu_options', [] );
-	$page_id = is_array( $opt ) ? (int) ( $opt['user_center_page'] ?? 0 ) : 0;
-	if ( $page_id ) {
-		$link = get_permalink( $page_id );
-		if ( $link ) {
-			return $link;
-		}
-	}
-	return admin_url( 'profile.php' );
+	$url = (string) apply_filters( 'jinyu_sl_user_center_url', '' );
+	return $url ? $url : admin_url( 'profile.php' );
 }
 
 function jinyu_sl_begin( string $platform ): void {
@@ -343,7 +366,7 @@ function jinyu_sl_callback(): void {
 	// 但记录日志以便排查。真正的防 CSRF 由 state↔transient 保证。
 	$cookie = isset( $_COOKIE[ JINYU_SL_COOKIE ] ) ? sanitize_text_field( wp_unslash( $_COOKIE[ JINYU_SL_COOKIE ] ) ) : '';
 	if ( '' !== $cookie && ! hash_equals( $cookie, $state ) ) {
-		error_log( 'Jinyu Social Login: state cookie mismatch, proceeding via transient check.' );
+		jinyu_companion_log( 'state cookie mismatch, proceeding via transient check.', 'sl-core' );
 	}
 
 	$stored = get_transient( 'jinyu_sl_' . $state );
@@ -379,7 +402,10 @@ function jinyu_sl_callback(): void {
 	$extra = [];
 	if ( $is_post ) {
 		$extra['id_token'] = sanitize_text_field( wp_unslash( $_POST['id_token'] ?? '' ) );
-		$extra['user']     = wp_unslash( $_POST['user'] ?? '' );
+		// user 是 Apple 回传的原始 JSON（含 name.firstName 等嵌套结构），**不能** sanitize_text_field：
+		// 那样会把双引号转成 HTML 实体，json_decode 直接失败 → 拿不到昵称。
+		// 它只被 json_decode 解析、不进数据库也不进 HTML，安全性由 decode 后的白名单取值保证。
+		$extra['user']     = wp_unslash( $_POST['user'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 原始 JSON，仅经 json_decode 解析后按字段白名单取值
 	}
 	if ( '' !== $nonce ) {
 		$extra['nonce'] = $nonce;
@@ -424,7 +450,7 @@ function jinyu_sl_callback(): void {
 
 /** 统一失败出口：记录日志 + 用短时效 transient 带回登录页（login_message 消费一次即删），避免报错卡在 URL 反复复现 */
 function jinyu_sl_bail( string $msg ): void {
-	error_log( 'Jinyu Social Login failed: ' . $msg );
+	jinyu_companion_log( 'failed: ' . $msg, 'sl-core' );
 	$tid = wp_generate_password( 12, false );
 	set_transient( 'jinyu_sl_err_' . $tid, $msg, 60 );
 	if ( ob_get_level() ) {
@@ -471,14 +497,30 @@ function jinyu_sl_find_or_create( string $platform, array $ud, bool $logged_in )
 		if ( $existing ) {
 			return $existing;
 		}
-		// 2) 站内已存在同邮箱且邮箱经平台验证：绑定到该账号（防邮箱伪造接管）。
-		// email_verified 由 provider 在拉取用户信息时保证（仅取平台标记为 verified 的邮箱）。
+		// 2) 站内已存在同邮箱：默认**不**自动接管，转入「待确认绑定」流程。
+		//
+		// 为什么不能静默绑定：邮箱匹配一旦可被伪造，就是无密码的账号接管通道。
+		// provider 侧已收紧到「只取平台标记 verified 的邮箱」（GitHub 走 /user/emails、
+		// Gitee 走 state=confirmed、Apple 走已验签 claim），但那是纵深防御的一层，
+		// 不是唯一一层——任何一个 provider 未来改错、或平台接口语义变化，都会重新打开这个洞。
+		// 用户能证明自己拥有该邮箱（已登录站账号、或走密码找回确认）才允许绑定，
+		// 这是唯一无法被伪造的凭据。
+		//
+		// 触发确认的前提是「确实存在同邮箱的站内账号」；不存在则直接走下方建号，
+		// 不给攻击者留「探测某邮箱是否注册过」的时间侧信道。
 		if ( ! empty( $ud['email'] ) && ! empty( $ud['email_verified'] ) ) {
 			$mail_uid = (int) email_exists( $ud['email'] );
 			if ( $mail_uid ) {
-				update_user_meta( $mail_uid, jinyu_sl_oauth_id_key( $platform ), $ud['id'] );
-				jinyu_sl_save_avatar( $mail_uid, $platform, $ud['avatar'] ?? '' );
-				return $mail_uid;
+				if ( jinyu_sl_auto_bind_by_email() ) {
+					update_user_meta( $mail_uid, jinyu_sl_oauth_id_key( $platform ), $ud['id'] );
+					jinyu_sl_save_avatar( $mail_uid, $platform, $ud['avatar'] ?? '' );
+					return $mail_uid;
+				}
+				// 落到这里说明自动接管已关闭：不建立任何绑定，也不建新账号，
+				// 把用户送去「用密码登录后到用户中心绑定」的确定性路径。
+				jinyu_sl_fail(
+					__( '该邮箱已在本站注册。为保障账号安全，请先用密码登录，再从用户中心绑定第三方账号。', 'jinyu-theme-companion' )
+				);
 			}
 		}
 		// 3) 全新用户：自动建号（可关闸 + 角色面板可配，见「第三方登录 → 新用户注册」）
@@ -564,7 +606,7 @@ function jinyu_sl_create_oauth_user( string $platform, array $ud ): int|WP_Error
 		return $uid;
 	}
 	// 密码为随机串（用户不知情、无法用它登录），打标记供解绑时防锁号判断；
-	// 用户在用户中心成功改密后，主题侧会清除该标记（数据契约：meta 键 jinyu_sl_no_password）。
+	// 用户成功设置自有密码后，由本插件挂在核心钩子 after_password_reset 上清除（见下方 jinyu_sl_clear_no_password_flag）。
 	update_user_meta( $uid, 'jinyu_sl_no_password', 1 );
 	wp_update_user(
 		[
@@ -584,23 +626,62 @@ function jinyu_sl_create_oauth_user( string $platform, array $ud ): int|WP_Error
  * 用户中心解绑（AJAX，登录态）
  * ======================================================================== */
 add_action( 'wp_ajax_jinyu_sl_unbind', 'jinyu_sl_ajax_unbind' );
+/**
+ * 用户中心解绑第三方账号。
+ *
+ * 失败一律 HTTP 200 + success:false（不返回 4xx）：服务器 nginx 的 error_page 会拦截
+ * admin-ajax 的 4xx 响应体并换成 HTML 错误页，前端拿到的就不是 JSON——用户只会看到
+ * 「操作失败」，真实原因（功能已关 / 参数无效 / 会锁死账号）全被吞掉。语义编码进 data.code。
+ */
 function jinyu_sl_ajax_unbind(): void {
-	check_ajax_referer( 'jinyu_sl_unbind', 'nonce' );
-
-	if ( ! jinyu_oauth_enabled() ) {
-		wp_send_json_error( [ 'msg' => __( '第三方登录功能已关闭。', 'jinyu-theme-companion' ) ], 403 );
+	// 能力：解绑只作用于「当前登录用户自己的账号」，无需 edit_user 等级的能力，
+	// 但必须已登录（wp_ajax_ 而非 nopriv 已保证），这里显式拒绝 uid=0 的异常态。
+	$uid = get_current_user_id();
+	if ( ! $uid || ! is_user_logged_in() ) {
+		wp_send_json_error(
+            [
+				'msg' => __( '请先登录。', 'jinyu-theme-companion' ),
+				'code' => 'unauthorized',
+			]
+        );
+	}
+	if ( ! check_ajax_referer( 'jinyu_sl_unbind', 'nonce', false ) ) {
+		wp_send_json_error(
+            [
+				'msg' => __( '安全校验失败，请刷新页面后重试。', 'jinyu-theme-companion' ),
+				'code' => 'bad_nonce',
+			]
+        );
 	}
 
-	$uid = get_current_user_id();
-	$platform = sanitize_key( wp_unslash( $_POST['platform'] ?? '' ) );
+	if ( ! jinyu_oauth_enabled() ) {
+		wp_send_json_error(
+            [
+				'msg' => __( '第三方登录功能已关闭。', 'jinyu-theme-companion' ),
+				'code' => 'disabled',
+			]
+        );
+	}
+
+	$platform  = sanitize_key( wp_unslash( $_POST['platform'] ?? '' ) );
 	$providers = jinyu_sl_providers();
 	if ( ! $uid || ! isset( $providers[ $platform ] ) ) {
-		wp_send_json_error( [ 'msg' => __( '参数无效。', 'jinyu-theme-companion' ) ], 400 );
+		wp_send_json_error(
+            [
+				'msg' => __( '参数无效。', 'jinyu-theme-companion' ),
+				'code' => 'bad_param',
+			]
+        );
 	}
 
 	$id_key = jinyu_sl_oauth_id_key( $platform );
 	if ( '' === (string) get_user_meta( $uid, $id_key, true ) ) {
-		wp_send_json_error( [ 'msg' => __( '该平台尚未绑定。', 'jinyu-theme-companion' ) ], 400 );
+		wp_send_json_error(
+            [
+				'msg' => __( '该平台尚未绑定。', 'jinyu-theme-companion' ),
+				'code' => 'not_bound',
+			]
+        );
 	}
 
 	// 防锁号：解绑后须仍有登录途径——其他平台绑定，或用户已设自己的密码。
@@ -613,8 +694,10 @@ function jinyu_sl_ajax_unbind(): void {
 	}
 	if ( 0 === $others && get_user_meta( $uid, 'jinyu_sl_no_password', true ) ) {
 		wp_send_json_error(
-			[ 'msg' => __( '此账号未设置密码，解绑后将无法登录。请先在上方设置密码，或绑定其他平台后再解绑。', 'jinyu-theme-companion' ) ],
-			409
+			[
+				'msg'  => __( '此账号未设置密码，解绑后将无法登录。请先在上方设置密码，或绑定其他平台后再解绑。', 'jinyu-theme-companion' ),
+				'code' => 'would_lock_out',
+			]
 		);
 	}
 
@@ -622,6 +705,26 @@ function jinyu_sl_ajax_unbind(): void {
 	delete_user_meta( $uid, jinyu_sl_oauth_avatar_key( $platform ) );
 
 	wp_send_json_success( [ 'msg' => __( '解绑成功。', 'jinyu-theme-companion' ) ] );
+}
+
+/*
+ * 用户已设自有密码 → 清除「无密码」标记。
+ * 挂在核心钩子 after_password_reset（wp_set_password() 内部触发），而非依赖主题在某处
+ * 代删该 meta：标记是本插件的私有数据模型，由插件自己负责生命周期，主题无须知情。
+ * 覆盖所有改密入口（用户中心 AJAX、后台资料页、wp_insert_user 等）。
+ */
+add_action( 'after_password_reset', 'jinyu_sl_clear_no_password_flag' );
+/**
+ * 清除用户的 jinyu_sl_no_password 标记（该用户已拥有可登录的自有密码）。
+ *
+ * @param int $user_id 用户 ID。
+ * @return void
+ */
+function jinyu_sl_clear_no_password_flag( $user_id ): void {
+	$uid = (int) $user_id;
+	if ( $uid > 0 ) {
+		delete_user_meta( $uid, 'jinyu_sl_no_password' );
+	}
 }
 
 /*

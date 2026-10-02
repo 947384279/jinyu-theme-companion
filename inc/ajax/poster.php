@@ -5,13 +5,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 add_action( 'wp_ajax_jinyu_poster', 'jinyu_poster_generate' );
 add_action( 'wp_ajax_nopriv_jinyu_poster', 'jinyu_poster_generate' );
+
+/**
+ * 海报生成端点（公开，游客可用）。
+ *
+ * CSRF 防护：校验本插件自持的 nonce（action = jinyu_poster），由本插件在文章渲染时
+ * 经过滤器广播给前端。此前这里是「双 nonce 任一通过」：主题的 jinyu_front +
+ * 本插件的 jinyu_companion_settings。问题有两个——
+ * ① jinyu_companion_settings 只在**后台设置页**签发，前台根本拿不到，插件独立运行时
+ *    无人能通过校验，端点形同虚设；
+ * ② 探测主题的 nonce 名是「插件认识主题」，属双向耦合，违反解耦约束。
+ * 改为插件只认自己签发的 nonce，主题通过 apply_filters( 'jinyu_poster_nonce' ) 取值，
+ * 主题缺席时该过滤器无人响应，前端自然不带 nonce——端点不可用是正确降级，
+ * 好过用一个「看起来能过实则过不了」的校验糊弄。
+ */
 function jinyu_poster_generate() {
-    // 双 nonce 兼容：主题在场时前端用主题 jinyu_front nonce；插件独立运行时
-    // 接受本插件设置页签发的 jinyu_companion_settings nonce。两者任一通过即可。
-    $ok = check_ajax_referer( 'jinyu_front', '_ajax_nonce', false )
-        || check_ajax_referer( 'jinyu_companion_settings', '_ajax_nonce', false );
-    if ( ! $ok ) {
-        wp_send_json_error( __( 'nonce 校验失败', 'jinyu-theme-companion' ), 403 );
+    if ( ! check_ajax_referer( 'jinyu_poster', '_ajax_nonce', false ) ) {
+        wp_send_json_error( __( '海报生成请求已失效，请刷新页面后重试。', 'jinyu-theme-companion' ) );
     }
 
     $post_id = absint( wp_unslash( $_REQUEST['post_id'] ?? 0 ) );
@@ -119,6 +129,22 @@ function jinyu_poster_generate() {
     }
 
     wp_send_json_success( [ 'url' => $url ] );
+}
+
+/**
+ * 广播海报端点的 nonce 供前端使用。
+ *
+ * 契约方向：主题渲染「生成海报」按钮时 apply_filters( 'jinyu_poster_nonce' ) 取值，
+ * 填进请求的 _ajax_nonce 字段。本插件只提供值，不认识主题任何函数。
+ * 默认返回空串——主题未取用时端点不可用，属正确降级（好过用一个恒定可绕过的校验）。
+ *
+ * @param string $default 主题侧默认值（本插件不接管时为空）。
+ * @return string
+ */
+add_filter( 'jinyu_poster_nonce', 'jinyu_poster_nonce' );
+function jinyu_poster_nonce( $default = '' ): string {
+	unset( $default );
+	return wp_create_nonce( 'jinyu_poster' );
 }
 
 /**

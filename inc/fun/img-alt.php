@@ -160,10 +160,7 @@ add_action( 'wp_ajax_jinyu_img_audit', 'jinyu_img_seo_audit_ajax' );
  * 纯只读查询，结果缓存 12h（force=1 强制重扫），供作者对症补内容。
  */
 function jinyu_img_seo_audit_ajax() {
-	check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
-	}
+	jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 	$force = isset( $_POST['force'] ) && '1' === $_POST['force'];
 	wp_send_json_success( jinyu_img_seo_audit( $force ) );
 }

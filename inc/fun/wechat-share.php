@@ -39,6 +39,37 @@ if ( ! function_exists( 'jinyu_wechat_get_appsecret' ) ) {
 	}
 }
 
+/**
+ * 把微信接口的错误响应压成一行可安全落日志的摘要。
+ *
+ * 为什么不能直接记 wp_remote_retrieve_body()：那是完整响应体，可能回显 appid、
+ * 还可能带上 ticket / token 片段；且微信某些错误分支会返回很长的 HTML 错误页。
+ * 只取 errcode + errmsg 两个字段——排查够用，且不含凭据。
+ *
+ * @param array|WP_Error $resp wp_remote_get() 的返回值。
+ * @return string
+ */
+if ( ! function_exists( 'jinyu_wechat_error_summary' ) ) {
+	function jinyu_wechat_error_summary( $resp ): string {
+		if ( is_wp_error( $resp ) ) {
+			return 'transport: ' . $resp->get_error_message();
+		}
+		$body = json_decode( (string) wp_remote_retrieve_body( $resp ), true );
+		if ( ! is_array( $body ) ) {
+			$code = (int) wp_remote_retrieve_response_code( $resp );
+			return 'http ' . $code . '（响应体非 JSON）';
+		}
+		$parts = array();
+		if ( isset( $body['errcode'] ) ) {
+			$parts[] = 'errcode=' . (int) $body['errcode'];
+		}
+		if ( isset( $body['errmsg'] ) ) {
+			$parts[] = 'errmsg=' . substr( (string) $body['errmsg'], 0, 120 );
+		}
+		return $parts ? implode( ' ', $parts ) : '未返回 errcode/errmsg';
+	}
+}
+
 if ( ! function_exists( 'jinyu_wechat_get_access_token' ) ) {
 	/**
 	 * 取 access_token（缓存 7000s，微信官方 7200s 过期）。失败返回空串并记日志，前端据此跳过注入（不致命）。
@@ -56,12 +87,12 @@ if ( ! function_exists( 'jinyu_wechat_get_access_token' ) ) {
 		$url  = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=' . rawurlencode( $appid ) . '&secret=' . rawurlencode( $secret );
 		$resp = wp_remote_get( $url, [ 'timeout' => 8 ] );
 		if ( is_wp_error( $resp ) ) {
-			error_log( '[jinyu-wechat] access_token request failed: ' . $resp->get_error_message() );
+			jinyu_companion_log( 'access_token request failed: ' . $resp->get_error_message(), 'wechat' );
 			return '';
 		}
 		$body = json_decode( wp_remote_retrieve_body( $resp ), true );
 		if ( empty( $body['access_token'] ) ) {
-			error_log( '[jinyu-wechat] access_token error: ' . wp_remote_retrieve_body( $resp ) );
+			jinyu_companion_log( 'access_token error: ' . jinyu_wechat_error_summary( $resp ), 'wechat' );
 			return '';
 		}
 		update_option(
@@ -92,12 +123,12 @@ if ( ! function_exists( 'jinyu_wechat_get_jsapi_ticket' ) ) {
 		$url  = 'https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token=' . rawurlencode( $at ) . '&type=jsapi';
 		$resp = wp_remote_get( $url, [ 'timeout' => 8 ] );
 		if ( is_wp_error( $resp ) ) {
-			error_log( '[jinyu-wechat] ticket request failed: ' . $resp->get_error_message() );
+			jinyu_companion_log( 'ticket request failed: ' . $resp->get_error_message(), 'wechat' );
 			return '';
 		}
 		$body = json_decode( wp_remote_retrieve_body( $resp ), true );
 		if ( empty( $body['ticket'] ) || (int) ( $body['errcode'] ?? 0 ) !== 0 ) {
-			error_log( '[jinyu-wechat] ticket error: ' . wp_remote_retrieve_body( $resp ) );
+			jinyu_companion_log( 'ticket error: ' . jinyu_wechat_error_summary( $resp ), 'wechat' );
 			return '';
 		}
 		update_option(

@@ -76,24 +76,34 @@ class Jinyu_OAuth_Provider_Gitee extends Jinyu_OAuth_Provider {
 			return $user;
 		}
 
-		$email = (string) ( $user['email'] ?? '' );
-
-		if ( '' === $email ) {
-			$emails = $this->request(
-				'https://gitee.com/api/v5/emails',
-				[ 'headers' => [ 'Authorization' => 'Bearer ' . $token ] ]
-			);
-			if ( ! is_wp_error( $emails ) && is_array( $emails ) ) {
-				foreach ( $emails as $row ) {
-					if ( ! is_array( $row ) || empty( $row['email'] ) ) {
-						continue;
-					}
-					if ( ! empty( $row['state'] ) && 'confirmed' === $row['state'] ) {
-						$email = (string) $row['email'];
-						break;
-					}
+		// 邮箱只认 /emails 里 state=confirmed 的条目。/user 返回的 email 是用户「公开的邮箱」，
+		// Gitee 不保证它已确认——拿它当已验证邮箱会让 core 的「同邮箱即绑定已有账号」
+		// 逻辑变成账号接管通道（攻击者把公开邮箱设成 victim@本站即可登进他人账号）。
+		$email    = '';
+		$emails   = $this->request(
+			'https://gitee.com/api/v5/emails',
+			[ 'headers' => [ 'Authorization' => 'Bearer ' . $token ] ]
+		);
+		$fallback = '';
+		if ( ! is_wp_error( $emails ) && is_array( $emails ) ) {
+			foreach ( $emails as $row ) {
+				if ( ! is_array( $row ) || empty( $row['email'] ) ) {
+					continue;
+				}
+				if ( empty( $row['state'] ) || 'confirmed' !== $row['state'] ) {
+					continue;
+				}
+				if ( ! empty( $row['primary'] ) ) {
+					$email = (string) $row['email'];
+					break;
+				}
+				if ( '' === $fallback ) {
+					$fallback = (string) $row['email'];
 				}
 			}
+		}
+		if ( '' === $email ) {
+			$email = $fallback;
 		}
 
 		return $this->normalize_user(
@@ -102,7 +112,6 @@ class Jinyu_OAuth_Provider_Gitee extends Jinyu_OAuth_Provider {
 				'nickname' => $user['name'] ?? ( $user['login'] ?? '' ),
 				'avatar'   => $user['avatar_url'] ?? '',
 				'email'    => $email,
-				'email_verified' => true,
 			]
 		);
 	}

@@ -145,7 +145,10 @@ class Jinyu_OAuth_Provider_Apple extends Jinyu_OAuth_Provider {
 				'nickname' => $nickname,
 				'avatar'   => '',
 				'email'    => $email,
-				'email_verified' => true,
+				// 这里的 email 来自**已验签的 id_token claim**（见上方 verify_id_token），
+				// 不是用户可自由填写的公开资料字段。Apple 只为已验证的邮箱地址签发该 claim，
+				// 与 GitHub/Gitee 的「公开邮箱」性质不同，因此可以认定为已验证。
+				'email_verified' => '' !== $email,
 			]
 		);
 	}

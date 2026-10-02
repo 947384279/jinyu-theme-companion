@@ -375,14 +375,20 @@ $jinyu_password_read = function ( $atts, $content = '' ) {
 	if ( $a['pass'] === '' ) {
 		// 未设置密码则始终可见
 		$unlocked = true;
-	} elseif ( isset( $_POST['jinyu_pwd_key'], $_POST['jinyu_pwd_val'] ) && $_POST['jinyu_pwd_key'] === $key ) {
-		if ( hash_equals( md5( $a['pass'] ), md5( trim( (string) $_POST['jinyu_pwd_val'] ) ) ) ) {
+	} elseif (
+		isset( $_POST['jinyu_pwd_key'], $_POST['jinyu_pwd_val'] )
+		// 密码必须 wp_unslash：值里带反斜杠时 md5 永远对不上，用户输了正确密码也进不去，
+		// 且不会有任何提示。$_COOKIE 同样——它由上面的 setcookie 写入，
+		// 若这里不 unslash，读写两侧的编码就不一致。
+		&& sanitize_text_field( wp_unslash( $_POST['jinyu_pwd_key'] ) ) === $key
+	) {
+		if ( hash_equals( md5( $a['pass'] ), md5( trim( sanitize_text_field( wp_unslash( $_POST['jinyu_pwd_val'] ) ) ) ) ) ) {
 			$unlocked = true;
 			if ( ! headers_sent() ) {
 				setcookie( $key, md5( $a['pass'] ), time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN );
 			}
 		}
-	} elseif ( isset( $_COOKIE[ $key ] ) && is_string( $_COOKIE[ $key ] ) && hash_equals( $_COOKIE[ $key ], md5( $a['pass'] ) ) ) {
+	} elseif ( isset( $_COOKIE[ $key ] ) && is_string( $_COOKIE[ $key ] ) && hash_equals( sanitize_text_field( wp_unslash( $_COOKIE[ $key ] ) ), md5( $a['pass'] ) ) ) {
 		$unlocked = true;
 	}
 

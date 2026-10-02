@@ -23,7 +23,9 @@ function jinyu_baidu_submit( int $post_id ): void {
     }
 
     // 已成功推送过则跳过，避免重复消耗每日配额
-    if ( get_post_meta( $post_id, 'jinyu_baidu_push_status', true ) == 1 ) {
+    // 用 intval 而非 === ：存量数据可能是字符串 '1'（早期版本或外部写入），
+    // 直接 === 1 会漏判并重复推送，白白消耗每日配额。
+    if ( 1 === intval( get_post_meta( $post_id, 'jinyu_baidu_push_status', true ) ) ) {
         return;
     }
 

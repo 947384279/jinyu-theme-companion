@@ -162,7 +162,7 @@ if ( ! function_exists( 'jinyu_companion_io_export_url' ) ) {
 
 if ( ! function_exists( 'jinyu_companion_io_perf_export' ) ) {
 	/**
-	 * 性能中心开关导出（独立 option jinyu_perf_options，全部为 0/1 非敏感开关）。
+	 * 性能中心开关导出（独立 option jinyu_perf_options_v2，全部为 0/1 非敏感开关）。
 	 *
 	 * @return array
 	 */
@@ -413,7 +413,9 @@ if ( ! function_exists( 'jinyu_companion_import_perf' ) ) {
 			);
 		}
 		$allowed = array_keys( jinyu_perf_toggle_meta() );
-		$current = (array) get_option( 'jinyu_perf_options', array() );
+		// 走 perf-center 的读取函数而非裸 get_option：它含默认值与旧键 fallback，
+		// 否则旧键尚未迁移时 $current 为空数组，isset 恒假，所有键都会被误报为「已更新」。
+		$current = function_exists( 'jinyu_perf_get_options' ) ? jinyu_perf_get_options() : (array) get_option( 'jinyu_perf_options_v2', array() );
 		$next    = $current;
 		$updated = 0;
 		foreach ( $allowed as $k ) {
@@ -428,7 +430,7 @@ if ( ! function_exists( 'jinyu_companion_import_perf' ) ) {
 			++$updated;
 		}
 		if ( $updated > 0 ) {
-			update_option( 'jinyu_perf_options', $next, false );
+			update_option( 'jinyu_perf_options_v2', $next, false );
 		}
 		return array(
 			'updated' => $updated,
@@ -592,7 +594,7 @@ if ( ! function_exists( 'jinyu_companion_handle_import' ) ) {
 
 		// 优先文件：仅接受 .json，体积超限直接拒绝（不进解析阶段）。
 		if ( isset( $_FILES['jinyu_import_file'] ) && ! empty( $_FILES['jinyu_import_file']['tmp_name'] ) ) {
-			$file = wp_unslash( $_FILES['jinyu_import_file'] );
+			$file = wp_unslash( $_FILES['jinyu_import_file'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- $_FILES 由 PHP 自身填充，非用户可控；tmp_name 另经 realpath + is_uploaded_file 校验，文件名经 wp_check_filetype 限 .json
 			$type = wp_check_filetype( $file['name'], array( 'json' => 'application/json' ) );
 			if ( 'json' !== $type['ext'] ) {
 				jinyu_companion_import_result(

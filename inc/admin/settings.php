@@ -120,32 +120,25 @@ function jinyu_companion_apply_saved_settings(): void {
 	$settings['page_cache_edge_path'] = isset( $_POST['page_cache_edge_path'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['page_cache_edge_path'] ) ) ) : '';
 	// 自动内链：单篇总链接数上限（1-20，默认 5）
 	$settings['auto_link_limit'] = isset( $_POST['auto_link_limit'] ) ? max( 1, min( 20, (int) wp_unslash( $_POST['auto_link_limit'] ) ) ) : 5;
+	// 浏览量冷却已写死为常量（见 theme-compat.php），不再作为用户设置；清掉历史残留键。
+	unset( $settings['views_wait_seconds'] );
 
 	// 站点验证元标签（仅保留安全字符，去除可能的注入内容）
 	foreach ( [ 'verify_google', 'verify_bing', 'verify_baidu', 'verify_yandex', 'verify_360' ] as $vk ) {
 		$settings[ $vk ] = isset( $_POST[ $vk ] ) ? sanitize_text_field( wp_unslash( $_POST[ $vk ] ) ) : '';
 	}
 	// Speculation Rules：模式（预取 / 预渲染）+ 急切度
-	$settings['speculation_mode'] = isset( $_POST['speculation_mode'] ) && in_array( $_POST['speculation_mode'], [ 'prefetch', 'prerender' ], true )
-		? sanitize_key( wp_unslash( $_POST['speculation_mode'] ) )
-		: 'prefetch';
-	$settings['speculation_eagerness'] = isset( $_POST['speculation_eagerness'] ) && in_array( $_POST['speculation_eagerness'], [ 'conservative', 'moderate', 'eager' ], true )
-		? sanitize_key( wp_unslash( $_POST['speculation_eagerness'] ) )
-		: 'conservative';
+	$settings['speculation_mode']     = jinyu_companion_post_enum( 'speculation_mode', [ 'prefetch', 'prerender' ], 'prefetch' );
+	$settings['speculation_eagerness'] = jinyu_companion_post_enum( 'speculation_eagerness', [ 'conservative', 'moderate', 'eager' ], 'conservative' );
 
 	// 验证码策略
-	$allowed_policy = [ 'smart', 'always', 'off' ];
-	$settings['captcha_policy'] = isset( $_POST['captcha_policy'] ) && in_array( $_POST['captcha_policy'], $allowed_policy, true )
-		? sanitize_key( wp_unslash( $_POST['captcha_policy'] ) )
-		: 'smart';
+	$settings['captcha_policy'] = jinyu_companion_post_enum( 'captcha_policy', [ 'smart', 'always', 'off' ], 'smart' );
 
 	// SMTP
 	$settings['smtp_host'] = isset( $_POST['smtp_host'] ) ? sanitize_text_field( wp_unslash( $_POST['smtp_host'] ) ) : '';
 	// 端口最小 1：清空提交存 0 会让 PHPMailer Port=0，发信静默失败
 	$settings['smtp_port']   = isset( $_POST['smtp_port'] ) ? max( 1, (int) wp_unslash( $_POST['smtp_port'] ) ) : 0;
-	$settings['smtp_secure'] = isset( $_POST['smtp_secure'] ) && in_array( $_POST['smtp_secure'], [ 'ssl', 'tls', 'none' ], true )
-		? sanitize_key( wp_unslash( $_POST['smtp_secure'] ) )
-		: 'ssl';
+	$settings['smtp_secure'] = jinyu_companion_post_enum( 'smtp_secure', [ 'ssl', 'tls', 'none' ], 'ssl' );
 	$settings['smtp_user']   = isset( $_POST['smtp_user'] ) ? sanitize_text_field( wp_unslash( $_POST['smtp_user'] ) ) : '';
 	$settings['smtp_from']   = isset( $_POST['smtp_from'] ) ? sanitize_email( wp_unslash( $_POST['smtp_from'] ) ) : '';
 	// 是否接管全站发信。关闭时仅保留「发送测试邮件」用于验证通道，不影响 wp_mail 走默认 mail()。
@@ -160,9 +153,7 @@ function jinyu_companion_apply_saved_settings(): void {
 	}
 
 	// 对象存储（CDN）：配置存本插件独立选项，与主题设置完全隔离
-	$settings['storage_provider'] = isset( $_POST['storage_provider'] ) && in_array( $_POST['storage_provider'], [ '', 'upyun', 's3' ], true )
-		? sanitize_key( wp_unslash( $_POST['storage_provider'] ) )
-		: '';
+	$settings['storage_provider'] = jinyu_companion_post_enum( 'storage_provider', [ '', 'upyun', 's3' ], '' );
 	$settings['storage_bucket']     = isset( $_POST['storage_bucket'] ) ? sanitize_text_field( wp_unslash( $_POST['storage_bucket'] ) ) : '';
 	$settings['storage_region']     = isset( $_POST['storage_region'] ) ? sanitize_text_field( wp_unslash( $_POST['storage_region'] ) ) : '';
 	$settings['storage_endpoint']   = isset( $_POST['storage_endpoint'] ) ? sanitize_text_field( wp_unslash( $_POST['storage_endpoint'] ) ) : '';
@@ -660,10 +651,25 @@ function jinyu_companion_settings_page_html(): void {
 							</div>
 
 							<div class="jyc-progress-card">
-								<div class="jyc-pc-head"><h3><?php echo esc_html__( '功能启用度明细', 'jinyu-theme-companion' ); ?></h3><span class="jyc-pct" id="jyc-pct">0%</span></div>
-								<div class="jyc-pbar"><i id="jyc-pbarFill" style="width:0%"></i></div>
-								<div class="jyc-checks" id="jyc-checks"></div>
+							<div class="jyc-pc-head">
+								<div class="jyc-pc-title">
+									<?php echo esc_html__( 'Feature Adoption', 'jinyu-theme-companion' ); ?>
+									<h3><?php echo esc_html__( '功能启用度明细', 'jinyu-theme-companion' ); ?></h3>
+									<p class="jyc-pc-sub"><?php echo esc_html__( '插件全部可配置能力的开启概况。点击任一功能可直接跳转对应设置面板。', 'jinyu-theme-companion' ); ?></p>
+								</div>
+								<div class="jyc-pc-metric">
+									<div class="jyc-pc-big"><span class="on" id="jyc-pc-on">0</span><span class="sep">/</span><span id="jyc-pc-total">0</span></div>
+									<span class="jyc-pc-pill" id="jyc-pct">0%</span>
+								</div>
 							</div>
+							<div class="jyc-pc-meter" id="jyc-meter" role="img" aria-label="<?php echo esc_attr__( '功能启用度分段图', 'jinyu-theme-companion' ); ?>"></div>
+							<p class="jyc-pc-meter-cap"><?php echo esc_html__( '每一格代表一项功能，蓝色为已启用', 'jinyu-theme-companion' ); ?></p>
+							<div class="jyc-checks" id="jyc-checks"></div>
+							<div class="jyc-pc-legend">
+								<span><i class="jyc-dot-on"></i><?php echo esc_html__( '已开启', 'jinyu-theme-companion' ); ?></span>
+								<span><i class="jyc-dot-off"></i><?php echo esc_html__( '未开启', 'jinyu-theme-companion' ); ?></span>
+							</div>
+						</div>
 
 							<div class="jyc-panel">
 								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg></span><?php echo esc_html__( '内置恒启能力', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '插件常驻 · 无需配置', 'jinyu-theme-companion' ); ?></span></div>
@@ -803,7 +809,7 @@ function jinyu_companion_settings_page_html(): void {
 											<div class="jyc-fname"><?php echo esc_html__( 'AI 爬虫到访统计', 'jinyu-theme-companion' ); ?></div>
 											<div class="jyc-fdesc"><?php echo esc_html__( '按上方清单的 UA 识别并聚合计数（只记品牌、次数与最后到访时间，不记录 IP 与完整访问日志），明细显示在上方各品牌行内。清零后从下一次到访重新累计。', 'jinyu-theme-companion' ); ?></div>
 											<?php if ( $jinyu_ai_rows ) : ?>
-												<div style="margin-top:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+												<div id="jyc-aiCrawlStatBox" style="margin-top:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
 													<span style="font-size:13px">
 														<?php
 														$jinyu_ai_total = 0;
@@ -817,7 +823,7 @@ function jinyu_companion_settings_page_html(): void {
 													<button type="button" class="jyc-btn jyc-btn-ghost jyc-btn-sm" id="jyc-aiCrawlReset" onclick="jycAiCrawlReset(this)"><?php echo esc_html__( '清零统计', 'jinyu-theme-companion' ); ?></button>
 												</div>
 											<?php else : ?>
-												<div style="font-size:13px;color:var(--muted,#6b7280);margin-top:6px"><?php echo esc_html__( '暂无记录——AI 爬虫到访后，计数会出现在上方对应品牌行内。', 'jinyu-theme-companion' ); ?></div>
+												<div id="jyc-aiCrawlStatBox" style="font-size:13px;color:var(--ink-3);margin-top:6px"><?php echo esc_html__( '暂无记录——AI 爬虫到访后，计数会出现在上方对应品牌行内。', 'jinyu-theme-companion' ); ?></div>
 											<?php endif; ?>
 										</div>
 									</div>
@@ -1188,12 +1194,11 @@ function jinyu_companion_settings_page_html(): void {
 	if ( $jpc && $jpc['enabled'] ) :
 		if ( 'edge' === $page_cache_mode ) :
 			$edge_srv = isset( $jpc['edge_server'] ) ? $jpc['edge_server'] : 'nginx';
-			$edge_dir = isset( $jpc['edge_path'] ) ? $jpc['edge_path'] : '';
 			?>
 			<div class="jyc-cache-note is-info">
 				<?php
-				// translators: 1: Web 服务器类型（NGINX / APACHE）；2: 边缘缓存目录路径.
-				printf( esc_html__( '边缘模式已启用（%1$s）：由 Web 服务器写入 %2$s，插件不写盘。请复制下方配置片段粘贴到服务器；保存设置会触发一次全量刷新。', 'jinyu-theme-companion' ), esc_html( strtoupper( $edge_srv ) ), '<code>' . esc_html( $edge_dir ) . '</code>' );
+				// translators: 1: Web 服务器类型（NGINX / APACHE）.
+				printf( esc_html__( '边缘模式已启用（%1$s）：缓存由 Web 服务器写入下方「边缘缓存目录」字段所指定的路径（插件自身不写盘）。复制下方配置片段粘贴到服务器即可；保存设置会触发一次全量刷新。', 'jinyu-theme-companion' ), esc_html( strtoupper( $edge_srv ) ) );
 				?>
 			</div>
 			<?php
@@ -1252,7 +1257,6 @@ function jinyu_companion_settings_page_html(): void {
 	</div>
 
 	<div class="jyc-edge-box" id="jycEdgeBox"<?php echo 'edge' === $page_cache_mode ? '' : ' hidden'; ?>>
-		<div class="jyc-fsep"><?php echo esc_html__( '边缘模式配置', 'jinyu-theme-companion' ); ?></div>
 		<div class="jyc-fpair">
 			<label class="jyc-fl">
 				<span class="jyc-fname-sm"><?php echo esc_html__( '服务器类型', 'jinyu-theme-companion' ); ?></span>
@@ -1274,31 +1278,33 @@ function jinyu_companion_settings_page_html(): void {
 		$edge_apache = function_exists( 'jinyu_page_cache_edge_snippet' ) ? jinyu_page_cache_edge_snippet( 'apache' ) : '';
 		// 片段查看器默认展示的服务器：跟随已保存的设置；auto 时按当前 Web 服务器探测结果取其一。
 		$edge_default = ( 'apache' === $page_cache_edge_server ) ? 'apache' : 'nginx';
+		$edge_snippets = array(
+			'nginx'  => $edge_nginx,
+			'apache' => $edge_apache,
+		);
 		?>
-		<div class="jyc-code-viewer" id="jycCodeViewer" data-active="<?php echo esc_attr( $edge_default ); ?>" data-snippets="
-        <?php
-        echo esc_attr(
-            wp_json_encode(
-                array(
-					'nginx' => $edge_nginx,
-					'apache' => $edge_apache,
-                )
-            )
-        );
-		?>
-                                                                        ">
-			<div class="jyc-code-head">
-				<div class="jyc-code-tabs" role="tablist">
-					<button type="button" class="jyc-code-tab" data-code="nginx" onclick="window.jycEdgeCodeTab('nginx')"><?php esc_html_e( 'Nginx', 'jinyu-theme-companion' ); ?></button>
-					<button type="button" class="jyc-code-tab" data-code="apache" onclick="window.jycEdgeCodeTab('apache')"><?php esc_html_e( 'Apache', 'jinyu-theme-companion' ); ?></button>
+		<div class="jyc-collapse" id="jycEdgeSnippet">
+			<button type="button" class="jyc-collapse-head" aria-expanded="false" aria-controls="jycEdgeSnippetBody" onclick="window.jycEdgeSnippetToggle(this)">
+				<span class="jyc-collapse-title"><?php echo esc_html__( '边缘模式配置', 'jinyu-theme-companion' ); ?></span>
+				<span class="jyc-collapse-sub"><?php echo esc_html__( '查看并复制 Nginx / Apache 部署片段', 'jinyu-theme-companion' ); ?></span>
+				<svg class="jyc-collapse-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+			</button>
+			<div class="jyc-collapse-body" id="jycEdgeSnippetBody" hidden>
+			<div class="jyc-code-viewer" id="jycCodeViewer" data-active="<?php echo esc_attr( $edge_default ); ?>" data-snippets="<?php echo esc_attr( wp_json_encode( $edge_snippets ) ); ?>">
+				<div class="jyc-code-head">
+					<div class="jyc-code-tabs" role="tablist">
+						<button type="button" class="jyc-code-tab" data-code="nginx" onclick="window.jycEdgeCodeTab('nginx')"><?php esc_html_e( 'Nginx', 'jinyu-theme-companion' ); ?></button>
+						<button type="button" class="jyc-code-tab" data-code="apache" onclick="window.jycEdgeCodeTab('apache')"><?php esc_html_e( 'Apache', 'jinyu-theme-companion' ); ?></button>
+					</div>
+					<button type="button" class="jyc-btn jyc-btn-soft jyc-code-copy" onclick="window.jycEdgeCodeCopy(this)"><?php esc_html_e( '复制片段', 'jinyu-theme-companion' ); ?></button>
 				</div>
-				<button type="button" class="jyc-btn jyc-btn-soft jyc-code-copy" onclick="window.jycEdgeCodeCopy(this)"><?php esc_html_e( '复制片段', 'jinyu-theme-companion' ); ?></button>
+				<span class="jyc-code-hint" data-code="nginx"><?php esc_html_e( '分三处粘贴：http 段 / PHP 的 location 内 / server 段', 'jinyu-theme-companion' ); ?></span>
+				<span class="jyc-code-hint" data-code="apache"><?php esc_html_e( '只能放 vhost 配置，放 .htaccess 会 500', 'jinyu-theme-companion' ); ?></span>
+				<textarea class="jyc-inp jyc-code" id="jycCodeText" rows="16" readonly spellcheck="false"></textarea>
 			</div>
-			<span class="jyc-code-hint" data-code="nginx"><?php esc_html_e( '分三处粘贴：http 段 / PHP 的 location 内 / server 段', 'jinyu-theme-companion' ); ?></span>
-			<span class="jyc-code-hint" data-code="apache"><?php esc_html_e( '只能放 vhost 配置，放 .htaccess 会 500', 'jinyu-theme-companion' ); ?></span>
-			<textarea class="jyc-inp jyc-code" id="jycCodeText" rows="16" readonly spellcheck="false"></textarea>
+			<span class="jyc-fnote"><?php echo esc_html__( '切换标签查看对应服务器配置；插件不会自动写入服务器配置，粘贴后保存设置会触发一次全量刷新。', 'jinyu-theme-companion' ); ?></span>
+			</div>
 		</div>
-		<span class="jyc-fnote"><?php echo esc_html__( '切换标签查看对应服务器配置；插件不会自动写入服务器配置，粘贴后保存设置会触发一次全量刷新。', 'jinyu-theme-companion' ); ?></span>
 	</div>
 	</div>
 </div>
@@ -1396,6 +1402,7 @@ function jinyu_companion_settings_page_html(): void {
 									<div id="jyc-ccResult" hidden style="margin-top:14px"></div>
 								</div>
 							</div>
+
 </section>
 
 						<!-- ===================== SMTP ===================== -->
@@ -1563,7 +1570,7 @@ function jinyu_companion_settings_page_html(): void {
 							</div>
 						</section>
 
-						<!-- ===================== SOCIAL LOGIN（第三方登录，自私有插件迁入） ===================== -->
+						<!-- ===================== SOCIAL LOGIN（第三方登录） ===================== -->
 						<section id="pane-social" class="jyc-pane<?php echo 'social' === $active_pane ? ' jyc-shown' : ''; ?>">
 							<?php jinyu_sl_settings_pane(); ?>
 						</section>

@@ -4,7 +4,7 @@ Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
 Tested up to: 7.1.2
 Requires PHP: 8.0
-Stable tag: 1.2.7
+Stable tag: 1.2.8
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,6 +27,28 @@ Features:
 * Performance center: OPcache / Memcached status boards, reversible performance toggles, per-layer cache flushing (OPcache / Memcached / page cache), one-click optimization, and a real-user Web Vitals board
 * AI crawler statistics: per-brand visit counts for known AI crawlers (privacy-safe — stores only the canonical UA name / count / last visit triple, never IP, raw UA or URI)
 * Third-party login (social login): optional sign-in with GitHub / Gitee / QQ / Apple — off by default. Each provider stores only the OAuth credentials you configure (encrypted at rest); no personal data leaves the site except the standard OAuth exchange when a user signs in.
+
+== Screenshots ==
+
+= Overview dashboard =
+Every subsystem summarised on one screen: how many of the 117 switches are on, whether SEO cards and index pinging are live, comment-protection strength, real-user performance, outstanding optimisation items, and database/cache health.
+
+`assets/screenshots/screenshot-1.png`
+
+= Third-party login =
+Enable social sign-in and configure each provider. App ID / secret are written only after you fill them in, and are stored AES-encrypted — the panel never displays a stored key in clear text.
+
+`assets/screenshots/screenshot-2.png`
+
+= Image watermark =
+Nine-grid positioning, live preview, custom text, and a PNG watermark URL. Watermarks are burned into the uploaded file itself (not a CSS overlay), so they survive copy-paste and are unaffected by theme changes. Every touched original is kept as a `-jywmo` backup for one-click restore.
+
+`assets/screenshots/screenshot-3.png`
+
+= Responsive layout =
+On narrow screens the top navigation collapses into a horizontally scrollable strip and the status tiles stack into a single column.
+
+`assets/screenshots/screenshot-4.png`
 
 == Installation ==
 
@@ -99,9 +121,12 @@ Administrators can disable any of the above outbound features at any time in the
 
 == Changelog ==
 
+= 1.2.8 =
+* 常规维护与缺陷修复。；code style: WPCS 全量合规治理
+
 = 1.2.7 =
 * Fix (performance center): the "block outbound WordPress.org API" toggle now uses a deny-list instead of a permit-list — it blocks only `/plugins/` and `/themes/` (plugin/theme details and install modals, the slow requests that actually stall the admin). Everything on the update path stays reachable: core version check `/core/version-check`, update checks `/core/update-check`, translation index `/translations/`, and package downloads on `downloads.wordpress.org`. Previously each new update endpoint silently fell outside the permit-list and broke the update channel with an error the plugin itself emitted ("download failed… blocked by the performance toggle"); the deny-list can no longer drift out of sync with WordPress.
-* Fix (storage): two-way mutual-exclusion guard with the legacy private plugin `wordpress-plugin-jinyu`, so load order can no longer produce a fatal redeclaration of `jinyu_storage_ssl_verify`.
+* Fix (storage): the mutual-exclusion guard for the object-storage module is now enforced on both sides, so PHP load order can no longer produce a fatal redeclaration of a shared storage symbol.
 * Feature: AI crawler statistics with privacy exporters/erasers — aggregate counts per crawler brand (no IP, no full UA, no URI stored), plus the per-brand in-panel readout and an "idle brand" state.
 * Tested up to WordPress 7.1.2.
 
@@ -215,8 +240,6 @@ Adds the HTTP transport check and page-cache exclusion rules. Existing page-cach
 = 1.0.0 =
 First release: the functional companion plugin split out from the Jinyu theme.
 
-== Resources ==
+== Notes ==
 
-This plugin no longer depends on any external or theme-provided icon font. All front-end icons (for example the captcha refresh button and the "comment to view" hint) are inlined as self-contained SVG, so the plugin works fully standalone.
-
-* Previously this plugin referenced Font Awesome on the front end; that dependency has been removed. Font Awesome Free remains under the CC BY 4.0 license (https://creativecommons.org/licenses/by/4.0/) and SIL OFL 1.1 (https://scripts.sil.org/OFL); its trademark belongs to Dave Gandy.
+This plugin has no external or theme-provided icon-font dependency. All admin and front-end icons (for example the captcha refresh button and the "comment to view" hint) are inlined as self-contained SVG, so the plugin works fully standalone.

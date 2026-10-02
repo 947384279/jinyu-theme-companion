@@ -12,10 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 add_action( 'wp_ajax_jinyu_db_optimize', 'jinyu_db_optimize' );
 
 function jinyu_db_optimize() {
-	check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
-	}
+	jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 
 	global $wpdb;
 
@@ -241,10 +238,7 @@ function jinyu_autoload_sql_in_off(): string {
  * 直接 SQL 聚合，不把大值读进内存。
  */
 function jinyu_autoload_scan() {
-	check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
-	}
+	jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 
 	global $wpdb;
 	$min = jinyu_autoload_min_size();
@@ -295,10 +289,7 @@ function jinyu_autoload_scan() {
  * 优先用 WP 6.6+ 的 wp_set_option_autoload()（内部正确处理 alloptions 缓存失效）。
  */
 function jinyu_autoload_fix() {
-	check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
-	}
+	jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 
 	$name = isset( $_POST['option_name'] ) ? sanitize_text_field( wp_unslash( $_POST['option_name'] ) ) : '';
 	if ( '' === $name || strlen( $name ) > 191 ) {

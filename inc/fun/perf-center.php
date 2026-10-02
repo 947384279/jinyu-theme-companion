@@ -5,7 +5,7 @@
  * 自主题 inc/fun/perf.php 迁入（plugin-territory：性能开关 / 缓存看板 / 清理动作
  * 均非主题呈现层职责，.org 上架要求此类能力由配套插件承载）。
  * 函数统一改用 jinyu_perf_ 前缀，避免与主题历史实现发生编译期早绑定冲突；
- * 开关选项存于 jinyu_perf_options（新键；首次读取时自动接管主题时代旧键 jinyu_perf_options 的历史配置）。
+ * 开关选项存于 jinyu_perf_options_v2（新键；首次读取时自动接管 jinyu_perf_options 旧键的历史配置）。
  *
  * 一个自包含的后台工具，提供：
  *   1) 状态看板：OPcache 字节码缓存（命中率/内存/脚本数/重启次数）与
@@ -19,7 +19,7 @@
  *      返回优化前后对比，并自动刷新状态看板。
  *
  * 设计原则：
- *   - 所有操作均可逆（开关存于 jinyu_perf_options，清理不删有效数据）。
+ *   - 所有操作均可逆（开关存于 jinyu_perf_options_v2，清理不删有效数据）。
  *   - 仅管理员可用（manage_options），全部 AJAX 走 nonce 校验。
  *   - 页面输出不使用任何 emoji / 图片：一律用 CSS / 内联 SVG 绘制，
  *     规避 WP emoji 脚本把字符替换为 s.w.org 远程图片、国内加载失败出现裂图的问题。
@@ -33,19 +33,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 /* ───────────────────────── 选项与开关定义 ───────────────────────── */
 
 /**
- * 读取性能开关（单例缓存，避免一次请求内重复查询 options 表）。
+ * 推荐开关组合（单一来源）：既是全新站点的默认值，也是「一键打开推荐开关」的目标状态。
+ * 「按需开启」类（前台 admin bar 隐藏 / 评论懒加载 / 游客 REST 限制）依赖站点具体环境，
+ * 不进推荐组合，保持默认关。
  *
  * @return array key => 0|1
  */
-function jinyu_perf_get_options(): array {
-	static $cache = null;
-	if ( is_array( $cache ) ) {
-		return $cache;
-	}
-	$defaults = [
+function jinyu_perf_recommended_options(): array {
+	return [
 		'disable_heartbeat'      => 1, // 关闭后台心跳轮询（单管理员站点推荐）
 		'disable_dashboard_news' => 1, // 移除仪表盘「动态与新闻」
-		'disable_emoji'          => 1, // 移除 WP emoji 检测/替换脚本（默认开：国内 s.w.org 不可达）
+		'disable_emoji'          => 1, // 移除 WP emoji 检测/替换脚本（国内 s.w.org 不可达）
 		'disable_embed'          => 1, // 移除 wp-embed 前端脚本
 		'limit_revisions'        => 1, // 每篇文章最多保留 5 个修订
 		'disable_live_geo'       => 1, // 短接 whois.pconline.com.cn 地理查询
@@ -54,19 +52,85 @@ function jinyu_perf_get_options(): array {
 		'disable_pingback'       => 1, // 禁用 pingback 自引用
 		'disable_wp_org_api'     => 1, // 屏蔽 WordPress.org 外部 API（更新/翻译/主题检查，国内极慢）
 		'hide_admin_bar_front'   => 0, // 前台对非管理员隐藏 admin bar（按需开启）
-		'dns_preconnect'        => 1, // 关键域名 DNS 预连接（CDN 域名，加速首屏建连）
-		'comment_lazyload'      => 0, // 评论懒加载（按需加载更多，减少长文首屏 DOM）
-		'iframe_lazy'           => 1, // iframe 懒加载（视频/嵌入延后到视口）
-		'restrict_guest_rest'   => 0, // 限制游客 REST API（拦截用户枚举等敏感路由）
+		'dns_preconnect'         => 1, // 关键域名 DNS 预连接（CDN 域名，加速首屏建连）
+		'comment_lazyload'       => 0, // 评论懒加载（按需加载更多，减少长文首屏 DOM）
+		'iframe_lazy'            => 1, // iframe 懒加载（视频/嵌入延后到视口）
+		'restrict_guest_rest'    => 0, // 限制游客 REST API（拦截用户枚举等敏感路由）
+		'html_minify'            => 1, // 前台 HTML 压缩（主题经 jinyu_perf_options 过滤器取本键的值）
 	];
-	$saved = get_option( 'jinyu_perf_options' );
+}
+
+/**
+ * 读取性能开关（单例缓存，避免一次请求内重复查询 options 表）。
+ *
+ * @param bool $flush 强制丢弃缓存并重新读库。写完 option 后必须传 true，
+ *                     否则同一次请求内后续调用仍拿到写入前的旧快照。
+ * @return array key => 0|1
+ */
+function jinyu_perf_get_options( bool $flush = false ): array {
+	static $cache = null;
+	if ( $flush ) {
+		$cache = null;
+	}
+	if ( is_array( $cache ) ) {
+		return $cache;
+	}
+	$defaults = jinyu_perf_recommended_options();
+	$saved = get_option( 'jinyu_perf_options_v2' );
 	if ( ! is_array( $saved ) ) {
-		// 兼容主题时代遗留：新键从未保存时接管旧键 jinyu_perf_options 的历史配置
+		// 兼容 1.2.7 及更早的旧键 jinyu_perf_options：新键从未保存时接管其历史配置。
 		$saved = get_option( 'jinyu_perf_options' );
 	}
 	$cache = wp_parse_args( is_array( $saved ) ? $saved : [], $defaults );
 	return $cache;
 }
+
+/**
+ * 一次性迁移：旧键 jinyu_perf_options → 新键 jinyu_perf_options_v2。
+ *
+ * 为什么换键：旧键 jinyu_perf_options 与本文件对外广播的过滤器名同名（见下方 add_filter），
+ * 同一字符串既当 option 键又当 filter 名，读代码时无法分辨它指的是配置存储还是契约通道。
+ * 键名加 _v2 后缀后，**配置存储**与**对外契约**两个用途在字符串层面分开，
+ * 且仍满足项目 jinyu_ 前缀约束。注意过滤器名保持 jinyu_perf_options 不变——它是已发布的
+ * 对外契约（主题 apply_filters 广播需求，本插件 add_filter 响应），改名等于破坏契约。
+ *
+ * 为什么用标记而非永久 fallback：永久 fallback 会让旧键永远留在 wp_options 里，
+ * 用户在后台改的是新键、旧键却纹丝不动，两份配置长期不一致且无人察觉。
+ * 搬一次并删旧键，配置只有单一真源。
+ *
+ * 幂等：由 jinyu_perf_options_v2_migrated 标记，仅执行一次。
+ *
+ * ⚠️ 挂载时机必须是 init 而非 after_setup_theme：本文件是在插件主文件那个
+ * after_setup_theme 回调「内部」被 require 的，而 after_setup_theme 在 wp-load.php
+ * 里整个请求只触发一次（did_action = 1）。钩子注册时该动作早已跑完，
+ * 挂上去的回调永远等不到下一轮 → 迁移每个请求都不执行（实测线上如此）。
+ * init 在 after_setup_theme 之后触发且尚未跑过，是此处唯一正确的时机。
+ */
+if ( ! function_exists( 'jinyu_perf_maybe_migrate_options' ) ) {
+	function jinyu_perf_maybe_migrate_options(): void {
+		if ( get_option( 'jinyu_perf_options_v2_migrated' ) ) {
+			return;
+		}
+		// 无论有无旧数据都落标记：新键已存在即说明是升级后的正常状态，无需再搬。
+		$legacy = get_option( 'jinyu_perf_options' );
+		if ( is_array( $legacy ) && ! get_option( 'jinyu_perf_options_v2' ) ) {
+			update_option( 'jinyu_perf_options_v2', $legacy, false );
+		}
+		delete_option( 'jinyu_perf_options' );
+		// 历史中间版本曾用过 jyc_ 前缀的键（违反项目 jinyu_ 约束，已废弃），一并清掉避免留脏数据。
+		delete_option( 'jyc_perf_options' );
+		update_option( 'jinyu_perf_options_v2_migrated', 1, false );
+		// 搬完立刻失效静态缓存：本次请求里 jinyu_perf_get_options() 可能已被
+		// jinyu_perf_apply()（init:1 之前就跑完了？不，apply 在 init:5，见下）填过旧快照。
+		// 不清的话，同一请求内后续所有读到的仍是删除前的旧值——迁移等于没生效。
+		jinyu_perf_get_options( true );
+	}
+}
+// ⚠️ 优先级必须是 1：jinyu_perf_apply() 挂在 init:5，它会先读一遍开关表并据此摘/挂钩子。
+// 迁移若晚于它，本次请求应用的将是删除前的旧键数据，且 jinyu_perf_get_options() 的静态缓存
+// 已被填成旧快照，迁移后当请求再也拿不到新值（静态缓存同请求内永不自动失效）。
+// 1 是 init 上第一个可用优先级，确保「先搬后用」。
+add_action( 'init', 'jinyu_perf_maybe_migrate_options', 1 );
 
 /**
  * 开关清单：key => [标签, 说明（用途 + 副作用）]。说明展示在每个开关下方，属「注释」UI。
@@ -159,13 +223,6 @@ function jinyu_perf_toggle_meta(): array {
 			'desc'  => __( '在 <head> 最前面为静态资源 CDN 域名提前建好 DNS+TCP+TLS 连接（并附 dns-prefetch 兼容老浏览器）。首屏图片/脚本命中该域名时省去建连往返，TTFB 与 LCP 略降。仅作用于已配置的「静态资源 CDN 域名」（主题设置→资源），未配置 CDN 时不发任何多余请求；不影响其它域名。还可通过 jinyu_perf_preconnect_hosts 过滤器追加字体/统计等源。', 'jinyu-theme-companion' ),
 
 		],
-		'comment_lazyload'      => [
-			'label' => __( '评论懒加载（加载更多）', 'jinyu-theme-companion' ),
-
-			'group' => 'cache',
-			'desc'  => __( '评论数多的文章，首屏只渲染第一页评论，底部出现「加载更多评论」按钮，点击后通过 admin-ajax 增量拉取后续评论页并追加（完美复用主题评论回调与嵌套结构，锚点/SEO 不受影响）。长文评论区 DOM 量大幅下降。依赖 WP 原生评论分页（page_comments 需开启），关闭后恢复一次性输出全部评论。默认关，按需开启。', 'jinyu-theme-companion' ),
-
-		],
 		'iframe_lazy'           => [
 			'label' => __( 'iframe 懒加载', 'jinyu-theme-companion' ),
 
@@ -180,10 +237,49 @@ function jinyu_perf_toggle_meta(): array {
 			'desc'  => __( '未登录访客仅能访问公开内容类 REST 路由（文章/页面/评论/分类/标签/媒体/搜索等），其余内部/管理类路由（用户 /wp/v2/users、设置、插件、主题、区块、菜单、小工具、模板、全局样式、类型/分类法/状态枚举等）一律返回 403。主要阻断「通过 /wp/v2/users 枚举作者用户名」这类常见探测与 API 滥用。登录用户不受影响（后台区块编辑器等照常）。注意：若站内插件在前台依赖被拦截的路由，相关功能会受影响——默认关，确认无依赖后再开。', 'jinyu-theme-companion' ),
 
 		],
+		'html_minify'           => [
+			'label' => __( '前台 HTML 压缩', 'jinyu-theme-companion' ),
+
+			'group' => 'front',
+			'desc'  => __( '输出前压缩整页 HTML：去掉标签间多余空白与注释（pre / textarea / script / style / noscript 内容原样保护），减小传输体积。压缩会去掉源码里的缩进换行，日后查看页面源代码会变成一整行；页面结构与样式不受影响。默认开，如需查看源码或依赖 HTML 空白排版（如部分邮件模板、打印样式）请关闭。', 'jinyu-theme-companion' ),
+
+		],
+		'comment_lazyload'      => [
+			'label' => __( '评论懒加载（加载更多）', 'jinyu-theme-companion' ),
+
+			'group' => 'front',
+			'desc'  => __( '评论数多的文章，首屏只渲染第一页评论，底部出现「加载更多评论」按钮，点击后通过 admin-ajax 增量拉取后续评论页并追加（完美复用主题评论回调与嵌套结构，锚点/SEO 不受影响）。长文评论区 DOM 量大幅下降。依赖 WP 原生评论分页（page_comments 需开启），关闭后恢复一次性输出全部评论。默认关，按需开启。', 'jinyu-theme-companion' ),
+
+		],
 	];
 }
 
 /* ───────────────────────── 开关落地（前台 + 后台全站生效） ───────────────────────── */
+
+/*
+ * 广播给主题：主题是纯呈现层，只按需「问」开关值，不认识本插件的 option 键。
+ * 契约方向：主题 apply_filters( 'jinyu_perf_options', [] ) → 本插件 add_filter 注入开关表。
+ * 主题缺席 / 本插件缺席时，另一侧都按各自默认值降级，互不致命。
+ */
+add_filter(
+	'jinyu_perf_options',
+	function ( $opts ) {
+		return array_merge( is_array( $opts ) ? $opts : [], jinyu_perf_get_options() );
+	}
+);
+
+/*
+ * 单个安全开关的专用广播：主题侧的 REST 路由白名单逻辑在 theme-compat.php，
+ * 它不该为了读一个布尔值就依赖 jinyu_perf_get_options()（那是整表读取 + 静态缓存）。
+ * 单开一个过滤器，语义单一、默认值明确（关），也不必让对方知道 option 键名。
+ */
+add_filter(
+	'jinyu_restrict_guest_rest',
+	function ( $enabled ) {
+		$o = jinyu_perf_get_options();
+		return ! empty( $o['restrict_guest_rest'] );
+	}
+);
 
 /**
  * 套用全部开关。挂在 init:5 —— 开关保存后于「下一个请求」生效
@@ -1681,12 +1777,14 @@ function jinyu_perf_render_status_html(): string {
 
 /* ───────────────────────── AJAX ───────────────────────── */
 
-/** AJAX 公共门卫：权限 + nonce。失败直接中断响应。 */
+/**
+ * 性能中心 AJAX 门卫：复用 primitives 的统一实现。
+ *
+ * 本模块的 nonce action 是 'jinyu_perf_center'、字段名是 'nonce'（内联 JS 单独签发，
+ * 不与设置页主表单的 jinyu_companion_nonce 混用——两处语义相反，混用极易误改）。
+ */
 function jinyu_perf_guard(): void {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_send_json_error( [ 'msg' => __( '权限不足', 'jinyu-theme-companion' ) ], 403 );
-	}
-	check_ajax_referer( 'jinyu_companion_nonce', 'nonce' );
+	jinyu_companion_guard( 'jinyu_perf_center', 'nonce' );
 }
 
 add_action( 'wp_ajax_jinyu_perf_optimize', 'jinyu_perf_ajax_optimize' );
@@ -1708,7 +1806,8 @@ function jinyu_perf_ajax_optimize(): void {
 			foreach ( $allowed as $k ) {
 				$opts[ $k ] = ! empty( $posted[ $k ] ) ? 1 : 0;
 			}
-			update_option( 'jinyu_perf_options', $opts, false );
+			update_option( 'jinyu_perf_options_v2', $opts, false );
+			jinyu_perf_get_options( true );
 		}
 	}
 
@@ -1786,10 +1885,25 @@ function jinyu_perf_ajax_save(): void {
 			foreach ( $allowed as $k ) {
 				$opts[ $k ] = ! empty( $posted[ $k ] ) ? 1 : 0;
 			}
-			update_option( 'jinyu_perf_options', $opts, false );
+			update_option( 'jinyu_perf_options_v2', $opts, false );
+			jinyu_perf_get_options( true );
+
+			// 必须清页面缓存：html_minify / disable_emoji / clean_wp_head / iframe_lazy /
+			// dns_preconnect 这几个开关直接影响最终 HTML 产物，而整页缓存会把旧 HTML
+			// 直接吐给访客，绕开所有开关。不同步清理的话，用户看到「已保存」但访客
+			// 最长一个 TTL（默认 1 小时）仍拿到旧页面——提示语就成了错误承诺。
+			$flushed = array_filter( (array) jinyu_perf_flush_caches(), 'strlen' );
+			wp_send_json_success(
+				[
+					'msg'    => $flushed
+						? __( '设置已保存，页面缓存已同步清理', 'jinyu-theme-companion' )
+						: __( '设置已保存，下一次请求起生效', 'jinyu-theme-companion' ),
+					'flush'  => array_values( $flushed ),
+				]
+			);
 		}
 	}
-	wp_send_json_success( [ 'msg' => __( '设置已保存，下一次请求起生效', 'jinyu-theme-companion' ) ] );
+	wp_send_json_success( [ 'msg' => __( '没有需要保存的改动', 'jinyu-theme-companion' ) ] );
 }
 
 /** 清空真实用户体验聚合（调试/重测用）。 */
@@ -1868,6 +1982,19 @@ function jinyu_perf_ajax_load_comments() {
 	}
 	$max_depth = get_option( 'thread_comments' ) ? (int) get_option( 'thread_comments_depth' ) : 0;
 
+	// 页码上限：offset 直接进 WP_Comment_Query，深翻页（page=100000 → offset 200 万）
+	// 会触发大 offset 全表扫描 + threaded 模式下的复杂子查询。限流只约束「次数」，
+	// 约束不了「单次成本」，两者必须都设。20 页足够读完任何正常长度的评论串。
+	$max_page = 20;
+	if ( $page > $max_page ) {
+		wp_send_json_success(
+            [
+				'html' => '',
+				'done' => true,
+			]
+        );
+	}
+
 	$comments = get_comments(
         [
 			'post_id'      => $post_id,
@@ -1892,8 +2019,10 @@ function jinyu_perf_ajax_load_comments() {
 		$per_page,
 		[
 			'style'       => 'ol',
-			// 主题评论回调（呈现层职责留在主题）；主题缺席时回退 WP 原生评论渲染。
-			'callback'    => function_exists( 'jinyu_wp_comment' ) ? 'jinyu_wp_comment' : '',
+			// 评论渲染回调属呈现层职责：主题在场时通过过滤器报名自己的回调，插件不探测主题函数名
+			// （探测即「插件认识主题」，是耦合而非解耦）。主题缺席 / 未报名时传空串，
+			// Walker_Comment 回退 WP 原生渲染，结构依然完整。
+			'callback'    => (string) apply_filters( 'jinyu_perf_comment_walker_callback', '' ),
 			'avatar_size' => 48,
 			'max_depth'   => $max_depth,
 		]
@@ -1940,7 +2069,8 @@ function jinyu_perf_render_pane(): void {
 		return;
 	}
 	$opts    = jinyu_perf_get_options();
-	$nonce   = wp_create_nonce( 'jinyu_companion_nonce' );
+	$rec     = jinyu_perf_recommended_options();
+	$nonce   = wp_create_nonce( 'jinyu_perf_center' );
 	$toggles = jinyu_perf_toggle_meta();
 	$st      = jinyu_perf_status_snapshot(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（JSON-LD/SVG/缓存页/内部构造 HTML），无需转义
 	$oc_on   = ! empty( $st['object_cache'] );
@@ -1985,7 +2115,6 @@ function jinyu_perf_render_pane(): void {
 						<?php foreach ( $g_items as $key => $meta ) : ?>
 						<div class="jcard">
 							<div class="jcard-body">
-// translators: Placeholder values are substituted at runtime.
 								<div class="jcard-t"><?php echo esc_html( $meta['label'] ); ?>
                                 <?php
                                 if ( ! empty( $opts[ $key ] ) ) :
@@ -1993,10 +2122,11 @@ function jinyu_perf_render_pane(): void {
                                     <span class="jbadge"><?php esc_html_e( '默认开', 'jinyu-theme-companion' ); ?></span><?php endif; ?><button type="button" class="jperf-help" aria-expanded="false" aria-label="<?php echo esc_attr( sprintf( __( '%s 的说明', 'jinyu-theme-companion' ), $meta['label'] ) ); // phpcs:ignore WordPress.WP.I18n.MissingTranslatorsComment ?>"><svg viewBox="0 0 24 24"><path d="M9.1 9a3 3 0 015.8 1c0 2-3 2.4-3 4"/><circle cx="12" cy="17.3" r=".6"/></svg></button></div>
 								<div class="jperf-tip" role="tooltip" hidden><?php echo esc_html( $meta['desc'] ); ?></div>
 							</div>
-							<div class="jperf-sw <?php echo ! empty( $opts[ $key ] ) ? 'on' : ''; ?>"
-								data-key="<?php echo esc_attr( $key ); ?>"
-								role="switch" aria-checked="<?php echo ! empty( $opts[ $key ] ) ? 'true' : 'false'; ?>"
-								tabindex="0"></div>
+						<div class="jperf-sw <?php echo ! empty( $opts[ $key ] ) ? 'on' : ''; ?>"
+							data-key="<?php echo esc_attr( $key ); ?>"
+							data-rec="<?php echo empty( $rec[ $key ] ) ? '0' : '1'; ?>"
+							role="switch" aria-checked="<?php echo ! empty( $opts[ $key ] ) ? 'true' : 'false'; ?>"
+							tabindex="0"></div>
 						</div>
 						<?php endforeach; ?>
 					</div>
@@ -2007,12 +2137,15 @@ function jinyu_perf_render_pane(): void {
 				<button type="button" id="jperf-save" class="jperf-btn jperf-btn-primary">
 					<svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h6M8 13h8M8 17h5"/></svg><span><?php esc_html_e( '保存设置', 'jinyu-theme-companion' ); ?></span>
 				</button>
+				<button type="button" id="jperf-rec" class="jperf-btn">
+					<svg viewBox="0 0 24 24"><path d="M4 21v-6M4 11V3M12 21v-9M12 8V3M20 21v-4M20 13V3M1 15h6M9 8h6M17 13h6"/></svg><span><?php esc_html_e( '一键打开推荐开关', 'jinyu-theme-companion' ); ?></span>
+				</button>
 				<button type="button" id="jperf-run" class="jperf-btn">
 					<svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg><span><?php esc_html_e( '一键应用推荐优化', 'jinyu-theme-companion' ); ?></span>
 				</button>
 				<span id="jperf-unsaved" class="jperf-unsaved" hidden>● <?php esc_html_e( '有改动未保存', 'jinyu-theme-companion' ); ?></span>
 			</div>
-			<p class="jperf-hint" style="margin-top:10px"><?php esc_html_e( '「推荐优化」= 勾选项全部保存 + 清理过期 transient + 优化碎片表 + 重置 OPcache 与 Memcached。也可单独点「保存设置」仅保存开关。', 'jinyu-theme-companion' ); ?></p>
+			<p class="jperf-hint" style="margin-top:10px"><?php esc_html_e( '「一键打开推荐开关」仅把界面开关切到推荐状态、不直接保存，核对后点「保存设置」落库；「推荐优化」= 保存当前开关 + 清理过期 transient + 优化碎片表 + 重置 OPcache 与 Memcached。也可单独点「保存设置」仅保存开关。', 'jinyu-theme-companion' ); ?></p>
 			<div id="jperf-result" class="jperf-result" aria-live="polite"></div>
 		</section>
 
@@ -2112,10 +2245,18 @@ function jinyu_perf_render_pane(): void {
 	}
 
 		/** 结果区渲染：textContent 逐条写入（无 innerHTML 拼接，杜绝注入/裂图）。 */
+		var resTimer = null;
+		/** 收起全部已展开结果区：10 秒自动收起与点击立即收起共用。 */
+		function collapseResults(){
+			document.querySelectorAll('.jperf-result.show').forEach(function(b){ b.classList.remove('show'); });
+		}
 		function showResult(id, lines){
 			var box = document.getElementById(id);
 			box.innerHTML = '';
 			box.classList.add('show');
+			if (resTimer) { clearTimeout(resTimer); }
+			// 一键优化/保存结果 10 秒后自动收起（状态看板会同步刷新，结果无需常驻）
+			resTimer = setTimeout(collapseResults, 10000);
 			lines.forEach(function(t){
 				var d = document.createElement('div');
 				d.className = 'item';
@@ -2131,6 +2272,27 @@ function jinyu_perf_render_pane(): void {
 				d.appendChild(span);
 				box.appendChild(d);
 			});
+		}
+
+		// 点击已展开的结果区任意位置 → 立即收起（不必等自动收起计时）
+		document.addEventListener('click', function(e){
+			if (e.target.closest('.jperf-result.show')) { collapseResults(); }
+		});
+
+		/** 保存成功浮层：顶部居中胶囊（大字号+强调底色+投影），比内联结果区显眼。 */
+		var toastEl = null, toastTimer = null;
+		function jperfToast(msg){
+			if (!toastEl || !toastEl.isConnected) {
+				toastEl = document.createElement('div');
+				toastEl.id = 'jperf-toast';
+				toastEl.setAttribute('role', 'status');
+				(document.querySelector('.jperf-app') || document.body).appendChild(toastEl);
+			}
+			toastEl.textContent = msg;
+			void toastEl.offsetWidth; // 强制重排，重触发入场过渡
+			toastEl.classList.add('show');
+			if (toastTimer) { clearTimeout(toastTimer); }
+			toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 3200);
 		}
 
 		function showErr(id, msg){
@@ -2262,6 +2424,28 @@ function jinyu_perf_render_pane(): void {
 		window.addEventListener('scroll', function(){ closeTips(null); }, true);
 		window.addEventListener('resize', function(){ closeTips(null); });
 
+		// 一键打开推荐开关：按 data-rec 把界面开关切到推荐状态（不落库，需再点「保存设置」生效）
+		var rec = document.getElementById('jperf-rec');
+		if (rec) {
+			rec.addEventListener('click', function(){
+				var changed = 0;
+				document.querySelectorAll('#jperf-toggles .jperf-sw').forEach(function(sw){
+					var want = sw.getAttribute('data-rec') === '1';
+					if (sw.classList.contains('on') !== want) { changed++; }
+					sw.classList.toggle('on', want);
+					sw.setAttribute('aria-checked', want ? 'true' : 'false');
+				});
+				if (unsaved) {
+					unsaved.hidden = false;
+					unsaved.textContent = '● <?php echo esc_js( __( '有改动未保存', 'jinyu-theme-companion' ) ); ?>';
+					unsaved.classList.remove('saved');
+				}
+				showResult('jperf-result', [changed > 0
+					? '<?php echo esc_js( __( '已按推荐状态切换 ', 'jinyu-theme-companion' ) ); ?>' + changed + '<?php echo esc_js( __( ' 项开关（尚未保存）。请核对后点「保存设置」生效。', 'jinyu-theme-companion' ) ); ?>'
+					: '<?php echo esc_js( __( '当前开关已是推荐状态，无需改动。', 'jinyu-theme-companion' ) ); ?>']);
+			});
+		}
+
 		// 一键应用推荐优化
 		var run = document.getElementById('jperf-run');
 		if (run) {
@@ -2316,6 +2500,7 @@ function jinyu_perf_render_pane(): void {
 						save.disabled = false; lbl.textContent = old;
 						if (!j.success) { showErr('jperf-result', j.data && j.data.msg ? j.data.msg : '<?php echo esc_js( __( '未知错误', 'jinyu-theme-companion' ) ); ?>'); return; }
 						showResult('jperf-result', [j.data.msg]);
+						jperfToast(j.data.msg); // 顶部居中显眼浮层（3.2s 自动消失）
 						if (unsaved) {
 							unsaved.hidden = false;
 							unsaved.textContent = '<?php echo esc_js( __( '✓ 已保存', 'jinyu-theme-companion' ) ); ?>';

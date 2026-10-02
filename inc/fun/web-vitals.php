@@ -81,16 +81,39 @@ function jinyu_web_vitals_record( array $m ): void {
 	update_option( $key, $agg, false );
 }
 
+/**
+ * 匿名体验指标上报端点。
+ *
+ * CSRF 防护用 Origin/Referer 同源校验，而不是 nonce：本端点由前台的
+ * PerformanceObserver + sendBeacon 触发（navigator.sendBeacon 不便携带自定义 nonce 头），
+ * 且必须对未登录访客开放。指标本身是只写聚合（品牌级计数与耗时分布，不含 IP / UA / URI），
+ * 同源校验已足够挡住「第三方站点诱导本站访客上报脏数据」这一实际风险。
+ */
 function jinyu_ajax_web_vitals() {
 	// 仅接受 POST
 	$method = isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
 	if ( 'POST' !== $method ) {
-		wp_send_json_error( 'method', 405 );
+		wp_send_json_error( 'method' );
+	}
+
+	// 同源校验：Origin 优先（sendBeacon 必带），缺失时回退 Referer。
+	// 两者都缺（部分老浏览器隐私模式会省）时放行到限流层，不因缺头误杀真实用户。
+	$host = wp_parse_url( home_url(), PHP_URL_HOST );
+	foreach ( [ 'HTTP_ORIGIN', 'HTTP_REFERER' ] as $hdr ) {
+		$raw = isset( $_SERVER[ $hdr ] ) ? esc_url_raw( wp_unslash( $_SERVER[ $hdr ] ) ) : '';
+		if ( '' === $raw ) {
+			continue;
+		}
+		$h = wp_parse_url( $raw, PHP_URL_HOST );
+		if ( $h && $host && strtolower( $h ) !== strtolower( $host ) ) {
+			wp_send_json_error( 'bad_origin' );
+		}
+		break;   // 只校验第一个出现的头
 	}
 
 	// 匿名端点防滥用：每 IP 每小时最多 30 次上报，防恶意刷库放大攻击（一次上报=一次 option 读改写）
 	if ( ! jinyu_companion_rate_limit( 'web_vitals', 30, HOUR_IN_SECONDS ) ) {
-		wp_send_json_error( 'rate_limited', 429 );
+		wp_send_json_error( 'rate_limited' );
 	}
 
 	$raw = isset( $_POST['data'] ) ? sanitize_text_field( wp_unslash( $_POST['data'] ) ) : '';

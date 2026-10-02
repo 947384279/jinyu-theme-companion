@@ -3,11 +3,12 @@
  * 从主题迁出的「插件领地」功能兼容层。
  *
  * 主题自 1.x 起定位为纯呈现层。下列能力原属主题（安全加固、浏览量采集、客户端真实 IP、
- * 通用 IP 速率限制），现统一由配套插件提供，主题侧仅保留委托壳（插件缺失即优雅降级）。
+ * 通用 IP 速率限制），现统一由配套插件提供。
  *
- * 注意：本文件在 after_setup_theme 阶段随主文件加载，此时主题函数（jinyu_is_checked /
- * jinyu_get_option 等）已就绪，可直接复用；并全部以 function_exists 守卫，未启用主题时
- * 安全项默认关闭、采集项不执行，不会致命。
+ * 解耦约束：本文件**不探测任何主题函数**（不写 function_exists( 'jinyu_get_option' ) 之类）。
+ * 探测即「插件认识主题」，插件的行为会随主题在否而变——对安全功能而言尤其危险：
+ * 主题缺席就静默失去防护，那不是降级而是裸奔。配置一律读本插件自己的数据源
+ * （companion 设置表 / 性能中心开关表），主题若也要这个能力，走过滤器接入。
  *
  * @package Jinyu_Theme_Companion
  */
@@ -71,18 +72,56 @@ if ( ! function_exists( 'jinyu_companion_rate_limit_check' ) ) {
 }
 
 /*
+ * 响应主题的需求广播：主题是纯呈现层，只声明「我需要客户端真实 IP / 需要限流」，
+ * 不认识本插件任何函数名。契约方向：主题 apply_filters → 本插件 add_filter。
+ */
+add_filter( 'jinyu_client_ip', 'jinyu_companion_filter_client_ip' );
+/**
+ * 过滤器回调：把主题请求的客户端 IP 解析为本插件的可信实现。
+ *
+ * @param string $fallback 主题给出的默认值（REMOTE_ADDR 或 0.0.0.0）。
+ * @return string
+ */
+function jinyu_companion_filter_client_ip( $fallback ): string {
+	$ip = jinyu_companion_client_ip();
+	return '' !== $ip ? $ip : (string) $fallback;
+}
+
+add_filter( 'jinyu_rate_limit_check', 'jinyu_companion_filter_rate_limit_check', 10, 3 );
+/**
+ * 过滤器回调：接管主题的 IP 速率限制判定。
+ *
+ * @param bool   $allow   主题默认值（恒为 true=放行）。
+ * @param string $action  动作标识。
+ * @param int    $max     窗口内最大请求数。
+ * @param int    $seconds 窗口秒数。
+ * @return bool
+ */
+function jinyu_companion_filter_rate_limit_check( $allow, $action = '', $max = 10, $seconds = 60 ): bool {
+	return jinyu_companion_rate_limit_check( (string) $action, (int) $max, (int) $seconds );
+}
+
+/*
 --------------------------------------------------------------------------
  * 安全加固：XML-RPC / REST API / 版本号 / 登录防暴破
  * 原属主题 security.php（无条件行为），迁出后主题不再承担任何安全逻辑。
- * 关闭 REST API 受主题「关闭 REST API」开关控制；其余默认开启（安全加固），
- * 未启用主题时全部跳过（优雅降级）。
+ * 全部加固默认开启，且**不依赖主题在场**——安全功能握在可选组件手里意味着
+ * 主题缺席时站点静默失去防护，那不是优雅降级，是隐性裸奔。
+ * 「限制游客 REST API」是本插件性能中心的一个开关（restrict_guest_rest，默认关）。
  * ------------------------------------------------------------------------ */
 
 // XML-RPC 默认关闭：常见暴破与 pingback 攻击面.
 add_filter( 'xmlrpc_enabled', '__return_false' );
 
-// 关闭 REST API 给未登录用户的访问（受主题开关控制）.
-if ( function_exists( 'jinyu_is_checked' ) && jinyu_is_checked( 'close_rest_api' ) ) {
+/*
+ * 限制游客 REST API。
+ *
+ * 开关经 jinyu_restrict_guest_rest 过滤器广播，由性能中心（restrict_guest_rest，默认关）
+ * 响应。此处不直接读性能中心的 option——那会让本文件与 perf-center 的存储结构硬耦合，
+ * 且 perf-center 可能因互斥守卫未加载。过滤器是唯一通道：无人响应即默认不限制，
+ * 行为可预期。
+ */
+if ( (bool) apply_filters( 'jinyu_restrict_guest_rest', false ) ) {
 	add_filter(
 		'rest_authentication_errors',
 		function ( $result ) {
@@ -177,8 +216,8 @@ add_filter( 'the_generator', '__return_empty_string' );
 				return;
 			}
 			$pid = $post->ID;
-			// 冷却秒数：后台「全局设置 › 同一 IP 浏览量冷却秒数」.
-			$wait = function_exists( 'jinyu_get_option' ) ? max( 1, (int) jinyu_get_option( 'views_wait_seconds', 10 ) ) : 10;
+			// 冷却秒数：写死常量，IP 冷却防刷新刷量。
+			$wait = 10;
 			$key  = 'jinyu_vw_' . md5( jinyu_companion_client_ip() . '|' . $pid );
 			if ( ! get_transient( $key ) ) {
 				set_transient( $key, 1, $wait );

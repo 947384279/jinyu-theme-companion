@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Jinyu Theme Companion
  * Plugin URI:  https://www.qicaiyun.top/4698.html
- * Description: Companion plugin for the Jinyu theme. It supplies the functional layer (SEO, structured data, social, related posts, shortcodes, cache and anti-spam) so the theme stays presentation-only. All outbound features are off by default.
- * Version:     1.2.7
+ * Description: Functional layer for the Jinyu theme: SEO, structured data, social, related posts, shortcodes, cache and anti-spam. Works on any theme.
+ * Version:     1.2.8
  * Author:      金玉
  * Author URI:  https://www.qicaiyun.top
  * License:     GPL-2.0-or-later
@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 插件先于主题载入，抢先定义会让主题读到的版本号变成插件版本，造成版本漂移。
  * ------------------------------------------------------------------------ */
 if ( ! defined( 'JINYU_COMPANION_VER' ) ) {
-	define( 'JINYU_COMPANION_VER', '1.2.7' );
+	define( 'JINYU_COMPANION_VER', '1.2.8' );
 }
 
 /*
@@ -41,18 +41,20 @@ if ( ! defined( 'JINYU_COMPANION_URL' ) ) {
 }
 
 /*
-文本域兜底：社交登录等从私有插件迁入的模块沿用 JINYU 常量作为 __() 文本域，
+文本域兜底：社交登录等模块沿用 JINYU 常量作为 __() 文本域，
  * 此处统一指向配套插件自身文本域，保证翻译可被 load_plugin_textdomain 加载。 */
 if ( ! defined( 'JINYU' ) ) {
 	define( 'JINYU', 'jinyu-theme-companion' );
 }
 
 /*
-第三方登录（社交登录）模块：从私有增强插件迁入，使配套插件可独立提供该能力。
+第三方登录（社交登录）模块：配套插件自持该能力，不依赖任何其它插件在场。
  * 必须在顶层加载（先于主题 functions.php），因为主题 user.php 用 if(!function_exists('jinyu_oauth_*'))
  * 提供降级桩，本模块须在主题运行前定义真实现，否则桩被采用、真实登录失效。
- * 与历史私有插件 wordpress-plugin-jinyu 互斥：双方均在 require 处用 function_exists 守卫，
- * 无论加载顺序如何，仅有一方定义 jinyu_oauth_enabled 等符号（PHP 8.5 编译期早绑定要求互斥置于 require 处）。
+ * 互斥：本模块定义 jinyu_oauth_enabled 等全局符号，与任何同源的第三方实现互斥。
+ * 双方均在各自主文件的 require 处用 function_exists 守卫，加载顺序无论先后，
+ * 都只有一方定义这些符号（PHP 8.5 编译期早绑定要求互斥必须置于 require 处，
+ * 文件顶部的 return 守卫无效——那会让本文件第 6 行之后的所有钩子静默失效）。
  *
  * PHP 版本守卫：本模块使用 PHP 8.0 联合类型语法（string|WP_Error 等），低版本下是编译期
  * fatal 而非运行期错误。wp.org 按「Requires PHP: 8.0」拦截低版本安装；此处的运行时守卫
@@ -93,8 +95,8 @@ register_activation_hook(
 			jinyu_stats_install();
 		}
 		// storage 任务表：原先拖到首次 AJAX 才建，批处理前必有一次空跑。
-		// 与历史私有插件 wordpress-plugin-jinyu 互斥：其 storage 同源（旧版），
-		// 若其已加载（私有插件先激活），此处跳过，共享函数由先加载方提供。
+		// 互斥：storage 模块与任何同源实现共享全局符号，此处先探测——
+		// 若对方已加载（先激活），本插件跳过，共享函数由先加载方提供。
 		if ( ! function_exists( 'jinyu_is_storage_enabled' ) && ! class_exists( 'Jinyu_Storage_Factory' ) ) {
 			require_once __DIR__ . '/inc/fun/storage.php';
 		}
@@ -164,12 +166,14 @@ add_action(
 		require_once __DIR__ . '/inc/fun/crypto.php';
 
 		// 对象存储引擎（又拍云 / 阿里云 OSS / 腾讯云 COS / 七牛 / S3）：
-		// 从主题拆出迁入本插件，提供 jinyu_is_storage_enabled / jinyu_storage_config / Jinyu_Storage_Factory，
-		// 主题 media.php 经 function_exists 守卫自动接管。与历史私有插件 wordpress-plugin-jinyu 互斥：
-		// 双向守卫——私有插件主文件 require 处有守卫（companion 先加载时其跳过），
-		// 此处反向守卫（私有插件先加载时本插件跳过，避免 redeclare fatal）。
-		// 独有函数仅 storage.php 内部使用，两版共享函数签名一致，先加载方生效即安全。
-		// 配置存本插件独立选项 jinyu_companion_settings（首次运行自动从主题 JINYU_OPT 平移），不依赖主题函数。
+		// 提供 jinyu_is_storage_enabled / jinyu_storage_config / Jinyu_Storage_Factory，
+		// 主题 media.php 经 function_exists 守卫自动接管。
+		// 互斥：storage 模块与任何同源实现共享全局符号，此处的守卫是**反向**那一半——
+		// 对方先加载时本插件跳过，避免 redeclare fatal；对方若也在其主文件 require 处
+		// 做了对称守卫，则本插件先加载时对方跳过。两个方向都覆盖，缺任一半都会在
+		// 两种插件同时激活时产生致命错误，因此互斥必须成对实现。
+		// 独有函数仅 storage.php 内部使用，共享函数签名一致，先加载方生效即安全。
+		// 配置存本插件独立选项 jinyu_companion_settings（首次运行自动从主题配置平移），不依赖主题函数。
 		if ( ! function_exists( 'jinyu_is_storage_enabled' ) && ! class_exists( 'Jinyu_Storage_Factory' ) ) {
 			require_once __DIR__ . '/inc/fun/storage.php';
 		}
@@ -210,6 +214,10 @@ add_action(
 		require_once __DIR__ . '/inc/fun/social.php';
 		// 验证码 + 登录失败计数（主题登录/评论调用 jinyu_captcha_*）
 		require_once __DIR__ . '/inc/fun/captcha.php';
+		// 主题扩展插槽应答：把社交 / 验证码 / 登录防暴破接入主题的 jinyu_ext_* 契约。
+		// 须在 social.php + captcha.php 之后（回调里要用到它们的实现）。
+		require_once __DIR__ . '/inc/fun/ext-slots.php';
+		require_once __DIR__ . '/inc/fun/ext-slots-captcha.php';
 
 		// 内容增强
 		require_once __DIR__ . '/inc/fun/related.php';
@@ -246,58 +254,8 @@ add_action(
 );
 
 /*
---------------------------------------------------------------------------
- * 兼容性提示：本插件设计为与「金玉」主题搭配。未启用主题时仅作软提示（可忽略），
- * 各功能已做降级处理，不会导致站点白屏。
- * ------------------------------------------------------------------------ */
-add_action(
-    'admin_notices',
-    function (): void {
-		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		if ( $screen && 'plugins' !== $screen->id && 'dashboard' !== $screen->id ) {
-			return;
-		}
-		$theme = wp_get_theme();
-		if ( 'jinyu' === strtolower( $theme->get( 'TextDomain' ) ?: '' ) || 'jinyu' === strtolower( $theme->get_template() ) ) {
-			return; // 金玉主题已启用，无需提示
-		}
-		$dismissed = get_user_meta( get_current_user_id(), 'jinyu_companion_theme_notice_dismissed', true );
-		if ( $dismissed ) {
-			return;
-		}
-		$url = admin_url( 'themes.php' );
-		echo '<div class="notice notice-info is-dismissible" id="jinyu-companion-theme-notice">'
-		. '<p>' . esc_html__( '「金玉主题配套插件」建议与金玉（jinyu）主题搭配使用以获得完整体验；当前未检测到金玉主题，部分功能将自动降级。', 'jinyu-theme-companion' ) . '</p>'
-		. '<p><a href="' . esc_url( $url ) . '">' . esc_html__( '前往主题管理', 'jinyu-theme-companion' ) . '</a></p>'
-		. '</div>';
-	}
-);
-
-add_action(
-    'wp_ajax_jinyu_companion_dismiss_theme_notice',
-    function (): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die();
-		}
-		check_ajax_referer( 'jinyu_companion_dismiss_theme_notice' );
-		update_user_meta( get_current_user_id(), 'jinyu_companion_theme_notice_dismissed', 1 );
-		wp_die();
-	}
-);
-
-// 用 wp_print_inline_script_tag() 输出内联脚本（wp.org 要求：不要手写 <script> 标签）。
-add_action(
-    'admin_print_footer_scripts',
-    function (): void {
-		$js = '(function(){'
-		. "var n=document.getElementById('jinyu-companion-theme-notice');"
-		. 'if(!n)return;'
-		. "n.querySelector('.notice-dismiss').addEventListener('click',function(){"
-		. 'var x=new XMLHttpRequest();'
-		. 'x.open("POST",' . wp_json_encode( esc_url_raw( admin_url( 'admin-ajax.php' ) ) ) . ');'
-		. 'x.setRequestHeader("Content-Type","application/x-www-form-urlencoded");'
-		. 'x.send(' . wp_json_encode( 'action=jinyu_companion_dismiss_theme_notice&_ajax_nonce=' . wp_create_nonce( 'jinyu_companion_dismiss_theme_notice' ) ) . ');'
-		. '});})();';
-		wp_print_inline_script_tag( $js );
-	}
-);
+ * 兼容性：本插件可独立运行，未启用金玉主题时各模块走 function_exists 守卫优雅降级，
+ * 不会白屏。此处**刻意不弹**「建议搭配本主题」的后台通知 —— 那属于在 WordPress 后台
+ * 推销特定产品，WordPress.org 插件目录明确禁止；且「是否搭配」是站点自己的选择，
+ * 插件无权替它做市场宣传。主题关联的说明放在 readme 的 FAQ 里，那才是合适的位置。
+ */

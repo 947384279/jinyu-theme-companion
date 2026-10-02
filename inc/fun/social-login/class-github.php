@@ -77,22 +77,37 @@ class Jinyu_OAuth_Provider_GitHub extends Jinyu_OAuth_Provider {
 			return $user;
 		}
 
-		$email = (string) ( $user['email'] ?? '' );
-
-		// email 私密时 /user 返回 null，需单独拉邮箱列表，只取 primary+verified
-		if ( '' === $email ) {
-			$emails = $this->request( 'https://api.github.com/user/emails', [ 'headers' => $headers ] );
-			if ( ! is_wp_error( $emails ) && is_array( $emails ) ) {
-				foreach ( $emails as $row ) {
-					if ( ! is_array( $row ) ) {
-						continue;
-					}
-					if ( ! empty( $row['primary'] ) && ! empty( $row['verified'] ) ) {
-						$email = (string) ( $row['email'] ?? '' );
-						break;
-					}
+		// 邮箱必须来自 /user/emails 里 verified=true 的条目。
+		//
+		// 为什么不能直接用 /user 返回的 email：那是用户「公开为 primary 的邮箱」，
+		// GitHub 不保证它已被验证——用户可以把任意邮箱（哪怕从未验证）设为公开邮箱。
+		// 若拿它当已验证邮箱，core 的「同邮箱即绑定到已有账号」逻辑就成了账号接管通道：
+		// 攻击者把公开邮箱设成 victim@本站 → OAuth 登录 → 直接进入管理员账号。
+		//
+		// 因此这里的策略是：/user/emails 是唯一可信来源，取不到就当没有邮箱
+		// （登录仍可凭 platform id 正常进行，只是不做邮箱匹配绑定）。
+		$email     = '';
+		$emails    = $this->request( 'https://api.github.com/user/emails', [ 'headers' => $headers ] );
+		$fallback  = '';
+		if ( ! is_wp_error( $emails ) && is_array( $emails ) ) {
+			foreach ( $emails as $row ) {
+				if ( ! is_array( $row ) || empty( $row['email'] ) ) {
+					continue;
+				}
+				if ( empty( $row['verified'] ) ) {
+					continue;
+				}
+				if ( ! empty( $row['primary'] ) ) {
+					$email = (string) $row['email'];
+					break;
+				}
+				if ( '' === $fallback ) {
+					$fallback = (string) $row['email'];
 				}
 			}
+		}
+		if ( '' === $email ) {
+			$email = $fallback;
 		}
 
 		return $this->normalize_user(
@@ -101,7 +116,6 @@ class Jinyu_OAuth_Provider_GitHub extends Jinyu_OAuth_Provider {
 				'nickname' => $user['name'] ?? ( $user['login'] ?? '' ),
 				'avatar'   => $user['avatar_url'] ?? '',
 				'email'    => $email,
-				'email_verified' => true,
 			]
 		);
 	}

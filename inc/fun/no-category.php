@@ -51,7 +51,8 @@ function jinyu_no_category_base_rewrite_rules( array $category_rewrite ): array 
     $categories = get_categories( [ 'hide_empty' => false ] );
     foreach ( $categories as $category ) {
         $nicename = $category->slug;
-        if ( $category->parent != 0 ) {
+        // WP_Term::$parent 由 sanitize_term() 做过 intval，是整数；用 !== 严格比较安全。
+        if ( 0 !== (int) $category->parent ) {
             $nicename = get_category_parents( $category->parent, false, '/', true ) . $nicename;
         }
         $category_rewrite[ '(' . $nicename . ')/(?:feed/)?(feed|rdf|rss|rss2|atom)/?$' ] = 'index.php?category_name=$matches[1]&feed=$matches[2]';

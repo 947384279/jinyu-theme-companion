@@ -135,20 +135,3 @@ add_action(
 		);
 	}
 );
-
-// AJAX 统计接口（仅管理员仪表盘小工具使用，关闭匿名访问）
-add_action( 'wp_ajax_jinyu_stats', 'jinyu_stats_ajax' );
-function jinyu_stats_ajax() {
-    if ( ! current_user_can( 'manage_options' ) ) {
-        wp_send_json_error( 'forbidden', 403 );
-    }
-    global $wpdb;
-    $tbl = $wpdb->prefix . 'jinyu_stats';
-    $row = $wpdb->get_row( $wpdb->prepare( 'SELECT SUM(pv) as pv, SUM(uv) as uv FROM %i', $tbl ) );
-    wp_send_json_success(
-        [
-			'pv' => $row ? (int) $row->pv : 0,
-			'uv' => $row ? (int) $row->uv : 0,
-		]
-    );
-}
