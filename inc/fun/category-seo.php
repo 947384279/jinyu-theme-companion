@@ -11,7 +11,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 注意：分类法在 init 阶段才注册，故钩子注册延后到 init（高优先级），
  * 确保 get_taxonomies() 已拿到完整列表。
  */
-
 function jinyu_tax_seo_add_fields(): void {
 	$label_kw   = __( 'SEO 关键字', 'jinyu-theme-companion' );
 	$label_desc = __( 'SEO 描述', 'jinyu-theme-companion' );
@@ -78,11 +77,15 @@ function jinyu_tax_seo_save( int $term_id ): void {
 	}
 }
 
-add_action( 'init', static function (): void {
-	foreach ( get_taxonomies( [ 'public' => true ] ) as $tax ) {
-		add_action( $tax . '_add_form_fields', 'jinyu_tax_seo_add_fields' );
-		add_action( $tax . '_edit_form_fields', 'jinyu_tax_seo_edit_fields' );
-		add_action( 'created_' . $tax, 'jinyu_tax_seo_save', 10, 1 );
-		add_action( 'edited_' . $tax, 'jinyu_tax_seo_save', 10, 1 );
-	}
-}, 99 );
+add_action(
+    'init',
+    static function (): void {
+		foreach ( get_taxonomies( [ 'public' => true ] ) as $tax ) {
+			add_action( $tax . '_add_form_fields', 'jinyu_tax_seo_add_fields' );
+			add_action( $tax . '_edit_form_fields', 'jinyu_tax_seo_edit_fields' );
+			add_action( 'created_' . $tax, 'jinyu_tax_seo_save', 10, 1 );
+			add_action( 'edited_' . $tax, 'jinyu_tax_seo_save', 10, 1 );
+		}
+	},
+    99
+);

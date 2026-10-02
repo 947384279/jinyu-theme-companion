@@ -24,7 +24,7 @@ function jinyu_companion_wm_task_key(): string {
 
 /** 简易限流：单用户每分钟最多发起 N 次水印请求，防刷。 */
 function jinyu_companion_wm_throttle(): bool {
-	$key = 'jyc_wm_rl_' . get_current_user_id();
+	$key = 'jinyu_wm_rl_' . get_current_user_id();
 	$n   = (int) get_transient( $key );
 	if ( $n >= 60 ) {
 		return false;
@@ -37,7 +37,13 @@ function jinyu_companion_wm_throttle(): bool {
 function jinyu_companion_wm_task(): array {
 	$raw = get_transient( jinyu_companion_wm_task_key() );
 	if ( ! is_array( $raw ) ) {
-		return array( 'status' => 'idle', 'done' => 0, 'total' => 0, 'errors' => 0, 'message' => '' );
+		return array(
+			'status' => 'idle',
+			'done' => 0,
+			'total' => 0,
+			'errors' => 0,
+			'message' => '',
+		);
 	}
 	return $raw;
 }
@@ -128,7 +134,7 @@ function jinyu_companion_wm_step(): array {
 				? Jinyu_Watermark::remove_attachment( (int) $id )
 				: Jinyu_Watermark::apply_attachment( (int) $id );
 			$errors  += (int) $r['errors'];
-			$blocked += (int) ($r['blocked'] ?? 0);
+			$blocked += (int) ( $r['blocked'] ?? 0 );
 		}
 	}
 
@@ -331,7 +337,7 @@ add_action(
 				'done'    => (int) $r['done'],
 				'total'   => (int) $r['total'],
 				'errors'  => (int) $r['errors'],
-				'blocked' => (int) ($r['blocked'] ?? 0),
+				'blocked' => (int) ( $r['blocked'] ?? 0 ),
 			)
 		);
 	}
@@ -359,9 +365,9 @@ add_action(
 		}
 		wp_send_json_success(
 			array(
-				'ok'      => ( (int) $r['errors'] ) === 0 && (int) ($r['blocked'] ?? 0) === 0,
+				'ok'      => ( (int) $r['errors'] ) === 0 && (int) ( $r['blocked'] ?? 0 ) === 0,
 				'errors'  => (int) $r['errors'],
-				'blocked' => (int) ($r['blocked'] ?? 0),
+				'blocked' => (int) ( $r['blocked'] ?? 0 ),
 			)
 		);
 	}

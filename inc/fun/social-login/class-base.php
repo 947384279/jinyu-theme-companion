@@ -11,8 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * 错误约定：方法失败时返回 WP_Error，上层统一转成前台提示。
  */
-abstract class Jinyu_OAuth_Provider
-{
+abstract class Jinyu_OAuth_Provider {
+
 	/** @var array 该平台的配置（client_id / client_secret 等，已解密） */
 	protected array $conf;
 
@@ -98,12 +98,14 @@ abstract class Jinyu_OAuth_Provider
 
 	/**
 	 * 用 code 换取 access_token。
+     *
 	 * @return string|WP_Error token 字符串
 	 */
 	abstract public function exchange_token( string $code, string $redirect_uri );
 
 	/**
 	 * 拉取并归一化用户信息。
+     *
 	 * @return array|WP_Error ['id','nickname','avatar','email']
 	 */
 	abstract public function fetch_user( string $token, array $extra = [] );
@@ -172,7 +174,7 @@ abstract class Jinyu_OAuth_Provider
 			return $data;
 		}
 
-		$fixed = preg_replace( "/([{,]\s*)([A-Za-z_]\w*)\s*:/", '$1"$2":', $body );
+		$fixed = preg_replace( '/([{,]\s*)([A-Za-z_]\w*)\s*:/', '$1"$2":', $body );
 		if ( is_string( $fixed ) && $fixed !== $body ) {
 			$data = json_decode( $fixed, true );
 			if ( is_array( $data ) ) {

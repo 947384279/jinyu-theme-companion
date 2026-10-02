@@ -5,8 +5,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // 配套插件自有设置存储（与主题 jinyu_options 隔离，避免被主题设置页「导入 / 重置」误清）。
 // 读取统一经下列函数；未设置时按约定给默认值：
-//   - 核心呈现开关（seo_open / twitter_card_enable / llms_enable）默认开启（'1'）；
-//   - 主动提交类（baidu_auto_submit）、禁用类（ld_json_disable）默认关闭（'0'）。
+// - 核心呈现开关（seo_open / twitter_card_enable / llms_enable）默认开启（'1'）；
+// - 主动提交类（baidu_auto_submit）、禁用类（ld_json_disable）默认关闭（'0'）。
 if ( ! function_exists( 'jinyu_companion_settings_cache' ) ) {
 	/**
 	 * 设置的请求内缓存（单一真源）。
@@ -71,7 +71,7 @@ if ( ! function_exists( 'jinyu_companion_is_checked' ) ) {
 		if ( null === $val ) {
 			return $default;
 		}
-		return $val !== '0';
+		return '0' !== $val;
 	}
 }
 
@@ -133,7 +133,7 @@ if ( ! function_exists( 'jinyu_companion_maybe_migrate_smtp' ) ) {
 			$layers = 0;
 			while ( preg_match( '#^jinyu_enc2?::#', $plain ) && $layers < 3 ) {
 				$plain = (string) jinyu_companion_decrypt( $plain );
-				$layers++;
+				++$layers;
 			}
 			// 解到最后仍是密文 → 数据已损坏（密钥变更过），宁可不动也不写坏值。
 			// $layers > 1 表示原值是嵌套密文；非 enc2 前缀表示明文或旧格式——两种情况都要重写。

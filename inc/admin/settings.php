@@ -36,7 +36,7 @@ function jinyu_companion_handle_save(): void {
 
 	// 导入分支：复用本表单的提交与 nonce，但完全走另一条数据通道（文件 / 粘贴 JSON）。
 	// 处理完直接返回，绝不落「整表保存」——避免把导入前的表单字段一起写进 options。
-	if ( isset( $_POST['jyc_import'] ) ) {
+	if ( isset( $_POST['jinyu_import'] ) ) {
 		jinyu_companion_handle_import();
 		// 导入后停在「配置备份」分区，让结果提示与用户视线重合。
 		jinyu_companion_active_pane( 'io' );
@@ -77,13 +77,13 @@ function jinyu_companion_apply_saved_settings(): void {
 	$settings['og_site_name']    = isset( $_POST['og_site_name'] ) ? sanitize_text_field( wp_unslash( $_POST['og_site_name'] ) ) : '';
 	$settings['og_image_alt']    = isset( $_POST['og_image_alt'] ) ? sanitize_text_field( wp_unslash( $_POST['og_image_alt'] ) ) : '';
 	// Twitter 账号名：去 @ 与空白，只留安全字符
-	$settings['twitter_site']    = isset( $_POST['twitter_site'] ) ? ltrim( sanitize_text_field( wp_unslash( $_POST['twitter_site'] ) ), '@' ) : '';
+	$settings['twitter_site'] = isset( $_POST['twitter_site'] ) ? ltrim( sanitize_text_field( wp_unslash( $_POST['twitter_site'] ) ), '@' ) : '';
 	// 对象存储同步排除项：逗号 / 换行 / 空格分隔的目录名或文件后缀（不含点）
 	$settings['storage_exclude_dirs'] = isset( $_POST['storage_exclude_dirs'] ) ? sanitize_text_field( wp_unslash( $_POST['storage_exclude_dirs'] ) ) : '';
 	$settings['storage_exclude_exts'] = isset( $_POST['storage_exclude_exts'] ) ? sanitize_text_field( wp_unslash( $_POST['storage_exclude_exts'] ) ) : '';
 	$settings['twitter_creator'] = isset( $_POST['twitter_creator'] ) ? ltrim( sanitize_text_field( wp_unslash( $_POST['twitter_creator'] ) ), '@' ) : '';
 	// Facebook App ID：纯数字（非数字直接丢弃，避免脏数据进 meta）
-	$settings['fb_app_id']       = isset( $_POST['fb_app_id'] ) ? preg_replace( '/\D/', '', (string) wp_unslash( $_POST['fb_app_id'] ) ) : '';
+	$settings['fb_app_id'] = isset( $_POST['fb_app_id'] ) ? preg_replace( '/\D/', '', (string) wp_unslash( $_POST['fb_app_id'] ) ) : '';
 	// 微信分享：AppID 仅安全字符；AppSecret 留空保留原值，非空则加密入库（jinyu_enc2::）。
 	$settings['wechat_appid'] = isset( $_POST['wechat_appid'] ) ? sanitize_text_field( wp_unslash( $_POST['wechat_appid'] ) ) : '';
 	if ( isset( $_POST['wechat_appsecret'] ) && '' !== (string) wp_unslash( $_POST['wechat_appsecret'] ) ) {
@@ -93,9 +93,9 @@ function jinyu_companion_apply_saved_settings(): void {
 	$settings['seo_keywords']    = isset( $_POST['seo_keywords'] ) ? sanitize_text_field( wp_unslash( $_POST['seo_keywords'] ) ) : '';
 	$settings['seo_desc']        = isset( $_POST['seo_desc'] ) ? sanitize_textarea_field( wp_unslash( $_POST['seo_desc'] ) ) : '';
 	// 结构化数据：组织 / 品牌 sameAs 链接（每行一个 URL）
-	$settings['entity_sameas']   = isset( $_POST['entity_sameas'] ) ? sanitize_textarea_field( wp_unslash( $_POST['entity_sameas'] ) ) : '';
+	$settings['entity_sameas'] = isset( $_POST['entity_sameas'] ) ? sanitize_textarea_field( wp_unslash( $_POST['entity_sameas'] ) ) : '';
 	// 组织 Logo：留空则依次回退主题自定义 Logo、站点图标
-	$settings['org_logo_url']    = isset( $_POST['org_logo_url'] ) ? esc_url_raw( wp_unslash( $_POST['org_logo_url'] ) ) : '';
+	$settings['org_logo_url'] = isset( $_POST['org_logo_url'] ) ? esc_url_raw( wp_unslash( $_POST['org_logo_url'] ) ) : '';
 	// 作者身份档案：作者本人的站外主页，每行一个（同域 URL 会被自动剔除）
 	$settings['author_sameas']   = isset( $_POST['author_sameas'] ) ? sanitize_textarea_field( wp_unslash( $_POST['author_sameas'] ) ) : '';
 	$settings['baidu_submit_token'] = isset( $_POST['baidu_submit_token'] ) ? esc_url_raw( wp_unslash( $_POST['baidu_submit_token'] ) ) : '';
@@ -140,7 +140,7 @@ function jinyu_companion_apply_saved_settings(): void {
 		: 'smart';
 
 	// SMTP
-	$settings['smtp_host']   = isset( $_POST['smtp_host'] ) ? sanitize_text_field( wp_unslash( $_POST['smtp_host'] ) ) : '';
+	$settings['smtp_host'] = isset( $_POST['smtp_host'] ) ? sanitize_text_field( wp_unslash( $_POST['smtp_host'] ) ) : '';
 	// 端口最小 1：清空提交存 0 会让 PHPMailer Port=0，发信静默失败
 	$settings['smtp_port']   = isset( $_POST['smtp_port'] ) ? max( 1, (int) wp_unslash( $_POST['smtp_port'] ) ) : 0;
 	$settings['smtp_secure'] = isset( $_POST['smtp_secure'] ) && in_array( $_POST['smtp_secure'], [ 'ssl', 'tls', 'none' ], true )
@@ -200,7 +200,7 @@ function jinyu_companion_apply_saved_settings(): void {
 	// 尺寸多选：full 恒驻（原图必要），其余按勾选存
 	$wm_sizes = array( 'full' );
 	foreach ( array( 'thumbnail', 'medium', 'medium_large', 'large' ) as $s ) {
-		if ( isset( $_POST['img_wm_size_' . $s] ) ) {
+		if ( isset( $_POST[ 'img_wm_size_' . $s ] ) ) {
 			$wm_sizes[] = $s;
 		}
 	}
@@ -210,8 +210,8 @@ function jinyu_companion_apply_saved_settings(): void {
 	jinyu_companion_save_settings( $settings );
 	jinyu_companion_settings_saved( true );
 	// 记录提交时所在分区，保存后停留原页（默认概览）。
-	if ( isset( $_POST['jyc_active_pane'] ) ) {
-		jinyu_companion_active_pane( sanitize_key( wp_unslash( $_POST['jyc_active_pane'] ) ) );
+	if ( isset( $_POST['jinyu_active_pane'] ) ) {
+		jinyu_companion_active_pane( sanitize_key( wp_unslash( $_POST['jinyu_active_pane'] ) ) );
 	}
 	// 分类前缀开关切换后立即刷新重写规则（成本极低，仅在状态实际变化时触发一次）
 	if ( $no_cat_changed ) {
@@ -226,7 +226,8 @@ function jinyu_companion_apply_saved_settings(): void {
 	// phpcs:enable
 }
 
-/* --------------------------------------------------------------------------
+/*
+--------------------------------------------------------------------------
  * 悬浮保存通道（脏检测浮条调用）
  *
  * 与上方的整页 POST 共用同一落库函数，区别只在「是否整页刷新」：本端点返回 JSON，
@@ -245,19 +246,39 @@ function jinyu_companion_ajax_save(): void {
 	// 专属标志位：表单里已有的 jinyu_companion_save=1 会随「立即优化」「发送测试邮件」等
 	// admin-ajax 请求一起提交，单独用它当开关会把「测试」当成「保存」。
 	if ( empty( $_POST['jinyu_companion_ajax'] ) ) {
-		wp_send_json( [ 'success' => false, 'msg' => __( '请求来源非法', 'jinyu-theme-companion' ) ] );
+		wp_send_json(
+            [
+				'success' => false,
+				'msg' => __( '请求来源非法', 'jinyu-theme-companion' ),
+			]
+        );
 	}
 	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_send_json( [ 'success' => false, 'msg' => __( '权限不足', 'jinyu-theme-companion' ) ] );
+		wp_send_json(
+            [
+				'success' => false,
+				'msg' => __( '权限不足', 'jinyu-theme-companion' ),
+			]
+        );
 	}
 	// 用 wp_verify_nonce 而非 check_admin_referer：后者校验失败会输出 wp_nonce_ays() 的完整拒绝页。
 	if ( empty( $_POST['jinyu_companion_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['jinyu_companion_nonce'] ) ), 'jinyu_companion_settings' ) ) {
-		wp_send_json( [ 'success' => false, 'msg' => __( '安全校验失败，请刷新页面后重试', 'jinyu-theme-companion' ) ] );
+		wp_send_json(
+            [
+				'success' => false,
+				'msg' => __( '安全校验失败，请刷新页面后重试', 'jinyu-theme-companion' ),
+			]
+        );
 	}
 
 	jinyu_companion_apply_saved_settings();
 
-	wp_send_json( [ 'success' => true, 'msg' => __( '设置已保存', 'jinyu-theme-companion' ) ] );
+	wp_send_json(
+        [
+			'success' => true,
+			'msg' => __( '设置已保存', 'jinyu-theme-companion' ),
+		]
+    );
 }
 
 if ( ! function_exists( 'jinyu_companion_settings_saved' ) ) {
@@ -411,7 +432,11 @@ function jinyu_companion_settings_page_html(): void {
 	$page_cache_edge_server   = jinyu_companion_get_option( 'page_cache_edge_server', 'auto' );
 	$page_cache_edge_path     = jinyu_companion_get_option( 'page_cache_edge_path', '' );
 	// HTTP 传输体检：只读已缓存结果，页面加载绝不发请求（未体检过就显示空态，等用户点击）。
-	$tp_data = function_exists( 'jinyu_transport_cached' ) ? jinyu_transport_cached() : array( 'rows' => array(), 'at' => 0, 'error' => '' );
+	$tp_data = function_exists( 'jinyu_transport_cached' ) ? jinyu_transport_cached() : array(
+		'rows' => array(),
+		'at' => 0,
+		'error' => '',
+	);
 	$tp_html = function_exists( 'jinyu_transport_render_rows' ) ? jinyu_transport_render_rows( $tp_data ) : '';
 	$tp_ago  = ( ! empty( $tp_data['rows'] ) && function_exists( 'jinyu_transport_ago' ) ) ? jinyu_transport_ago( (int) $tp_data['at'] ) : '';
 
@@ -471,7 +496,7 @@ function jinyu_companion_settings_page_html(): void {
 		<form method="post" id="jyc-form">
 			<?php wp_nonce_field( 'jinyu_companion_settings', 'jinyu_companion_nonce' ); ?>
 			<input type="hidden" name="jinyu_companion_save" value="1">
-			<input type="hidden" name="jyc_active_pane" id="jyc-activePane" value="<?php echo esc_attr( $active_pane ); ?>">
+			<input type="hidden" name="jinyu_active_pane" id="jyc-activePane" value="<?php echo esc_attr( $active_pane ); ?>">
 
 			<div class="jyc-app" data-theme="light">
 				<!-- ===================== TOP NAV ===================== -->
@@ -596,7 +621,7 @@ function jinyu_companion_settings_page_html(): void {
 								);
 								return $map[ $rate ] ?? '#94a3b8';
 							};
-							?>
+	?>
 							<div class="jyc-bento">
 								<div class="jyc-tile"><div class="jyc-k"><i style="background:var(--brand)"></i><?php echo esc_html__( '功能启用度', 'jinyu-theme-companion' ); ?></div>
 									<div class="jyc-v jyc-num" id="jyc-bentoPct">0%</div><div class="jyc-n"><?php echo esc_html__( '全部功能开关平均开启比例', 'jinyu-theme-companion' ); ?></div></div>
@@ -613,15 +638,17 @@ function jinyu_companion_settings_page_html(): void {
 								<div class="jyc-tile jyc-tile-link" role="button" tabindex="0" id="jyc-tileTodo" data-jyc-goto="<?php echo esc_attr( $ov_open ? $ov_open[0]['p'] : 'perfcenter' ); ?>" data-todos="<?php echo esc_attr( (string) wp_json_encode( $ov_spec ) ); ?>">
 									<span class="jyc-goto" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></span>
 									<div class="jyc-k"><i style="background:<?php echo esc_attr( $ov_open ? 'var(--warn)' : 'var(--ok)' ); ?>"></i><?php echo esc_html__( '优化待办', 'jinyu-theme-companion' ); ?></div>
-									<div class="jyc-v jyc-num" id="jyc-sTodo"><?php
+									<div class="jyc-v jyc-num" id="jyc-sTodo">
+                                    <?php
 										echo esc_html(
 											sprintf(
 												/* translators: %d: 待处理项数 */
 												__( '%d 项', 'jinyu-theme-companion' ),
 												count( $ov_open )
 											)
-										);
-									?></div>
+                                        );
+									?>
+                                    </div>
 									<div class="jyc-n" id="jyc-sTodoNote"><?php echo esc_html( $ov_open ? $ov_open[0]['l'] : __( '暂无优化建议', 'jinyu-theme-companion' ) ); ?></div>
 								</div>
 								<div class="jyc-tile jyc-tile-link" role="button" tabindex="0" data-jyc-goto="perfcenter">
@@ -701,54 +728,61 @@ function jinyu_companion_settings_page_html(): void {
 										<div class="jyc-grow">
 											<div class="jyc-crawlers">
 												<?php
-												$jyc_ai_rows   = jinyu_ai_crawl_stats_rows();
-												$jyc_ai_brands = array();
-												foreach ( $jyc_ai_rows as $jyc_ai_row ) {
-													$jyc_b = $jyc_ai_row['brand'];
-													if ( ! isset( $jyc_ai_brands[ $jyc_b ] ) ) {
-														$jyc_ai_brands[ $jyc_b ] = array( 'n' => 0, 'last' => '' );
+												$jinyu_ai_rows   = jinyu_ai_crawl_stats_rows();
+												$jinyu_ai_brands = array();
+												foreach ( $jinyu_ai_rows as $jinyu_ai_row ) {
+													$jinyu_b = $jinyu_ai_row['brand'];
+													if ( ! isset( $jinyu_ai_brands[ $jinyu_b ] ) ) {
+														$jinyu_ai_brands[ $jinyu_b ] = array(
+															'n' => 0,
+															'last' => '',
+														);
 													}
-													$jyc_ai_brands[ $jyc_b ]['n'] += $jyc_ai_row['n'];
-													if ( $jyc_ai_row['last'] > $jyc_ai_brands[ $jyc_b ]['last'] ) {
-														$jyc_ai_brands[ $jyc_b ]['last'] = $jyc_ai_row['last'];
+													$jinyu_ai_brands[ $jinyu_b ]['n'] += $jinyu_ai_row['n'];
+													if ( $jinyu_ai_row['last'] > $jinyu_ai_brands[ $jinyu_b ]['last'] ) {
+														$jinyu_ai_brands[ $jinyu_b ]['last'] = $jinyu_ai_row['last'];
 													}
 												}
-												foreach ( jinyu_geo_crawler_groups() as $jyc_region => $jyc_groups ) :
-													$jyc_ua_count = 0;
-													foreach ( $jyc_groups as $jyc_group ) {
-														$jyc_ua_count += count( $jyc_group['crawlers'] );
+												foreach ( jinyu_geo_crawler_groups() as $jinyu_region => $jinyu_groups ) :
+													$jinyu_ua_count = 0;
+													foreach ( $jinyu_groups as $jinyu_group ) {
+														$jinyu_ua_count += count( $jinyu_group['crawlers'] );
 													}
 													?>
 													<details class="jyc-csect">
 														<summary class="jyc-csect-h">
 															<svg class="jyc-csect-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-															<span class="jyc-csect-name"><?php echo esc_html( jinyu_geo_crawler_region_label( $jyc_region ) ); ?></span>
-															<span class="jyc-csect-meta"><?php
+															<span class="jyc-csect-name"><?php echo esc_html( jinyu_geo_crawler_region_label( $jinyu_region ) ); ?></span>
+															<span class="jyc-csect-meta">
+                                                            <?php
 																/* translators: 1: number of brands, 2: number of user agents. */
-																echo esc_html( sprintf( __( '%1$d 个品牌 · %2$d 条 UA', 'jinyu-theme-companion' ), count( $jyc_groups ), $jyc_ua_count ) );
-															?></span>
+																echo esc_html( sprintf( __( '%1$d 个品牌 · %2$d 条 UA', 'jinyu-theme-companion' ), count( $jinyu_groups ), $jinyu_ua_count ) );
+															?>
+                                                            </span>
 														</summary>
 														<div class="jyc-csect-b">
-															<?php foreach ( $jyc_groups as $jyc_group ) : ?>
+															<?php foreach ( $jinyu_groups as $jinyu_group ) : ?>
 																<div class="jyc-cgroup">
 																	<span class="jyc-brand">
 																		<svg class="jyc-brand-ico" viewBox="0 0 24 24" aria-hidden="true">
-																			<circle cx="12" cy="12" r="12" fill="<?php echo esc_attr( $jyc_group['color'] ); ?>"></circle>
-																			<text x="12" y="12" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="<?php echo esc_attr( preg_match_all( '/./u', $jyc_group['mark'] ) > 1 ? 9 : 12 ); ?>" font-weight="700"><?php echo esc_html( $jyc_group['mark'] ); ?></text>
+																			<circle cx="12" cy="12" r="12" fill="<?php echo esc_attr( $jinyu_group['color'] ); ?>"></circle>
+																			<text x="12" y="12" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="<?php echo esc_attr( preg_match_all( '/./u', $jinyu_group['mark'] ) > 1 ? 9 : 12 ); ?>" font-weight="700"><?php echo esc_html( $jinyu_group['mark'] ); ?></text>
 																		</svg>
-																		<span class="jyc-brand-name"><?php echo esc_html( $jyc_group['label'] ); ?></span>
+																		<span class="jyc-brand-name"><?php echo esc_html( $jinyu_group['label'] ); ?></span>
 																	</span>
 																	<span class="jyc-ua-list">
-																		<?php foreach ( $jyc_group['crawlers'] as $jyc_ua ) : ?>
-																			<code class="jyc-ua"><?php echo esc_html( $jyc_ua ); ?></code>
+																		<?php foreach ( $jinyu_group['crawlers'] as $jinyu_ua ) : ?>
+																			<code class="jyc-ua"><?php echo esc_html( $jinyu_ua ); ?></code>
 																		<?php endforeach; ?>
 																	</span>
-																	<?php if ( isset( $jyc_ai_brands[ $jyc_group['label'] ] ) ) : ?>
-																		<span class="jyc-aistat"><?php
-																			$jyc_ai_b = $jyc_ai_brands[ $jyc_group['label'] ];
+																	<?php if ( isset( $jinyu_ai_brands[ $jinyu_group['label'] ] ) ) : ?>
+																		<span class="jyc-aistat">
+                                                                        <?php
+																			$jinyu_ai_b = $jinyu_ai_brands[ $jinyu_group['label'] ];
 																			/* translators: 1: visit count, 2: last visit time. */
-																			echo esc_html( sprintf( __( '%1$s 次到访 · 最近 %2$s', 'jinyu-theme-companion' ), number_format_i18n( $jyc_ai_b['n'] ), $jyc_ai_b['last'] ) );
-																		?></span>
+																			echo esc_html( sprintf( __( '%1$s 次到访 · 最近 %2$s', 'jinyu-theme-companion' ), number_format_i18n( $jinyu_ai_b['n'] ), $jinyu_ai_b['last'] ) );
+																		?>
+                                                                        </span>
 																	<?php else : ?>
 																		<span class="jyc-aistat jyc-aistat--none"><?php echo esc_html__( '近期无到访', 'jinyu-theme-companion' ); ?></span>
 																	<?php endif; ?>
@@ -768,16 +802,16 @@ function jinyu_companion_settings_page_html(): void {
 										<div class="jyc-grow">
 											<div class="jyc-fname"><?php echo esc_html__( 'AI 爬虫到访统计', 'jinyu-theme-companion' ); ?></div>
 											<div class="jyc-fdesc"><?php echo esc_html__( '按上方清单的 UA 识别并聚合计数（只记品牌、次数与最后到访时间，不记录 IP 与完整访问日志），明细显示在上方各品牌行内。清零后从下一次到访重新累计。', 'jinyu-theme-companion' ); ?></div>
-											<?php if ( $jyc_ai_rows ) : ?>
+											<?php if ( $jinyu_ai_rows ) : ?>
 												<div style="margin-top:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
 													<span style="font-size:13px">
 														<?php
-														$jyc_ai_total = 0;
-														foreach ( $jyc_ai_rows as $jyc_ai_row ) {
-															$jyc_ai_total += $jyc_ai_row['n'];
+														$jinyu_ai_total = 0;
+														foreach ( $jinyu_ai_rows as $jinyu_ai_row ) {
+															$jinyu_ai_total += $jinyu_ai_row['n'];
 														}
 														/* translators: 1: brand count, 2: total visit count. */
-														echo esc_html( sprintf( __( '已记录 %1$d 个品牌、共 %2$s 次到访。', 'jinyu-theme-companion' ), count( $jyc_ai_brands ), number_format_i18n( $jyc_ai_total ) ) );
+														echo esc_html( sprintf( __( '已记录 %1$d 个品牌、共 %2$s 次到访。', 'jinyu-theme-companion' ), count( $jinyu_ai_brands ), number_format_i18n( $jinyu_ai_total ) ) );
 														?>
 													</span>
 													<button type="button" class="jyc-btn jyc-btn-ghost jyc-btn-sm" id="jyc-aiCrawlReset" onclick="jycAiCrawlReset(this)"><?php echo esc_html__( '清零统计', 'jinyu-theme-companion' ); ?></button>
@@ -1169,11 +1203,16 @@ function jinyu_companion_settings_page_html(): void {
 			?>
 			<div class="jyc-cache-note <?php echo $jpc_ready ? 'is-ok' : 'is-warn'; ?>">
 				<?php if ( $jpc_ready ) : ?>
-				<?php
-				// translators: 1: 缓存文件数量；2: 最近写入时间（相对时间）.
-				printf( esc_html__( '缓存目录就绪：%1$s 个缓存文件，最近写入 %2$s。', 'jinyu-theme-companion' ), esc_html( number_format_i18n( (int) $jpc['files'] ) ), esc_html( $jpc_last ) );
-				?>
-				<div class="jyc-cache-sub"><?php if ( function_exists( 'jinyu_page_cache_etag_hint' ) ) { echo wp_kses( jinyu_page_cache_etag_hint(), array( 'code' => array() ) ); } ?></div>
+					<?php
+					// translators: 1: 缓存文件数量；2: 最近写入时间（相对时间）.
+					printf( esc_html__( '缓存目录就绪：%1$s 个缓存文件，最近写入 %2$s。', 'jinyu-theme-companion' ), esc_html( number_format_i18n( (int) $jpc['files'] ) ), esc_html( $jpc_last ) );
+					?>
+				<div class="jyc-cache-sub">
+					<?php
+					if ( function_exists( 'jinyu_page_cache_etag_hint' ) ) {
+						echo wp_kses( jinyu_page_cache_etag_hint(), array( 'code' => array() ) ); }
+					?>
+                </div>
 			<?php else : ?>
 				<strong><?php esc_html_e( '整页缓存未生效', 'jinyu-theme-companion' ); ?></strong>
 				<div class="jyc-cache-sub"><?php echo wp_kses( jinyu_page_cache_hint(), array( 'code' => array() ) ); // 返回值内部已 esc_html 参数，此处仅放行 <code> 标签. ?></div>
@@ -1236,7 +1275,18 @@ function jinyu_companion_settings_page_html(): void {
 		// 片段查看器默认展示的服务器：跟随已保存的设置；auto 时按当前 Web 服务器探测结果取其一。
 		$edge_default = ( 'apache' === $page_cache_edge_server ) ? 'apache' : 'nginx';
 		?>
-		<div class="jyc-code-viewer" id="jycCodeViewer" data-active="<?php echo esc_attr( $edge_default ); ?>" data-snippets="<?php echo esc_attr( wp_json_encode( array( 'nginx' => $edge_nginx, 'apache' => $edge_apache ) ) ); ?>">
+		<div class="jyc-code-viewer" id="jycCodeViewer" data-active="<?php echo esc_attr( $edge_default ); ?>" data-snippets="
+        <?php
+        echo esc_attr(
+            wp_json_encode(
+                array(
+					'nginx' => $edge_nginx,
+					'apache' => $edge_apache,
+                )
+            )
+        );
+		?>
+                                                                        ">
 			<div class="jyc-code-head">
 				<div class="jyc-code-tabs" role="tablist">
 					<button type="button" class="jyc-code-tab" data-code="nginx" onclick="window.jycEdgeCodeTab('nginx')"><?php esc_html_e( 'Nginx', 'jinyu-theme-companion' ); ?></button>
@@ -1259,10 +1309,10 @@ function jinyu_companion_settings_page_html(): void {
 							<div class="jyc-mod-head jyc-mod-flex">
 								<div class="jyc-mod-title">
 									<h1><?php echo esc_html__( '性能中心', 'jinyu-theme-companion' ); ?></h1>
-									<?php jyc_perf_render_headside(); ?>
+									<?php jinyu_perf_render_headside(); ?>
 								</div>
 								<div class="jyc-sub"><?php echo esc_html__( '服务器运行时运维：OPcache / Memcached 实时看板、可逆优化开关、多层缓存清理与一键优化。整页缓存等前台配置在「前台加速」。', 'jinyu-theme-companion' ); ?></div></div>
-							<?php jyc_perf_render_pane(); ?>
+							<?php jinyu_perf_render_pane(); ?>
 						</section>
 
 						<!-- ===================== COMMENT ===================== -->
@@ -1275,9 +1325,9 @@ function jinyu_companion_settings_page_html(): void {
 								<div class="jyc-panel-b">
 									<div class="jyc-fl"><?php echo esc_html__( '验证码策略', 'jinyu-theme-companion' ); ?>
 										<div class="jyc-seg" id="jyc-captchaSeg" role="radiogroup" aria-label="<?php echo esc_attr__( '验证码策略', 'jinyu-theme-companion' ); ?>">
-											<button type="button" data-v="smart" class="<?php echo $captcha === 'smart' ? 'jyc-active' : ''; ?>"><?php echo esc_html__( '智能', 'jinyu-theme-companion' ); ?></button>
-											<button type="button" data-v="always" class="<?php echo $captcha === 'always' ? 'jyc-active' : ''; ?>"><?php echo esc_html__( '始终启用', 'jinyu-theme-companion' ); ?></button>
-											<button type="button" data-v="off" class="<?php echo $captcha === 'off' ? 'jyc-active' : ''; ?>"><?php echo esc_html__( '关闭', 'jinyu-theme-companion' ); ?></button>
+											<button type="button" data-v="smart" class="<?php echo 'smart' === $captcha ? 'jyc-active' : ''; ?>"><?php echo esc_html__( '智能', 'jinyu-theme-companion' ); ?></button>
+											<button type="button" data-v="always" class="<?php echo 'always' === $captcha ? 'jyc-active' : ''; ?>"><?php echo esc_html__( '始终启用', 'jinyu-theme-companion' ); ?></button>
+											<button type="button" data-v="off" class="<?php echo 'off' === $captcha ? 'jyc-active' : ''; ?>"><?php echo esc_html__( '关闭', 'jinyu-theme-companion' ); ?></button>
 										</div>
 										<input type="hidden" name="captcha_policy" value="<?php echo esc_attr( $captcha ); ?>">
 										<span class="jyc-muted" style="font-size:12px"><?php echo esc_html__( '智能：失败过多时自动启用；始终：每次均验证；关闭：不验证。', 'jinyu-theme-companion' ); ?></span>
@@ -1696,7 +1746,14 @@ function jinyu_companion_settings_page_html(): void {
 											<div class="jyc-opcard-h"><span class="jyc-opcard-t"><?php echo esc_html__( '并发数', 'jinyu-theme-companion' ); ?></span></div>
 											<div class="jyc-opcard-b">
 												<select class="jyc-inp" name="img_wm_concurrency" id="jyc-wmCc">
-													<?php foreach ( array( 1 => __( '1（串行，最稳）', 'jinyu-theme-companion' ), 2 => __( '2', 'jinyu-theme-companion' ), 4 => __( '4', 'jinyu-theme-companion' ), 8 => __( '8（最快，弱机勿用）', 'jinyu-theme-companion' ) ) as $v => $t ) : ?>
+													<?php
+                                                    foreach ( array(
+														1 => __( '1（串行，最稳）', 'jinyu-theme-companion' ),
+														2 => __( '2', 'jinyu-theme-companion' ),
+														4 => __( '4', 'jinyu-theme-companion' ),
+														8 => __( '8（最快，弱机勿用）', 'jinyu-theme-companion' ),
+													) as $v => $t ) :
+														?>
 														<option value="<?php echo esc_attr( (string) $v ); ?>" <?php selected( $wm_cc, $v ); ?>><?php echo esc_html( $t ); ?></option>
 													<?php endforeach; ?>
 												</select>
@@ -1822,7 +1879,7 @@ function jinyu_companion_settings_page_html(): void {
 										<p class="jyc-drop-t"><?php echo wp_kses( __( '拖入备份文件，或 <b>点击选择</b>', 'jinyu-theme-companion' ), array( 'b' => array() ) ); ?></p>
 										<p class="jyc-drop-sub"><?php echo esc_html__( '支持 .json（本插件导出的备份文件）', 'jinyu-theme-companion' ); ?></p>
 									</div>
-									<input class="jyc-sr" type="file" name="jyc_import_file" id="jyc-import-file" accept=".json,application/json" autocomplete="off">
+									<input class="jyc-sr" type="file" name="jinyu_import_file" id="jyc-import-file" accept=".json,application/json" autocomplete="off">
 									<div class="jyc-drop-file" id="jyc-drop-file" hidden>
 										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
 										<span class="jyc-drop-fname" id="jyc-drop-name"></span>
@@ -1831,14 +1888,14 @@ function jinyu_companion_settings_page_html(): void {
 									</div>
 									<details class="jyc-io-adv" open>
 										<summary><?php echo esc_html__( '高级：直接粘贴 JSON', 'jinyu-theme-companion' ); ?></summary>
-										<textarea class="jyc-inp jyc-inp-area" name="jyc_import_text" rows="5" placeholder='{"plugin":"jinyu-theme-companion","settings":{...}}'></textarea>
+										<textarea class="jyc-inp jyc-inp-area" name="jinyu_import_text" rows="5" placeholder='{"plugin":"jinyu-theme-companion","settings":{...}}'></textarea>
 									</details>
 									<label class="jyc-checkline">
-										<input type="checkbox" name="jyc_import_confirm" value="1">
+										<input type="checkbox" name="jinyu_import_confirm" value="1">
 										<span><?php echo esc_html__( '我已确认：导入会用备份文件里的同名配置项覆盖当前设置，未出现的配置保持现状。', 'jinyu-theme-companion' ); ?></span>
 									</label>
 									<div class="jyc-io-actions">
-										<button type="submit" class="jyc-btn jyc-btn-primary" name="jyc_import" value="1" id="jyc-import-submit"><?php echo esc_html__( '导入并覆盖同名配置', 'jinyu-theme-companion' ); ?></button>
+										<button type="submit" class="jyc-btn jyc-btn-primary" name="jinyu_import" value="1" id="jyc-import-submit"><?php echo esc_html__( '导入并覆盖同名配置', 'jinyu-theme-companion' ); ?></button>
 									</div>
 								</div>
 							</div>
@@ -1848,8 +1905,8 @@ function jinyu_companion_settings_page_html(): void {
 				</div>
 
 				<!-- 悬浮保存浮条：与主题「有未保存的更改」同一交互。DOM 必须挂在 .jyc-app 内 ——
-				     配色走 .jyc-app 的 CSS 变量，且与 .jyc-main 同级（避开 .jyc-pane 进场动画的
-				     transform 形成 fixed 包含块，导致浮条贴到分区顶部而不是视口底部）。 -->
+					配色走 .jyc-app 的 CSS 变量，且与 .jyc-main 同级（避开 .jyc-pane 进场动画的
+					transform 形成 fixed 包含块，导致浮条贴到分区顶部而不是视口底部）。 -->
 				<div class="jyc-dirtybar" id="jyc-dirtybar" role="status" aria-live="polite" hidden>
 					<span class="jyc-db-dot" aria-hidden="true"></span>
 					<span class="jyc-db-txt" id="jyc-db-txt">
@@ -1863,7 +1920,7 @@ function jinyu_companion_settings_page_html(): void {
 				</div>
 
 				<!-- Toast 必须在 .jyc-app 作用域内：配色全部依赖 .jyc-app 上的 CSS 变量，
-				     放外面变量失效 → 白底/绿条/绿勾全丢，退化成透明底黑勾（实测踩坑）。 -->
+					放外面变量失效 → 白底/绿条/绿勾全丢，退化成透明底黑勾（实测踩坑）。 -->
 				<div class="jyc-toast jyc-glass<?php echo jinyu_companion_settings_saved() ? ' jyc-show' : ''; ?>" id="jyc-toast" role="status" aria-live="polite">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
 					<span id="jyc-toastMsg"><?php echo esc_html__( '设置已保存', 'jinyu-theme-companion' ); ?></span>
@@ -1881,7 +1938,7 @@ function jinyu_companion_admin_assets( string $hook ): void {
 	if ( 'toplevel_page_jinyu-theme-companion' !== $hook ) {
 		return;
 	}
-	$root = dirname( dirname( dirname( __FILE__ ) ) ); // .../wp-content/plugins/jinyu-theme-companion
+	$root = dirname( dirname( __DIR__ ) ); // .../wp-content/plugins/jinyu-theme-companion
 	$main = $root . '/jinyu-theme-companion.php';       // plugins_url 第 2 参数须为插件根下真实文件（目录会被多剥一层）
 	$fallback = defined( 'JINYU_COMPANION_VER' ) ? JINYU_COMPANION_VER : '1.0.1';
 	// 版本号用文件 mtime：改动 admin.css / admin.js 后自动失效浏览器缓存，避免用户仍看到旧样式/旧脚本。

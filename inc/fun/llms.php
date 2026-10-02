@@ -70,7 +70,8 @@ function jinyu_llms_flush(): void {
 	flush_rewrite_rules();
 }
 
-/* ── 内容变更失效 ─────────────────────────────────────────────────────────
+/*
+── 内容变更失效 ─────────────────────────────────────────────────────────
  * llms.txt / llms-full.txt 的输出缓存必须随内容变更立即失效。
  * 这里显式挂 save_post 等钩子 —— jinyu_companion_cache_flush() 只挂在设置面板的「清空缓存」
  * 按钮、导入与存储切换上，并没有 save_post 钩子；不补这一段，发文后两个端点最长 6 小时
@@ -142,7 +143,7 @@ function jinyu_llms_serve(): void {
 		exit;
 	}
 
-	if ( $mode === 'full' ) {
+	if ( 'full' === $mode ) {
 		jinyu_llms_serve_full( $cache_key );
 		return;
 	}
@@ -167,7 +168,7 @@ function jinyu_llms_serve(): void {
 		while ( $prev !== $excerpt && $iter < 3 ) {
 			$prev    = $excerpt;
 			$excerpt = html_entity_decode( $excerpt, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-			$iter++;
+			++$iter;
 		}
 		$excerpt = trim( preg_replace( '/\s+/', ' ', $excerpt ) );
 		if ( mb_strlen( $excerpt, 'UTF-8' ) > 200 ) {
@@ -182,12 +183,14 @@ function jinyu_llms_serve(): void {
 
 	// 重要页面辅助：按 slug 取页面（避免已弃用的 get_page_by_path）
 	$page_by_slug = static function ( string $slug ): ?WP_Post {
-		$pages = get_posts( [
-			'post_type'      => 'page',
-			'name'           => $slug,
-			'posts_per_page' => 1,
-			'no_found_rows'  => true,
-		] );
+		$pages = get_posts(
+            [
+				'post_type'      => 'page',
+				'name'           => $slug,
+				'posts_per_page' => 1,
+				'no_found_rows'  => true,
+			]
+        );
 		return $pages ? $pages[0] : null;
 	};
 
@@ -198,27 +201,34 @@ function jinyu_llms_serve(): void {
 	$out .= '## 关于本站' . "\n\n";
 	$out .= '- 站点名称：' . $site_name . "\n";
 	$out .= '- 站点地址：' . $home . "\n";
-	$out .= '- 站点简介：' . ( $desc !== '' ? $desc : '-' ) . "\n";
+	$out .= '- 站点简介：' . ( '' !== $desc ? $desc : '-' ) . "\n";
 	foreach ( jinyu_jsonld_sameas_urls( (string) jinyu_companion_get_option( 'entity_sameas', '' ) ) as $jinyu_su ) {
 		$out .= '- 组织档案：' . $jinyu_su . "\n";
 	}
 	// 主笔作者：取值与文章页 author.sameAs 同源，避免「正文写得这个人」与「实体署名人」不一致。
-	$jinyu_owner = get_users( [
-		'number'      => 1,
-		'fields'      => 'ID',
-		'capability'  => 'edit_others_posts', // WP 5.9 起 'who=authors' 已废弃，改按能力查询
-		'orderby'     => 'registered',
-		'order'       => 'ASC',
-		'count_total' => false,
-	] );
+	$jinyu_owner = get_users(
+        [
+			'number'      => 1,
+			'fields'      => 'ID',
+			'capability'  => 'edit_others_posts', // WP 5.9 起 'who=authors' 已废弃，改按能力查询
+			'orderby'     => 'registered',
+			'order'       => 'ASC',
+			'count_total' => false,
+		]
+    );
 	if ( ! empty( $jinyu_owner ) ) {
 		$jinyu_owner_id = (int) $jinyu_owner[0];
 		$out .= '- 主笔作者：' . get_the_author_meta( 'display_name', $jinyu_owner_id )
 			. '（' . get_author_posts_url( $jinyu_owner_id ) . "）\n";
-		foreach ( jinyu_jsonld_sameas_urls( implode( "\n", [
-			(string) get_the_author_meta( 'user_url', $jinyu_owner_id ),
-			(string) jinyu_companion_get_option( 'author_sameas', '' ),
-		] ) ) as $jinyu_su ) {
+		foreach ( jinyu_jsonld_sameas_urls(
+            implode(
+                "\n",
+                [
+					(string) get_the_author_meta( 'user_url', $jinyu_owner_id ),
+					(string) jinyu_companion_get_option( 'author_sameas', '' ),
+				]
+            )
+        ) as $jinyu_su ) {
 			$out .= '- 作者档案：' . $jinyu_su . "\n";
 		}
 	}
@@ -228,15 +238,17 @@ function jinyu_llms_serve(): void {
 	$out .= '## 热门文章' . "\n\n";
 	$hot  = function_exists( 'jinyu_get_hot_posts' )
 		? jinyu_get_hot_posts( 8 )
-		: get_posts( [
-			'post_type'      => 'post',
-			'post_status'    => 'publish',
-		'has_password'    => false,
-			'posts_per_page' => 8,
-			'no_found_rows'  => true,
-			'orderby'        => 'comment_count',
-			'order'          => 'DESC',
-		] );
+		: get_posts(
+            [
+				'post_type'      => 'post',
+				'post_status'    => 'publish',
+				'has_password'    => false,
+				'posts_per_page' => 8,
+				'no_found_rows'  => true,
+				'orderby'        => 'comment_count',
+				'order'          => 'DESC',
+			]
+        );
 	foreach ( $hot as $p ) {
 		$out .= $post_line( $p );
 	}
@@ -244,28 +256,32 @@ function jinyu_llms_serve(): void {
 
 	// 最新文章（新鲜度信号）
 	$out     .= '## 最新文章' . "\n\n";
-	$latest   = get_posts( [
-		'post_type'      => 'post',
-		'post_status'    => 'publish',
-		'has_password'    => false,
-		'posts_per_page' => 8,
-		'no_found_rows'  => true,
-		'orderby'        => 'date',
-		'order'          => 'DESC',
-	] );
+	$latest   = get_posts(
+        [
+			'post_type'      => 'post',
+			'post_status'    => 'publish',
+			'has_password'    => false,
+			'posts_per_page' => 8,
+			'no_found_rows'  => true,
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+		]
+    );
 	foreach ( $latest as $p ) {
 		$out .= $post_line( $p );
 	}
 	$out .= "\n";
 
 	// 系列教程（结构化知识，体现站点主题权威度）
-	$series = get_terms( [
-		'taxonomy'   => 'jinyu_series',
-		'orderby'    => 'count',
-		'order'      => 'DESC',
-		'number'     => 8,
-		'hide_empty' => true,
-	] );
+	$series = get_terms(
+        [
+			'taxonomy'   => 'jinyu_series',
+			'orderby'    => 'count',
+			'order'      => 'DESC',
+			'number'     => 8,
+			'hide_empty' => true,
+		]
+    );
 	if ( ! is_wp_error( $series ) && ! empty( $series ) ) {
 		$out .= '## 系列教程' . "\n\n";
 		foreach ( $series as $s ) {
@@ -277,7 +293,7 @@ function jinyu_llms_serve(): void {
 				while ( $prev !== $raw && $iter < 3 ) {
 					$prev = $raw;
 					$raw  = html_entity_decode( $raw, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-					$iter++;
+					++$iter;
 				}
 				$line .= ': ' . trim( preg_replace( '/\s+/', ' ', $raw ) );
 			}
@@ -287,7 +303,13 @@ function jinyu_llms_serve(): void {
 	}
 
 	// 分类（主题地图）
-	$cats = get_categories( [ 'orderby' => 'count', 'order' => 'DESC', 'number' => 10 ] );
+	$cats = get_categories(
+        [
+			'orderby' => 'count',
+			'order' => 'DESC',
+			'number' => 10,
+		]
+    );
 	if ( ! empty( $cats ) ) {
 		$out .= '## 分类' . "\n\n";
 		foreach ( $cats as $c ) {
@@ -297,7 +319,13 @@ function jinyu_llms_serve(): void {
 	}
 
 	// 标签（更细粒度的主题索引）
-	$tags = get_tags( [ 'orderby' => 'count', 'order' => 'DESC', 'number' => 15 ] );
+	$tags = get_tags(
+        [
+			'orderby' => 'count',
+			'order' => 'DESC',
+			'number' => 15,
+		]
+    );
 	if ( ! empty( $tags ) ) {
 		$out .= '## 标签' . "\n\n";
 		foreach ( $tags as $t ) {
@@ -348,36 +376,56 @@ function jinyu_html_to_md( string $html ): string {
 
 	// 1) 提取代码块 / 行内代码，用占位符保护，避免内部被二次处理
 	$blocks = [];
-	$html   = preg_replace_callback( '#<pre[^>]*>(.*?)</pre>#is', static function ( $m ) use ( &$blocks ) {
-		$blocks[] = trim( preg_replace( '#</?code[^>]*>#i', '', $m[1] ) );
-		return "\n@@CODE" . ( count( $blocks ) - 1 ) . "@@\n";
-	}, $html );
+	$html   = preg_replace_callback(
+        '#<pre[^>]*>(.*?)</pre>#is',
+        static function ( $m ) use ( &$blocks ) {
+			$blocks[] = trim( preg_replace( '#</?code[^>]*>#i', '', $m[1] ) );
+			return "\n@@CODE" . ( count( $blocks ) - 1 ) . "@@\n";
+		},
+        $html
+    );
 	$icodes = [];
-	$html   = preg_replace_callback( '#<code[^>]*>(.*?)</code>#is', static function ( $m ) use ( &$icodes ) {
-		$icodes[] = trim( wp_strip_all_tags( $m[1] ) );
-		return "@@ICODE" . ( count( $icodes ) - 1 ) . "@@";
-	}, $html );
+	$html   = preg_replace_callback(
+        '#<code[^>]*>(.*?)</code>#is',
+        static function ( $m ) use ( &$icodes ) {
+			$icodes[] = trim( wp_strip_all_tags( $m[1] ) );
+			return '@@ICODE' . ( count( $icodes ) - 1 ) . '@@';
+		},
+        $html
+    );
 
 	// 2) 标题
-	$html = preg_replace_callback( '#<h([1-6])[^>]*>(.*?)</h\1>#is', static function ( $m ) {
-		$lvl = min( 6, max( 1, (int) $m[1] ) );
-		return "\n\n" . str_repeat( '#', $lvl ) . ' ' . trim( wp_strip_all_tags( $m[2] ) ) . "\n\n";
-	}, $html );
+	$html = preg_replace_callback(
+        '#<h([1-6])[^>]*>(.*?)</h\1>#is',
+        static function ( $m ) {
+			$lvl = min( 6, max( 1, (int) $m[1] ) );
+			return "\n\n" . str_repeat( '#', $lvl ) . ' ' . trim( wp_strip_all_tags( $m[2] ) ) . "\n\n";
+		},
+        $html
+    );
 
 	// 3) 链接
-	$html = preg_replace_callback( '#<a[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>#is', static function ( $m ) {
-		$url = trim( $m[1] );
-		$txt = trim( wp_strip_all_tags( $m[2] ) );
-		if ( $txt === '' ) {
-			$txt = $url;
-		}
-		return '[' . $txt . '](' . $url . ')';
-	}, $html );
+	$html = preg_replace_callback(
+        '#<a[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>#is',
+        static function ( $m ) {
+			$url = trim( $m[1] );
+			$txt = trim( wp_strip_all_tags( $m[2] ) );
+			if ( '' === $txt ) {
+				$txt = $url;
+			}
+			return '[' . $txt . '](' . $url . ')';
+		},
+        $html
+    );
 
 	// 4) 列表项
-	$html = preg_replace_callback( '#<li[^>]*>(.*?)</li>#is', static function ( $m ) {
-		return '- ' . trim( wp_strip_all_tags( $m[1] ) ) . "\n";
-	}, $html );
+	$html = preg_replace_callback(
+        '#<li[^>]*>(.*?)</li>#is',
+        static function ( $m ) {
+			return '- ' . trim( wp_strip_all_tags( $m[1] ) ) . "\n";
+		},
+        $html
+    );
 
 	// 5) 粗体 / 斜体
 	$html = preg_replace( '#<(strong|b)[^>]*>(.*?)</\1>#is', '**$2**', $html );
@@ -392,14 +440,22 @@ function jinyu_html_to_md( string $html ): string {
 	$html = wp_strip_all_tags( $html );
 
 	// 8) 还原代码
-	$html = preg_replace_callback( '#@@CODE(\d+)@@#', static function ( $m ) use ( $blocks ) {
-		$i = (int) $m[1];
-		return "\n```\n" . ( $blocks[ $i ] ?? '' ) . "\n```\n";
-	}, $html );
-	$html = preg_replace_callback( '#@@ICODE(\d+)@@#', static function ( $m ) use ( $icodes ) {
-		$i = (int) $m[1];
-		return '`' . ( $icodes[ $i ] ?? '' ) . '`';
-	}, $html );
+	$html = preg_replace_callback(
+        '#@@CODE(\d+)@@#',
+        static function ( $m ) use ( $blocks ) {
+			$i = (int) $m[1];
+			return "\n```\n" . ( $blocks[ $i ] ?? '' ) . "\n```\n";
+		},
+        $html
+    );
+	$html = preg_replace_callback(
+        '#@@ICODE(\d+)@@#',
+        static function ( $m ) use ( $icodes ) {
+			$i = (int) $m[1];
+			return '`' . ( $icodes[ $i ] ?? '' ) . '`';
+		},
+        $html
+    );
 
 	// 9) 清理多余空行
 	$html = preg_replace( '/\n{3,}/', "\n\n", $html );
@@ -419,15 +475,17 @@ function jinyu_llms_serve_full( string $cache_key = 'jinyu_llms_full_cache' ): v
 	$out .= $desc ? $desc . "\n\n" : '';
 	$out .= '> 本文件为全站已发布内容（文章与页面）正文纯文本（markdown），供 AI 助理（如 ChatGPT、Claude、Perplexity、元宝等）整站吸收与引用。' . "\n\n";
 
-	$posts = get_posts( [
-		'post_type'      => [ 'post', 'page' ],
-		'post_status'    => 'publish',
-		'has_password'    => false,
-		'posts_per_page' => -1,
-		'orderby'        => 'date',
-		'order'          => 'DESC',
-		'no_found_rows'  => true,
-	] );
+	$posts = get_posts(
+        [
+			'post_type'      => [ 'post', 'page' ],
+			'post_status'    => 'publish',
+			'has_password'    => false,
+			'posts_per_page' => -1,
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+			'no_found_rows'  => true,
+		]
+    );
 
 	foreach ( $posts as $p ) {
 		$url     = get_permalink( $p );

@@ -3,7 +3,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-if (!function_exists('jinyu_get_related_post_ids')) {
+if ( ! function_exists( 'jinyu_get_related_post_ids' ) ) {
     /**
      * 取相关文章 ID 列表（带结果集缓存，单一数据源）。
      *
@@ -13,91 +13,110 @@ if (!function_exists('jinyu_get_related_post_ids')) {
      *
      * @return int[]
      */
-    function jinyu_get_related_post_ids($post_id = 0, $num = 4, $type = '')
-    {
+    function jinyu_get_related_post_ids( $post_id = 0, $num = 4, $type = '' ) {
         global $post;
-        $pid = $post_id ?: (isset($post) ? $post->ID : 0);
-        if (!$pid) return [];
+        $pid = $post_id ?: ( isset( $post ) ? $post->ID : 0 );
+        if ( ! $pid ) {
+			return [];
+        }
         $key = 'related_' . $pid . '_' . $type . '_' . $num;
-        $ids = jinyu_companion_cache_get($key);
-        if (is_array($ids)) {
+        $ids = jinyu_companion_cache_get( $key );
+        if ( is_array( $ids ) ) {
             return $ids;
         }
 
-        $cats = wp_get_post_categories($pid);
-        $tags = wp_get_post_tags($pid, ['fields' => 'ids']);
+        $cats = wp_get_post_categories( $pid );
+        $tags = wp_get_post_tags( $pid, [ 'fields' => 'ids' ] );
 
         $base = [
             'post_type'           => 'post',
             'posts_per_page'      => 200,
-            'post__not_in'        => [$pid],
+            'post__not_in'        => [ $pid ],
             'ignore_sticky_posts' => true,
             'no_found_rows'       => true,
             'fields'              => 'ids',
         ];
 
         $args = $base;
-        if ($type === 'random') {
+        if ( 'random' === $type ) {
             // 仅随机，不限定标签/分类
-        } elseif ($type === 'views') {
+        } elseif ( 'views' === $type ) {
             // 协同过滤（co-click 近似）：同标签/分类相关，再按浏览量降序——越热门越靠前
-            if (!empty($tags) || !empty($cats)) {
-                $args['tax_query'] = ['relation' => 'OR'];
-                if (!empty($tags)) $args['tax_query'][] = ['taxonomy' => 'post_tag', 'field' => 'term_id', 'terms' => $tags];
-                if (!empty($cats)) $args['tax_query'][] = ['taxonomy' => 'category', 'field' => 'term_id', 'terms' => $cats];
+            if ( ! empty( $tags ) || ! empty( $cats ) ) {
+                $args['tax_query'] = [ 'relation' => 'OR' ];
+                if ( ! empty( $tags ) ) {
+					$args['tax_query'][] = [
+						'taxonomy' => 'post_tag',
+						'field' => 'term_id',
+						'terms' => $tags,
+					];
+                }
+                if ( ! empty( $cats ) ) {
+					$args['tax_query'][] = [
+						'taxonomy' => 'category',
+						'field' => 'term_id',
+						'terms' => $cats,
+					];
+                }
             }
-        } elseif ($type === 'cats') {
-            if (!empty($cats)) $args['category__in'] = $cats;
-        } else { // tags（默认）：优先标签，无标签回退到分类
-            if (!empty($tags)) {
+        } elseif ( 'cats' === $type ) {
+            if ( ! empty( $cats ) ) {
+				$args['category__in'] = $cats;
+            }
+        } elseif ( ! empty( $tags ) ) { // tags（默认）：优先标签，无标签回退到分类
                 $args['tag__in'] = $tags;
-            } elseif (!empty($cats)) {
-                $args['category__in'] = $cats;
-            }
+		} elseif ( ! empty( $cats ) ) {
+			$args['category__in'] = $cats;
         }
 
-        $q = new WP_Query($args);
+        $q = new WP_Query( $args );
         // 标签/分类命中为空（文章未被打标签或与其它文章无重合）时，自动回退到「随机」，
         // 保证「相关文章」区域在站点不止一篇文章时始终有内容，避免开了开关却看不到区域。
-        if (!$q->have_posts() && $type !== 'random') {
-            $q = new WP_Query($base);
+        if ( ! $q->have_posts() && 'random' !== $type ) {
+            $q = new WP_Query( $base );
         }
 
-        $pool = $q->have_posts() ? array_map('intval', $q->posts) : [];
-        shuffle($pool);
-        $ids = array_slice($pool, 0, $num);
-        $ids = array_values(array_diff($ids, [$pid]));
-        jinyu_companion_cache_set($key, $ids, HOUR_IN_SECONDS);
+        $pool = $q->have_posts() ? array_map( 'intval', $q->posts ) : [];
+        shuffle( $pool );
+        $ids = array_slice( $pool, 0, $num );
+        $ids = array_values( array_diff( $ids, [ $pid ] ) );
+        jinyu_companion_cache_set( $key, $ids, HOUR_IN_SECONDS );
         return $ids;
     }
 }
 
-if (!function_exists('jinyu_get_related_posts')) {
+if ( ! function_exists( 'jinyu_get_related_posts' ) ) {
     /**
      * 取相关文章 WP_Query（供 post-relevant.php 的 while/have_posts 循环使用）。
      * 复用 jinyu_get_related_post_ids() 的缓存结果，按 post__in 重组查询。
      */
-    function jinyu_get_related_posts($post_id = 0, $num = 4, $type = '')
-    {
+    function jinyu_get_related_posts( $post_id = 0, $num = 4, $type = '' ) {
         global $post;
-        $pid = $post_id ?: (isset($post) ? $post->ID : 0);
-        $ids = jinyu_get_related_post_ids($pid, $num, $type);
+        $pid = $post_id ?: ( isset( $post ) ? $post->ID : 0 );
+        $ids = jinyu_get_related_post_ids( $pid, $num, $type );
         // post__in 为空数组时 WP_Query 会回退查全表，必须用哨兵 [0]（不存在的 ID）保证空集
-        if (empty($ids)) {
-            return new WP_Query(['post__in' => [0], 'no_found_rows' => true]);
+        if ( empty( $ids ) ) {
+            return new WP_Query(
+                [
+					'post__in' => [ 0 ],
+					'no_found_rows' => true,
+				]
+            );
         }
-        return new WP_Query([
-            'post_type'           => 'post',
-            'post__in'            => $ids,
-            'orderby'             => 'post__in',
-            'post__not_in'        => [$pid],
-            'ignore_sticky_posts' => true,
-            'no_found_rows'       => true,
-        ]);
+        return new WP_Query(
+            [
+				'post_type'           => 'post',
+				'post__in'            => $ids,
+				'orderby'             => 'post__in',
+				'post__not_in'        => [ $pid ],
+				'ignore_sticky_posts' => true,
+				'no_found_rows'       => true,
+			]
+        );
     }
 }
 
-if (!function_exists('jinyu_get_hot_posts')) {
+if ( ! function_exists( 'jinyu_get_hot_posts' ) ) {
     /**
      * 取「热门文章」列表（侧栏默认卡与「金玉·热门文章」小工具共用同一份数据源）。
      *
@@ -111,49 +130,55 @@ if (!function_exists('jinyu_get_hot_posts')) {
      * @param int $num 需要的文章数
      * @return WP_Post[]
      */
-    function jinyu_get_hot_posts($num = 5)
-    {
-        $num = max(1, (int) $num);
+    function jinyu_get_hot_posts( $num = 5 ) {
+        $num = max( 1, (int) $num );
         // ID 列表与文章对象必须分用两个 key：hydrate 内部也按传入 key 取缓存，
         // 若与 ID 列表同 key，命中后会读回 ID 数组当文章对象返回（调用方取 ->ID 全警告、封面全空）。
         $key      = 'hot_posts_' . $num;
         $obj_key  = $key . '_objs';
 
         // 结果集缓存：热门/补齐两次查询只在 TTL 内跑一次，之后复用 ID 列表。
-        $ids = jinyu_companion_cache_get($key);
-        if (is_array($ids)) {
-            return jinyu_companion_hydrate_posts($ids, $obj_key, 10 * MINUTE_IN_SECONDS);
+        $ids = jinyu_companion_cache_get( $key );
+        if ( is_array( $ids ) ) {
+            return jinyu_companion_hydrate_posts( $ids, $obj_key, 10 * MINUTE_IN_SECONDS );
         }
 
-        $hot = new WP_Query([
-            'post_type'              => 'post',
-            'posts_per_page'         => $num,
-            'ignore_sticky_posts'    => true,
-            'no_found_rows'          => true,
-            'update_post_term_cache' => false,
-            'meta_key'               => 'jinyu_views',
-            'orderby'                => ['meta_value_num' => 'DESC', 'date' => 'DESC'],
-            // 限定近 1 年，缩小 meta_value_num 排序的候选集（避免对全表已发布文章做 filesort）
-            'date_query'             => [['after' => gmdate('Y-m-d', strtotime('-365 days'))]],
-        ]);
+        $hot = new WP_Query(
+            [
+				'post_type'              => 'post',
+				'posts_per_page'         => $num,
+				'ignore_sticky_posts'    => true,
+				'no_found_rows'          => true,
+				'update_post_term_cache' => false,
+				'meta_key'               => 'jinyu_views',
+				'orderby'                => [
+					'meta_value_num' => 'DESC',
+					'date' => 'DESC',
+				],
+				// 限定近 1 年，缩小 meta_value_num 排序的候选集（避免对全表已发布文章做 filesort）
+				'date_query'             => [ [ 'after' => gmdate( 'Y-m-d', strtotime( '-365 days' ) ) ] ],
+			]
+        );
         $posts = $hot->posts;
 
-        if (count($posts) < $num) {
-            $fill = new WP_Query([
-                'post_type'              => 'post',
-                'posts_per_page'         => $num - count($posts),
-                'post__not_in'           => $posts ? wp_list_pluck($posts, 'ID') : [0],
-                'ignore_sticky_posts'    => true,
-                'no_found_rows'          => true,
-                'update_post_term_cache' => false,
-                'orderby'                => 'date',
-                'order'                  => 'DESC',
-            ]);
-            $posts = array_merge($posts, $fill->posts);
+        if ( count( $posts ) < $num ) {
+            $fill = new WP_Query(
+                [
+					'post_type'              => 'post',
+					'posts_per_page'         => $num - count( $posts ),
+					'post__not_in'           => $posts ? wp_list_pluck( $posts, 'ID' ) : [ 0 ],
+					'ignore_sticky_posts'    => true,
+					'no_found_rows'          => true,
+					'update_post_term_cache' => false,
+					'orderby'                => 'date',
+					'order'                  => 'DESC',
+				]
+            );
+            $posts = array_merge( $posts, $fill->posts );
         }
 
-        $ids = array_map('intval', wp_list_pluck($posts, 'ID'));
-        jinyu_companion_cache_set($key, $ids, 10 * MINUTE_IN_SECONDS);
-        return jinyu_companion_hydrate_posts($ids, $obj_key, 10 * MINUTE_IN_SECONDS);
+        $ids = array_map( 'intval', wp_list_pluck( $posts, 'ID' ) );
+        jinyu_companion_cache_set( $key, $ids, 10 * MINUTE_IN_SECONDS );
+        return jinyu_companion_hydrate_posts( $ids, $obj_key, 10 * MINUTE_IN_SECONDS );
     }
 }

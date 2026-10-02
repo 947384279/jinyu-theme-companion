@@ -167,7 +167,7 @@ if ( ! function_exists( 'jinyu_wechat_print_script' ) ) {
 			. "(function(){if(typeof wx==='undefined')return;"
 			. "var og=function(p){var m=document.querySelector('meta[property=\"'+p+'\"]');return m?m.getAttribute('content'):'';};"
 			. "var data={title:og('og:title')||document.title,desc:og('og:description')||'',link:og('og:url')||location.href,imgUrl:og('og:image')||''};"
-			. "wx.config({debug:" . $debug . ',appId:window.jinyuWechat.appId,timestamp:parseInt(window.jinyuWechat.timestamp,10),nonceStr:window.jinyuWechat.nonceStr,signature:window.jinyuWechat.signature,jsApiList:[\'updateAppMessageShareData\',\'updateTimelineShareData\']});'
+			. 'wx.config({debug:' . $debug . ',appId:window.jinyuWechat.appId,timestamp:parseInt(window.jinyuWechat.timestamp,10),nonceStr:window.jinyuWechat.nonceStr,signature:window.jinyuWechat.signature,jsApiList:[\'updateAppMessageShareData\',\'updateTimelineShareData\']});'
 			. 'wx.ready(function(){wx.updateAppMessageShareData({title:data.title,desc:data.desc,link:data.link,imgUrl:data.imgUrl});wx.updateTimelineShareData({title:data.title,link:data.link,imgUrl:data.imgUrl});});'
 			. 'wx.error(function(res){if(' . $debug . '){console.warn(\'[jinyu-wechat] config fail:\',res);}});'
 			. '})();';

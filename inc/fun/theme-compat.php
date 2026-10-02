@@ -16,7 +16,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/* --------------------------------------------------------------------------
+/*
+--------------------------------------------------------------------------
  * 客户端真实 IP 与通用 IP 速率限制
  * 公共能力，供全站 AJAX 接口复用。原属主题 security.php。
  * ------------------------------------------------------------------------ */
@@ -48,7 +49,7 @@ if ( ! function_exists( 'jinyu_companion_client_ip' ) ) {
 				}
 			}
 		}
-		return $remote !== '' ? $remote : '0.0.0.0';
+		return '' !== $remote ? $remote : '0.0.0.0';
 	}
 }
 
@@ -69,7 +70,8 @@ if ( ! function_exists( 'jinyu_companion_rate_limit_check' ) ) {
 	}
 }
 
-/* --------------------------------------------------------------------------
+/*
+--------------------------------------------------------------------------
  * 安全加固：XML-RPC / REST API / 版本号 / 登录防暴破
  * 原属主题 security.php（无条件行为），迁出后主题不再承担任何安全逻辑。
  * 关闭 REST API 受主题「关闭 REST API」开关控制；其余默认开启（安全加固），
@@ -138,7 +140,7 @@ add_filter( 'the_generator', '__return_empty_string' );
 				return new WP_Error(
 					'jinyu_brute',
 					sprintf(
-// translators: Placeholder values are substituted at runtime.
+                    // translators: Placeholder values are substituted at runtime.
 						__( '登录尝试过于频繁，已被临时锁定，请 %d 分钟后再试。', 'jinyu-theme-companion' ),
 						$jinyu_brute_min
 					)
@@ -157,35 +159,36 @@ add_filter( 'the_generator', '__return_empty_string' );
 			jinyu_companion_counter_delete( 'jinyu_brute_' . md5( jinyu_companion_client_ip() ) );
 		}
 	);
-}
+	}
 
-/* --------------------------------------------------------------------------
- * 浏览量采集（写入 post meta，插件领地：数据采集 / 分析）
- * 原属主题 post-meta.php 的 jinyu_auto_increment_views()，迁出后主题仅保留读取壳。
- * ------------------------------------------------------------------------ */
-add_action( 'wp_head', 'jinyu_companion_auto_increment_views' );
-/**
- * 单篇文章访问时按 IP 冷却自增浏览量（写入 post meta jinyu_views）。
- */
-function jinyu_companion_auto_increment_views() {
-	if ( is_single() && ! is_admin() ) {
-		global $post;
-		if ( ! $post ) {
-			return;
-		}
-		$pid  = $post->ID;
-		// 冷却秒数：后台「全局设置 › 同一 IP 浏览量冷却秒数」.
-		$wait = function_exists( 'jinyu_get_option' ) ? max( 1, (int) jinyu_get_option( 'views_wait_seconds', 10 ) ) : 10;
-		$key  = 'jinyu_vw_' . md5( jinyu_companion_client_ip() . '|' . $pid );
-		if ( ! get_transient( $key ) ) {
-			set_transient( $key, 1, $wait );
-			add_action(
-				'shutdown',
-				function () use ( $pid ) {
-					$count = (int) get_post_meta( $pid, 'jinyu_views', true );
-					update_post_meta( $pid, 'jinyu_views', $count + 1 );
-				}
-			);
+	/*
+	--------------------------------------------------------------------------
+	* 浏览量采集（写入 post meta，插件领地：数据采集 / 分析）
+	* 原属主题 post-meta.php 的 jinyu_auto_increment_views()，迁出后主题仅保留读取壳。
+	* ------------------------------------------------------------------------ */
+	add_action( 'wp_head', 'jinyu_companion_auto_increment_views' );
+	/**
+	 * 单篇文章访问时按 IP 冷却自增浏览量（写入 post meta jinyu_views）。
+	 */
+	function jinyu_companion_auto_increment_views() {
+		if ( is_single() && ! is_admin() ) {
+			global $post;
+			if ( ! $post ) {
+				return;
+			}
+			$pid = $post->ID;
+			// 冷却秒数：后台「全局设置 › 同一 IP 浏览量冷却秒数」.
+			$wait = function_exists( 'jinyu_get_option' ) ? max( 1, (int) jinyu_get_option( 'views_wait_seconds', 10 ) ) : 10;
+			$key  = 'jinyu_vw_' . md5( jinyu_companion_client_ip() . '|' . $pid );
+			if ( ! get_transient( $key ) ) {
+				set_transient( $key, 1, $wait );
+				add_action(
+                    'shutdown',
+                    function () use ( $pid ) {
+                        $count = (int) get_post_meta( $pid, 'jinyu_views', true );
+                        update_post_meta( $pid, 'jinyu_views', $count + 1 );
+                    }
+				);
+			}
 		}
 	}
-}

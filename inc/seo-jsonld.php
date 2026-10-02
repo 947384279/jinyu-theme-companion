@@ -15,14 +15,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 function jinyu_jsonld_is_same_site_url( $url ) {
     $home_host = (string) wp_parse_url( home_url(), PHP_URL_HOST );
     $url_host  = (string) wp_parse_url( $url, PHP_URL_HOST );
-    if ( $home_host === '' || $url_host === '' ) {
+    if ( '' === $home_host || '' === $url_host ) {
         return false;
     }
     $home_host = strtolower( $home_host );
     $url_host  = strtolower( $url_host );
     return $url_host === $home_host
-        || $url_host === 'www.' . $home_host
-        || $home_host === 'www.' . $url_host;
+        || 'www.' === $url_host . $home_host
+        || 'www.' === $home_host . $url_host;
 }
 
 /**
@@ -95,10 +95,11 @@ function jinyu_jsonld_org_fields() {
 }
 
 // JSON-LD 结构化数据 - SE0 增强
-add_action('wp_head', 'jinyu_json_ld', 99);
-function jinyu_json_ld()
-{
-    if ( ! jinyu_companion_is_checked('ld_json_enable', true) ) return;
+add_action( 'wp_head', 'jinyu_json_ld', 99 );
+function jinyu_json_ld() {
+    if ( ! jinyu_companion_is_checked( 'ld_json_enable', true ) ) {
+		return;
+    }
     $data = [];
 
     // 组织实体锚点：首页的 Organization 与文章页 publisher 指向同一 @id，
@@ -110,13 +111,13 @@ function jinyu_json_ld()
         '@context'      => 'https://schema.org',
         '@type'         => 'WebSite',
         '@id'           => home_url( '/' ) . '#website',
-        'name'          => get_bloginfo('name'),
+        'name'          => get_bloginfo( 'name' ),
         'url'           => home_url(),
-        'description'   => get_bloginfo('description'),
+        'description'   => get_bloginfo( 'description' ),
         'publisher'     => [ '@id' => $org_id ],
         'potentialAction' => [
             '@type'       => 'SearchAction',
-            'target'      => home_url('/?s={s}'),
+            'target'      => home_url( '/?s={s}' ),
             'query-input' => 'required name=s',
         ],
     ];
@@ -129,24 +130,33 @@ function jinyu_json_ld()
             $data,
             1,
             0,
-            [ array_merge(
-                [ '@context' => 'https://schema.org', '@type' => 'Organization', '@id' => $org_id ],
-                jinyu_jsonld_org_fields()
-            ) ]
+            [
+				array_merge(
+                    [
+						'@context' => 'https://schema.org',
+						'@type' => 'Organization',
+						'@id' => $org_id,
+					],
+                    jinyu_jsonld_org_fields()
+                ),
+			]
         );
     }
 
     // 单篇 Article（post 与 page 均输出，扩大 GEO 实体覆盖面；page 无分类故省略 articleSection）
-    if (is_singular(['post', 'page'])) {
+    if ( is_singular( [ 'post', 'page' ] ) ) {
         global $post;
         $author_id = (int) $post->post_author;
-        $author    = get_the_author_meta('display_name', $author_id);
-        $cover     = jinyu_companion_post_cover($post->ID, 'large');
-        $cats      = is_singular('post') ? get_the_category($post->ID) : [];
+        $author    = get_the_author_meta( 'display_name', $author_id );
+        $cover     = jinyu_companion_post_cover( $post->ID, 'large' );
+        $cats      = is_singular( 'post' ) ? get_the_category( $post->ID ) : [];
 
         // 组织（publisher）：与首页 Organization 共用取值，并用 @id 与首页实体互相挂接。
         $publisher = array_merge(
-            [ '@type' => 'Organization', '@id' => $org_id ],
+            [
+				'@type' => 'Organization',
+				'@id' => $org_id,
+			],
             jinyu_jsonld_org_fields()
         );
 
@@ -156,41 +166,46 @@ function jinyu_json_ld()
         $author_node = [
             '@type'  => 'Person',
             'name'   => $author,
-            'url'    => get_author_posts_url($author_id),
-            'image'  => get_avatar_url($author_id, ['size'=>96]),
+            'url'    => get_author_posts_url( $author_id ),
+            'image'  => get_avatar_url( $author_id, [ 'size' => 96 ] ),
         ];
-        $author_sameas = jinyu_jsonld_sameas_urls( implode(
-            "\n",
-            [
-                (string) get_the_author_meta( 'user_url', $author_id ),
-                (string) jinyu_companion_get_option( 'author_sameas', '' ),
-                (string) apply_filters( "jinyu_seo_author_sameas_{$author_id}", '' ),
-                (string) apply_filters( 'jinyu_seo_author_sameas', '' ),
-            ]
-        ) );
+        $author_sameas = jinyu_jsonld_sameas_urls(
+            implode(
+                "\n",
+                [
+					(string) get_the_author_meta( 'user_url', $author_id ),
+					(string) jinyu_companion_get_option( 'author_sameas', '' ),
+					(string) apply_filters( "jinyu_seo_author_sameas_{$author_id}", '' ),
+					(string) apply_filters( 'jinyu_seo_author_sameas', '' ),
+                ]
+            )
+        );
         if ( $author_sameas ) {
             $author_node['sameAs'] = $author_sameas;
         }
 
-        $ld_desc = get_post_meta($post->ID, 'jinyu_seo_desc', true);
-        if (!$ld_desc) {
+        $ld_desc = get_post_meta( $post->ID, 'jinyu_seo_desc', true );
+        if ( ! $ld_desc ) {
             $ld_desc = $post->post_excerpt ?: $post->post_content;
         }
         $article = [
             '@context'    => 'https://schema.org',
             '@type'       => 'Article',
             'headline'    => $post->post_title,
-            'articleSection' => !empty($cats) ? $cats[0]->name : '',
-            'datePublished' => get_the_date('c', $post->ID),
-            'dateModified'  => get_the_modified_date('c', $post->ID),
+            'articleSection' => ! empty( $cats ) ? $cats[0]->name : '',
+            'datePublished' => get_the_date( 'c', $post->ID ),
+            'dateModified'  => get_the_modified_date( 'c', $post->ID ),
             'author'      => $author_node,
             'publisher'   => $publisher,
-            'mainEntityOfPage' => ['@type'=>'WebPage', '@id'=>get_permalink($post->ID)],
+            'mainEntityOfPage' => [
+				'@type' => 'WebPage',
+				'@id' => get_permalink( $post->ID ),
+			],
             'image'       => $cover,
-            'description' => jinyu_truncate_desc($ld_desc),
-            'wordCount'   => (int) mb_strlen(preg_replace('/\s+/', '', wp_strip_all_tags($post->post_content)), 'UTF-8'),
+            'description' => jinyu_truncate_desc( $ld_desc ),
+            'wordCount'   => (int) mb_strlen( preg_replace( '/\s+/', '', wp_strip_all_tags( $post->post_content ) ), 'UTF-8' ),
         ];
-        if ( is_singular('page') ) {
+        if ( is_singular( 'page' ) ) {
             unset( $article['articleSection'] );
         }
         // inLanguage 显式声明语种（多语言站点的 AI 索引关键），isAccessibleForFree 声明非付费墙。
@@ -203,53 +218,104 @@ function jinyu_json_ld()
     }
 
     // BreadcrumbList
-    if (is_singular() || is_category() || is_tag() || is_search()) {
-        $items = [['@type'=>'ListItem', 'position'=>1, 'name'=>get_bloginfo('name'), 'item'=>home_url()]];
+    if ( is_singular() || is_category() || is_tag() || is_search() ) {
+        $items = [
+			[
+				'@type' => 'ListItem',
+				'position' => 1,
+				'name' => get_bloginfo( 'name' ),
+				'item' => home_url(),
+			],
+		];
         $pos = 2;
-        if (is_singular('post')) {
+        if ( is_singular( 'post' ) ) {
             $cats = get_the_category();
-            if ($cats) $items[] = ['@type'=>'ListItem','position'=>$pos++,'name'=>$cats[0]->name,'item'=>get_category_link($cats[0]->term_id)];
-            $items[] = ['@type'=>'ListItem','position'=>$pos,'name'=>get_the_title(),'item'=>get_permalink()];
-        } elseif (is_singular()) {
-            $items[] = ['@type'=>'ListItem','position'=>$pos,'name'=>get_the_title(),'item'=>get_permalink()];
-        } elseif (is_category()) {
-            $items[] = ['@type'=>'ListItem','position'=>$pos,'name'=>single_cat_title('',false)];
-        } elseif (is_tag()) {
-            $items[] = ['@type'=>'ListItem','position'=>$pos,'name'=>single_tag_title('',false)];
-        } elseif (is_search()) {
-            $items[] = ['@type'=>'ListItem','position'=>$pos,'name'=>__('搜索: ', 'jinyu-theme-companion').get_search_query()];
+            if ( $cats ) {
+				$items[] = [
+					'@type' => 'ListItem',
+					'position' => $pos++,
+					'name' => $cats[0]->name,
+					'item' => get_category_link( $cats[0]->term_id ),
+				];
+            }
+            $items[] = [
+				'@type' => 'ListItem',
+				'position' => $pos,
+				'name' => get_the_title(),
+				'item' => get_permalink(),
+			];
+        } elseif ( is_singular() ) {
+            $items[] = [
+				'@type' => 'ListItem',
+				'position' => $pos,
+				'name' => get_the_title(),
+				'item' => get_permalink(),
+			];
+        } elseif ( is_category() ) {
+            $items[] = [
+				'@type' => 'ListItem',
+				'position' => $pos,
+				'name' => single_cat_title( '', false ),
+			];
+        } elseif ( is_tag() ) {
+            $items[] = [
+				'@type' => 'ListItem',
+				'position' => $pos,
+				'name' => single_tag_title( '', false ),
+			];
+        } elseif ( is_search() ) {
+            $items[] = [
+				'@type' => 'ListItem',
+				'position' => $pos,
+				'name' => __( '搜索: ', 'jinyu-theme-companion' ) . get_search_query(),
+			];
         }
-        $data[] = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','itemListElement'=>$items];
+        $data[] = [
+			'@context' => 'https://schema.org',
+			'@type' => 'BreadcrumbList',
+			'itemListElement' => $items,
+		];
     }
 
     // FAQ (检测 [jinyu_faq] / [jinyu_faq_item] 短代码，生成 FAQPage 结构化数据)
-    if (is_singular() && preg_match_all('/\[jinyu_faq_item\s*q="([^"]+)"\](.*?)\[\/jinyu_faq_item\]/s', get_the_content(), $faqMatches)) {
+    if ( is_singular() && preg_match_all( '/\[jinyu_faq_item\s*q="([^"]+)"\](.*?)\[\/jinyu_faq_item\]/s', get_the_content(), $faqMatches ) ) {
         $faqs = [];
-        foreach ($faqMatches[1] as $i => $q) {
+        foreach ( $faqMatches[1] as $i => $q ) {
             $faqs[] = [
                 '@type'          => 'Question',
                 'name'           => $q,
-                'acceptedAnswer' => ['@type'=>'Answer','text'=>trim(wp_strip_all_tags($faqMatches[2][$i]))],
+                'acceptedAnswer' => [
+					'@type' => 'Answer',
+					'text' => trim( wp_strip_all_tags( $faqMatches[2][ $i ] ) ),
+				],
             ];
         }
-        if ($faqs) $data[] = ['@context'=>'https://schema.org','@type'=>'FAQPage','mainEntity'=>$faqs];
+        if ( $faqs ) {
+			$data[] = [
+				'@context' => 'https://schema.org',
+				'@type' => 'FAQPage',
+				'mainEntity' => $faqs,
+			];
+        }
     }
 
     // HowTo（兼容 [jinyu_step name="…"] 与 [jinyu_step] 两种写法）
-    if (is_singular() && preg_match_all('/\[jinyu_step(?:\s+name="([^"]*)")?\s*\](.*?)\[\/jinyu_step\]/s', get_the_content(), $stepMatches)) {
+    if ( is_singular() && preg_match_all( '/\[jinyu_step(?:\s+name="([^"]*)")?\s*\](.*?)\[\/jinyu_step\]/s', get_the_content(), $stepMatches ) ) {
         $steps = [];
-        foreach ($stepMatches[2] as $i => $text) {
-            $name = isset($stepMatches[1][$i]) ? trim($stepMatches[1][$i]) : '';
-            $text = trim(wp_strip_all_tags($text));
-            if ($name === '' && $text === '') continue;
+        foreach ( $stepMatches[2] as $i => $text ) {
+            $name = isset( $stepMatches[1][ $i ] ) ? trim( $stepMatches[1][ $i ] ) : '';
+            $text = trim( wp_strip_all_tags( $text ) );
+            if ( '' === $name && '' === $text ) {
+				continue;
+            }
             $steps[] = [
                 '@type' => 'HowToStep',
                 // schema.org 的 HowToStep 需至少有 name 或 text：name 缺省时用文本前 40 字兜底
-                'name'  => $name !== '' ? $name : mb_substr($text, 0, 40, 'UTF-8'),
-                'text'  => $text !== '' ? $text : $name,
+                'name'  => '' !== $name ? $name : mb_substr( $text, 0, 40, 'UTF-8' ),
+                'text'  => '' !== $text ? $text : $name,
             ];
         }
-        if ($steps) {
+        if ( $steps ) {
             global $post; // HowTo 由短代码触发，$post 未必在全局作用域内：显式引入并判空
             $data[] = [
                 '@context' => 'https://schema.org',
@@ -288,17 +354,19 @@ function jinyu_json_ld()
                     '@id'      => $author_url . '#person',
                     'name'     => get_the_author_meta( 'display_name', $author_id ),
                     'url'      => $author_url,
-                    'image'    => get_avatar_url( $author_id, ['size'=>96] ),
+                    'image'    => get_avatar_url( $author_id, [ 'size' => 96 ] ),
                 ];
-                $person_sameas = jinyu_jsonld_sameas_urls( implode(
-                    "\n",
-                    [
-                        (string) get_the_author_meta( 'user_url', $author_id ),
-                        (string) jinyu_companion_get_option( 'author_sameas', '' ),
-                        (string) apply_filters( "jinyu_seo_author_sameas_{$author_id}", '' ),
-                        (string) apply_filters( 'jinyu_seo_author_sameas', '' ),
-                    ]
-                ) );
+                $person_sameas = jinyu_jsonld_sameas_urls(
+                    implode(
+                        "\n",
+                        [
+							(string) get_the_author_meta( 'user_url', $author_id ),
+							(string) jinyu_companion_get_option( 'author_sameas', '' ),
+							(string) apply_filters( "jinyu_seo_author_sameas_{$author_id}", '' ),
+							(string) apply_filters( 'jinyu_seo_author_sameas', '' ),
+                        ]
+                    )
+                );
                 if ( $person_sameas ) {
                     $person['sameAs'] = $person_sameas;
                 }
@@ -335,41 +403,53 @@ function jinyu_json_ld()
         }
     }
 
-    if ($data) {
+    if ( $data ) {
         // 中和 </script> 闭合标签，防止任意值（标题/FAQ 问题/HowTo 步骤名）提前闭合脚本注入标记。
         // 必须大小写不敏感：HTML 解析器把 </SCRIPT> 同样当闭合标签，只替换小写 </ 会漏掉混合大小写。
-        $json = str_ireplace('</', '<\/', (string) wp_json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        $json = str_ireplace( '</', '<\/', (string) wp_json_encode( $data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) );
         // 用 WP 的 inline script 构造函数输出（不再手写 <script> 标签）。
         echo "\n" . wp_get_inline_script_tag( $json, array( 'type' => 'application/ld+json' ) ) . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_get_inline_script_tag 生成的标签；JSON 已做大小写不敏感的 </ 中和
     }
 }
 
 // FAQ 短代码
-$jinyu_faq = function($atts, $c=''){
+$jinyu_faq = function ( $atts, $c = '' ) {
     global $jinyu_faq_index;
     $jinyu_faq_index = -1; // 每个 FAQ 块独立计数，首条展开
     return '<div class="jinyu-faq">' . wp_kses_post( do_shortcode( $c ) ) . '</div>';
 };
 // FAQ 项：默认折叠；首条自动展开（open 属性显式传 0 可强制折叠）
-$jinyu_faq_item = function($atts, $c=''){
+$jinyu_faq_item = function ( $atts, $c = '' ) {
     global $jinyu_faq_index;
-    $a = shortcode_atts(['q'=>'','open'=>''],$atts);
-    $jinyu_faq_index = isset($jinyu_faq_index) ? $jinyu_faq_index + 1 : 0;
-    if ($a['open'] !== '') {
-        $is_open = in_array(strtolower((string)$a['open']), ['1','yes','true','on'], true);
+    $a = shortcode_atts(
+        [
+			'q' => '',
+			'open' => '',
+		],
+		$atts
+    );
+    $jinyu_faq_index = isset( $jinyu_faq_index ) ? $jinyu_faq_index + 1 : 0;
+    if ( $a['open'] !== '' ) {
+        $is_open = in_array( strtolower( (string) $a['open'] ), [ '1','yes','true','on' ], true );
     } else {
-        $is_open = ($jinyu_faq_index === 0);
+        $is_open = ( 0 === $jinyu_faq_index );
     }
-    return '<details class="jinyu-faq-item"' . ($is_open ? ' open' : '') . '><summary>' . esc_html($a['q']) . '</summary><div class="jinyu-faq-ans">' . wp_kses_post( do_shortcode( $c ) ) . '</div></details>';
+    return '<details class="jinyu-faq-item"' . ( $is_open ? ' open' : '' ) . '><summary>' . esc_html( $a['q'] ) . '</summary><div class="jinyu-faq-ans">' . wp_kses_post( do_shortcode( $c ) ) . '</div></details>';
 };
-add_shortcode('jinyu_faq', $jinyu_faq);
-add_shortcode('jinyu_faq_item', $jinyu_faq_item);
+add_shortcode( 'jinyu_faq', $jinyu_faq );
+add_shortcode( 'jinyu_faq_item', $jinyu_faq_item );
 
 // HowTo 步骤短代码：[jinyu_howto][jinyu_step name="..."]...[/jinyu_step]...[/jinyu_howto]
-add_shortcode('jinyu_howto', function ($atts, $c = '') {
-    return '<div class="jinyu-howto"><ol class="jinyu-steps">' . wp_kses_post( do_shortcode( $c ) ) . '</ol></div>';
-});
-add_shortcode('jinyu_step', function ($atts, $c = '') {
-    $a = shortcode_atts(['name' => ''], $atts);
-    return '<li class="jinyu-step"><span class="jinyu-step-name">' . esc_html($a['name']) . '</span><div class="jinyu-step-text">' . wp_kses_post( do_shortcode( $c ) ) . '</div></li>';
-});
+add_shortcode(
+    'jinyu_howto',
+    function ( $atts, $c = '' ) {
+		return '<div class="jinyu-howto"><ol class="jinyu-steps">' . wp_kses_post( do_shortcode( $c ) ) . '</ol></div>';
+	}
+);
+add_shortcode(
+    'jinyu_step',
+    function ( $atts, $c = '' ) {
+		$a = shortcode_atts( [ 'name' => '' ], $atts );
+		return '<li class="jinyu-step"><span class="jinyu-step-name">' . esc_html( $a['name'] ) . '</span><div class="jinyu-step-text">' . wp_kses_post( do_shortcode( $c ) ) . '</div></li>';
+	}
+);

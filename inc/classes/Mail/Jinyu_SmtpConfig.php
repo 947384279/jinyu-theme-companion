@@ -1,6 +1,7 @@
 <?php
 
 namespace Jinyu\Mail;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -8,11 +9,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * SMTP 配置（OOP 实现，供 phpmailer_init 钩子调用）
  */
-class Jinyu_SmtpConfig
-{
+class Jinyu_SmtpConfig {
+
     /**
      * 测试邮件时临时覆盖（优先于数据库值）。
      * 允许 SMTP 测试在未「保存」的情况下，直接使用表单当前填写的值发信。
+     *
      * @var array|null
      */
     public static ?array $testOverride = null;
@@ -22,32 +24,30 @@ class Jinyu_SmtpConfig
      *
      * @param object $phpmailer PHPMailer 实例
      */
-    public function apply($phpmailer): void
-    {
+    public function apply( $phpmailer ): void {
         // 「接管全站发信」未开启时不改道，让 wp_mail 走服务器默认 mail()；
         // 测试邮件（testOverride）豁免此开关——需要先验证通道才谈得上是否启用。
-        if (self::$testOverride === null && ! jinyu_companion_is_checked('smtp_enable', true)) {
+        if ( self::null === $testOverride && ! jinyu_companion_is_checked( 'smtp_enable', true ) ) {
             return;
         }
         $cfg = self::$testOverride ?? $this->cfgFromDb();
-        self::applyConfig($phpmailer, $cfg);
+        self::applyConfig( $phpmailer, $cfg );
     }
 
     /**
      * 从插件独立 option（jinyu_companion_settings）读取 SMTP 配置；
      * 首次启用时由 jinyu_companion_maybe_migrate() 从主题 jinyu_options 回填（含已解密密码）。
      */
-    private function cfgFromDb(): array
-    {
+    private function cfgFromDb(): array {
         return [
-            'host'   => jinyu_companion_get_option('smtp_host', ''),
-            'port'   => (int) jinyu_companion_get_option('smtp_port', 465),
-            'secure' => jinyu_companion_get_option('smtp_secure', 'ssl'),
-            'user'   => jinyu_companion_get_option('smtp_user', ''),
+            'host'   => jinyu_companion_get_option( 'smtp_host', '' ),
+            'port'   => (int) jinyu_companion_get_option( 'smtp_port', 465 ),
+            'secure' => jinyu_companion_get_option( 'smtp_secure', 'ssl' ),
+            'user'   => jinyu_companion_get_option( 'smtp_user', '' ),
             // 授权码加密入库（与 storage_secret 同策略）；对历史明文 decrypt 原样返回，平滑过渡
-            'pwd'    => jinyu_companion_decrypt((string) jinyu_companion_get_option('smtp_pwd', '')),
-            'from'   => jinyu_companion_get_option('smtp_from', ''),
-            'from_name' => jinyu_companion_get_option('smtp_from_name', ''),
+            'pwd'    => jinyu_companion_decrypt( (string) jinyu_companion_get_option( 'smtp_pwd', '' ) ),
+            'from'   => jinyu_companion_get_option( 'smtp_from', '' ),
+            'from_name' => jinyu_companion_get_option( 'smtp_from_name', '' ),
         ];
     }
 
@@ -57,39 +57,42 @@ class Jinyu_SmtpConfig
      * @param object $phpmailer PHPMailer 实例
      * @param array  $cfg       host/port/secure/user/pwd/from
      */
-    public static function applyConfig($phpmailer, array $cfg): void
-    {
-        if (!is_object($phpmailer)) return;
-        if (empty($cfg['host'])) return; // 未配置则不接管，走默认 mail()
+    public static function applyConfig( $phpmailer, array $cfg ): void {
+        if ( ! is_object( $phpmailer ) ) {
+			return;
+        }
+        if ( empty( $cfg['host'] ) ) {
+			return; // 未配置则不接管，走默认 mail()
+        }
 
         $phpmailer->isSMTP();
-        $phpmailer->Host       = (string) $cfg['host'];
+        $phpmailer->Host = (string) $cfg['host'];
         // 端口 0/负值（历史脏数据）回退 465，避免 PHPMailer Port=0 静默失败
-        $port                  = (int) ($cfg['port'] ?? 0);
+        $port                  = (int) ( $cfg['port'] ?? 0 );
         $phpmailer->Port       = $port > 0 ? $port : 465;
         // 加密方式白名单：历史脏数据/异常值归一为 ssl，避免直通 PHPMailer 触发 SMTPSecure 报错
-        $secure                = (string) ($cfg['secure'] ?? 'ssl');
+        $secure = (string) ( $cfg['secure'] ?? 'ssl' );
         if ( ! in_array( $secure, array( 'ssl', 'tls', 'none' ), true ) ) {
             $secure = 'ssl';
         }
-        $phpmailer->SMTPSecure = ($secure === 'none') ? '' : $secure;
+        $phpmailer->SMTPSecure = ( 'none' === $secure ) ? '' : $secure;
 
-        if (!empty($cfg['user'])) {
+        if ( ! empty( $cfg['user'] ) ) {
             $phpmailer->SMTPAuth = true;
             $phpmailer->Username = (string) $cfg['user'];
-            $phpmailer->Password = (string) ($cfg['pwd'] ?? '');
+            $phpmailer->Password = (string) ( $cfg['pwd'] ?? '' );
         }
 
-        $from = (string) ($cfg['from'] ?? '');
-        if ($from && is_email($from)) {
+        $from = (string) ( $cfg['from'] ?? '' );
+        if ( $from && is_email( $from ) ) {
             // 发件人名称：后台可配置，留空回退站点名称
-            $fromName = trim((string) ($cfg['from_name'] ?? ''));
-            if ('' === $fromName) {
-                $fromName = get_bloginfo('name');
+            $fromName = trim( (string) ( $cfg['from_name'] ?? '' ) );
+            if ( '' === $fromName ) {
+                $fromName = get_bloginfo( 'name' );
             }
             $phpmailer->From      = $from;
             $phpmailer->FromName  = $fromName;
-            $phpmailer->addReplyTo($from, $fromName);
+            $phpmailer->addReplyTo( $from, $fromName );
         }
     }
 }

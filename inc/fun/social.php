@@ -1,124 +1,153 @@
 <?php
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
-/* ==========================================================================
-   社交：关注（用户 / 系列）+ 站内通知
-   - 关注关系存 user meta 数组（双写：following / followers），查询轻量
-   - 通知存独立表 wp_jinyu_notify，支撑已读 / 分页 / 未读计数 / 角标
-   ========================================================================== */
+/*
+==========================================================================
+    社交：关注（用户 / 系列）+ 站内通知
+    - 关注关系存 user meta 数组（双写：following / followers），查询轻量
+    - 通知存独立表 wp_jinyu_notify，支撑已读 / 分页 / 未读计数 / 角标
+    ========================================================================== */
 
 /* ----------------------------- 关注：用户 ----------------------------- */
-function jinyu_follow_user(int $follower, int $following): bool
-{
-    if ($follower <= 0 || $following <= 0 || $follower === $following) return false;
-    if (!get_userdata($following)) return false;
+function jinyu_follow_user( int $follower, int $following ): bool {
+    if ( $follower <= 0 || $following <= 0 || $follower === $following ) {
+		return false;
+    }
+    if ( ! get_userdata( $following ) ) {
+		return false;
+    }
 
-    $following_list = jinyu_companion_meta_ids($follower, 'jinyu_following');
-    $followers_list = jinyu_companion_meta_ids($following, 'jinyu_followers');
+    $following_list = jinyu_companion_meta_ids( $follower, 'jinyu_following' );
+    $followers_list = jinyu_companion_meta_ids( $following, 'jinyu_followers' );
 
-    if (in_array($following, $following_list, true)) return true; // 已关注
+    if ( in_array( $following, $following_list, true ) ) {
+		return true; // 已关注
+    }
 
     $following_list[] = $following;
     $followers_list[] = $follower;
-    update_user_meta($follower, 'jinyu_following', array_values($following_list));
-    update_user_meta($following, 'jinyu_followers', array_values($followers_list));
+    update_user_meta( $follower, 'jinyu_following', array_values( $following_list ) );
+    update_user_meta( $following, 'jinyu_followers', array_values( $followers_list ) );
 
     // 给被关注者发一条「关注了你」通知
-    jinyu_add_notification($following, 'follow', __('关注了你', 'jinyu-theme-companion'), '', '', $follower);
+    jinyu_add_notification( $following, 'follow', __( '关注了你', 'jinyu-theme-companion' ), '', '', $follower );
     return true;
 }
 
-function jinyu_unfollow_user(int $follower, int $following): bool
-{
-    if ($follower <= 0 || $following <= 0) return false;
+function jinyu_unfollow_user( int $follower, int $following ): bool {
+    if ( $follower <= 0 || $following <= 0 ) {
+		return false;
+    }
 
-    $following_list = jinyu_companion_meta_ids($follower, 'jinyu_following');
-    $followers_list = jinyu_companion_meta_ids($following, 'jinyu_followers');
+    $following_list = jinyu_companion_meta_ids( $follower, 'jinyu_following' );
+    $followers_list = jinyu_companion_meta_ids( $following, 'jinyu_followers' );
 
-    $fi = array_search($following, $following_list, true);
-    $fo = array_search($follower, $followers_list, true);
-    if ($fi !== false) array_splice($following_list, $fi, 1);
-    if ($fo !== false) array_splice($followers_list, $fo, 1);
+    $fi = array_search( $following, $following_list, true );
+    $fo = array_search( $follower, $followers_list, true );
+    if ( false !== $fi ) {
+		array_splice( $following_list, $fi, 1 );
+    }
+    if ( false !== $fo ) {
+		array_splice( $followers_list, $fo, 1 );
+    }
 
-    update_user_meta($follower, 'jinyu_following', array_values($following_list));
-    update_user_meta($following, 'jinyu_followers', array_values($followers_list));
+    update_user_meta( $follower, 'jinyu_following', array_values( $following_list ) );
+    update_user_meta( $following, 'jinyu_followers', array_values( $followers_list ) );
     return true;
 }
 
-function jinyu_is_following(int $follower, int $following): bool
-{
-    if ($follower <= 0 || $following <= 0) return false;
-    $following_list = jinyu_companion_meta_ids($follower, 'jinyu_following');
-    return in_array($following, $following_list, true);
+function jinyu_is_following( int $follower, int $following ): bool {
+    if ( $follower <= 0 || $following <= 0 ) {
+		return false;
+    }
+    $following_list = jinyu_companion_meta_ids( $follower, 'jinyu_following' );
+    return in_array( $following, $following_list, true );
 }
 
-function jinyu_get_following_users(int $uid, int $limit = 0): array
-{
-    if ($uid <= 0) return [];
-    $ids = jinyu_companion_meta_ids($uid, 'jinyu_following');
-    if ($limit > 0) $ids = array_slice($ids, 0, $limit);
+function jinyu_get_following_users( int $uid, int $limit = 0 ): array {
+    if ( $uid <= 0 ) {
+		return [];
+    }
+    $ids = jinyu_companion_meta_ids( $uid, 'jinyu_following' );
+    if ( $limit > 0 ) {
+		$ids = array_slice( $ids, 0, $limit );
+    }
     $out = [];
-    foreach ($ids as $id) {
-        if ($u = get_userdata($id)) $out[] = $u;
+    foreach ( $ids as $id ) {
+        if ( $u = get_userdata( $id ) ) {
+			$out[] = $u;
+        }
     }
     return $out;
 }
 
 /* ----------------------------- 关注：系列 ----------------------------- */
-function jinyu_follow_term(int $uid, int $term_id): bool
-{
-    if ($uid <= 0 || $term_id <= 0) return false;
-    $terms = jinyu_companion_meta_ids($uid, 'jinyu_following_terms');
-    if (in_array($term_id, $terms, true)) return true;
+function jinyu_follow_term( int $uid, int $term_id ): bool {
+    if ( $uid <= 0 || $term_id <= 0 ) {
+		return false;
+    }
+    $terms = jinyu_companion_meta_ids( $uid, 'jinyu_following_terms' );
+    if ( in_array( $term_id, $terms, true ) ) {
+		return true;
+    }
     $terms[] = $term_id;
-    update_user_meta($uid, 'jinyu_following_terms', array_values($terms));
+    update_user_meta( $uid, 'jinyu_following_terms', array_values( $terms ) );
     return true;
 }
 
-function jinyu_unfollow_term(int $uid, int $term_id): bool
-{
-    if ($uid <= 0 || $term_id <= 0) return false;
-    $terms = jinyu_companion_meta_ids($uid, 'jinyu_following_terms');
-    $i = array_search($term_id, $terms, true);
-    if ($i !== false) array_splice($terms, $i, 1);
-    update_user_meta($uid, 'jinyu_following_terms', array_values($terms));
+function jinyu_unfollow_term( int $uid, int $term_id ): bool {
+    if ( $uid <= 0 || $term_id <= 0 ) {
+		return false;
+    }
+    $terms = jinyu_companion_meta_ids( $uid, 'jinyu_following_terms' );
+    $i = array_search( $term_id, $terms, true );
+    if ( false !== $i ) {
+		array_splice( $terms, $i, 1 );
+    }
+    update_user_meta( $uid, 'jinyu_following_terms', array_values( $terms ) );
     return true;
 }
 
-function jinyu_is_following_term(int $uid, int $term_id): bool
-{
-    if ($uid <= 0 || $term_id <= 0) return false;
-    $terms = jinyu_companion_meta_ids($uid, 'jinyu_following_terms');
-    return in_array($term_id, $terms, true);
+function jinyu_is_following_term( int $uid, int $term_id ): bool {
+    if ( $uid <= 0 || $term_id <= 0 ) {
+		return false;
+    }
+    $terms = jinyu_companion_meta_ids( $uid, 'jinyu_following_terms' );
+    return in_array( $term_id, $terms, true );
 }
 
-function jinyu_get_following_terms(int $uid): array
-{
-    if ($uid <= 0) return [];
-    $ids = jinyu_companion_meta_ids($uid, 'jinyu_following_terms');
+function jinyu_get_following_terms( int $uid ): array {
+    if ( $uid <= 0 ) {
+		return [];
+    }
+    $ids = jinyu_companion_meta_ids( $uid, 'jinyu_following_terms' );
     $out = [];
-    foreach ($ids as $id) {
+    foreach ( $ids as $id ) {
         // get_term 对不存在/已删除的系列返回 WP_Error（truthy），直接入列会在
         // get_term_link() 处触发 fatal，导致整页中断（骨架屏不消失）
-        $t = get_term($id, 'jinyu_series');
-        if ($t && !is_wp_error($t)) $out[] = $t;
+        $t = get_term( $id, 'jinyu_series' );
+        if ( $t && ! is_wp_error( $t ) ) {
+			$out[] = $t;
+        }
     }
     return $out;
 }
 
 /* ----------------------------- 站内通知 ----------------------------- */
-function jinyu_notify_install()
-{
+function jinyu_notify_install() {
     // 版本守卫：持久 option（不怕 object cache flush_all），命中零 SQL 直返。
     // 改表结构时 bump 值触发重建。
-    if (get_option('jinyu_notify_dbver') === '1') {
+    if ( get_option( 'jinyu_notify_dbver' ) === '1' ) {
         return;
     }
     global $wpdb;
     $table = $wpdb->prefix . 'jinyu_notify';
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     $charset = $wpdb->get_charset_collate();
-    dbDelta("
+    dbDelta(
+        "
         CREATE TABLE {$table} (
           id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
           user_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
@@ -133,14 +162,16 @@ function jinyu_notify_install()
           KEY user_read (user_id, is_read),
           KEY created_at (created_at)
         ) {$charset};
-    ");
+    "
+    );
     // autoload 默认 yes：进 alloptions 预加载（object cache 命中），守卫读取零 SQL
-    update_option('jinyu_notify_dbver', '1');
+    update_option( 'jinyu_notify_dbver', '1' );
 }
 
-function jinyu_add_notification(int $user_id, string $type, string $title, string $content = '', string $link = '', int $actor_id = 0): int
-{
-    if ($user_id <= 0) return 0;
+function jinyu_add_notification( int $user_id, string $type, string $title, string $content = '', string $link = '', int $actor_id = 0 ): int {
+    if ( $user_id <= 0 ) {
+		return 0;
+    }
     global $wpdb;
     $table = $wpdb->prefix . 'jinyu_notify';
     $wpdb->insert(
@@ -153,82 +184,84 @@ function jinyu_add_notification(int $user_id, string $type, string $title, strin
             'content'    => $content,
             'link'       => $link,
             'is_read'    => 0,
-            'created_at' => current_time('mysql'),
+            'created_at' => current_time( 'mysql' ),
         ],
-        ['%d', '%s', '%d', '%s', '%s', '%s', '%d', '%s']
+        [ '%d', '%s', '%d', '%s', '%s', '%s', '%d', '%s' ]
     );
-    return (int)$wpdb->insert_id;
+    return (int) $wpdb->insert_id;
 }
 
-function jinyu_get_notifications(int $user_id, int $page = 1, int $per = 20): array
-{
-    if ($user_id <= 0) return [];
-    global $wpdb;
-    $table = $wpdb->prefix . 'jinyu_notify';
-    $page  = max(1, $page);
-    $offset = ($page - 1) * $per;
-    return (array)$wpdb->get_results(
-        $wpdb->prepare("SELECT * FROM $table WHERE user_id = %d ORDER BY id DESC LIMIT %d OFFSET %d", $user_id, $per, $offset)
-    );
-}
-
-function jinyu_get_unread_count(int $user_id): int
-{
-    if ($user_id <= 0) return 0;
-    global $wpdb;
-    $table = $wpdb->prefix . 'jinyu_notify';
-    return (int)$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM $table WHERE user_id = %d AND is_read = 0", $user_id));
-}
-
-function jinyu_mark_read(int $user_id, array $ids = []): int
-{
-    if ($user_id <= 0) return 0;
-    global $wpdb;
-    $table = $wpdb->prefix . 'jinyu_notify';
-    if (empty($ids)) {
-        return (int)$wpdb->query($wpdb->prepare("UPDATE $table SET is_read = 1 WHERE user_id = %d", $user_id));
+function jinyu_get_notifications( int $user_id, int $page = 1, int $per = 20 ): array {
+    if ( $user_id <= 0 ) {
+		return [];
     }
-    $ids = array_map('intval', $ids);
-    $placeholders = implode(',', array_fill(0, count($ids), '%d'));
-    return (int)$wpdb->query(
-        $wpdb->prepare("UPDATE $table SET is_read = 1 WHERE user_id = %d AND id IN ($placeholders)", array_merge([$user_id], $ids))
+    global $wpdb;
+    $table = $wpdb->prefix . 'jinyu_notify';
+    $page  = max( 1, $page );
+    $offset = ( $page - 1 ) * $per;
+    return (array) $wpdb->get_results(
+        $wpdb->prepare( "SELECT * FROM $table WHERE user_id = %d ORDER BY id DESC LIMIT %d OFFSET %d", $user_id, $per, $offset )
+    );
+}
+
+function jinyu_get_unread_count( int $user_id ): int {
+    if ( $user_id <= 0 ) {
+		return 0;
+    }
+    global $wpdb;
+    $table = $wpdb->prefix . 'jinyu_notify';
+    return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table WHERE user_id = %d AND is_read = 0", $user_id ) );
+}
+
+function jinyu_mark_read( int $user_id, array $ids = [] ): int {
+    if ( $user_id <= 0 ) {
+		return 0;
+    }
+    global $wpdb;
+    $table = $wpdb->prefix . 'jinyu_notify';
+    if ( empty( $ids ) ) {
+        return (int) $wpdb->query( $wpdb->prepare( "UPDATE $table SET is_read = 1 WHERE user_id = %d", $user_id ) );
+    }
+    $ids = array_map( 'intval', $ids );
+    $placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+    return (int) $wpdb->query(
+        $wpdb->prepare( "UPDATE $table SET is_read = 1 WHERE user_id = %d AND id IN ($placeholders)", array_merge( [ $user_id ], $ids ) )
     );
 }
 
 /* ----------------------------- 触发：评论回复通知 ----------------------------- */
-add_action('wp_insert_comment', 'jinyu_notify_comment_reply', 10, 2);
-function jinyu_notify_comment_reply($comment_id, $comment)
-{
-    if ((int)$comment->comment_approved !== 1) {
+add_action( 'wp_insert_comment', 'jinyu_notify_comment_reply', 10, 2 );
+function jinyu_notify_comment_reply( $comment_id, $comment ) {
+    if ( (int) $comment->comment_approved !== 1 ) {
         return; // 仅已通过审核的评论才通知
     }
-    $parent_id = (int)$comment->comment_parent;
-    if (!$parent_id) {
+    $parent_id = (int) $comment->comment_parent;
+    if ( ! $parent_id ) {
         return;
     }
-    $parent = get_comment($parent_id);
-    if (!$parent) {
+    $parent = get_comment( $parent_id );
+    if ( ! $parent ) {
         return;
     }
-    $parent_uid = (int)$parent->user_id;
-    if (!$parent_uid || $parent_uid === (int)$comment->user_id) {
+    $parent_uid = (int) $parent->user_id;
+    if ( ! $parent_uid || $parent_uid === (int) $comment->user_id ) {
         return; // 游客评论 / 自己回复自己不通知
     }
 
-    $actor    = (int)$comment->user_id;
-    $actor_ud = $actor ? get_userdata($actor) : null;
-    $actor_name = $actor_ud ? $actor_ud->display_name : ($comment->comment_author ?: __('有人', 'jinyu-theme-companion'));
-    $post     = get_post($comment->comment_post_ID);
+    $actor    = (int) $comment->user_id;
+    $actor_ud = $actor ? get_userdata( $actor ) : null;
+    $actor_name = $actor_ud ? $actor_ud->display_name : ( $comment->comment_author ?: __( '有人', 'jinyu-theme-companion' ) );
+    $post     = get_post( $comment->comment_post_ID );
     $post_title = $post ? $post->post_title : '';
-// translators: Placeholder values are substituted at runtime.
-    $title    = sprintf(__('%s 回复了你的评论', 'jinyu-theme-companion'), $actor_name);
-    $content  = ($post_title ? '《' . $post_title . '》 ' : '') . mb_substr(wp_strip_all_tags($comment->comment_content), 0, 140);
-    $link     = get_comment_link($comment_id);
+	// translators: Placeholder values are substituted at runtime.
+    $title    = sprintf( __( '%s 回复了你的评论', 'jinyu-theme-companion' ), $actor_name );
+    $content  = ( $post_title ? '《' . $post_title . '》 ' : '' ) . mb_substr( wp_strip_all_tags( $comment->comment_content ), 0, 140 );
+    $link     = get_comment_link( $comment_id );
 
-    jinyu_add_notification($parent_uid, 'comment_reply', $title, $content, $link, $actor);
+    jinyu_add_notification( $parent_uid, 'comment_reply', $title, $content, $link, $actor );
 }
 
 /* ----------------------------- 安装钩子 ----------------------------- */
-add_action('after_switch_theme', 'jinyu_notify_install');
+add_action( 'after_switch_theme', 'jinyu_notify_install' );
 // 原 wp_footer + 12h transient 兜底已删：版本 option 永久持久（不怕 flush_all），
 // 且插件激活钩子（register_activation_hook）已直接建表，无需前台阶段跑 dbDelta。

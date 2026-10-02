@@ -22,7 +22,10 @@ function jinyu_bulk_push_ajax(): void {
 	if ( function_exists( 'jinyu_push_log_add' ) ) {
 		$data = is_array( $result['data'] ) ? $result['data'] : [];
 		if ( $result['ok'] ) {
-			foreach ( [ 'indexnow' => 'IndexNow', 'baidu' => '百度主动推送' ] as $key => $label ) {
+			foreach ( [
+				'indexnow' => 'IndexNow',
+				'baidu' => '百度主动推送',
+			] as $key => $label ) {
 				$st = isset( $data[ $key ] ) && is_array( $data[ $key ] ) ? $data[ $key ] : null;
 				if ( ! $st || empty( $st['enabled'] ) ) {
 					continue;
@@ -77,8 +80,18 @@ function jinyu_bulk_push_run(): array {
 		}
 	}
 
-	$indexnow = [ 'enabled' => false, 'total' => count( $all_urls ), 'sent' => 0, 'ok' => 0 ];
-	$baidu    = [ 'enabled' => false, 'total' => count( $post_urls ), 'sent' => 0, 'ok' => 0 ];
+	$indexnow = [
+		'enabled' => false,
+		'total' => count( $all_urls ),
+		'sent' => 0,
+		'ok' => 0,
+	];
+	$baidu    = [
+		'enabled' => false,
+		'total' => count( $post_urls ),
+		'sent' => 0,
+		'ok' => 0,
+	];
 
 	// IndexNow：单次请求最多 10000 条，全量一份直发。
 	if ( jinyu_companion_is_checked( 'indexnow_enable', false ) ) {
@@ -141,11 +154,17 @@ function jinyu_bulk_push_run(): array {
 	}
 
 	if ( ! $indexnow['enabled'] && ! $baidu['enabled'] ) {
-		return [ 'ok' => false, 'data' => '未开启 IndexNow 且未填写百度接口，暂无可推送渠道。' ];
+		return [
+			'ok' => false,
+			'data' => '未开启 IndexNow 且未填写百度接口，暂无可推送渠道。',
+		];
 	}
 
 	return [
 		'ok'   => true,
-		'data' => [ 'indexnow' => $indexnow, 'baidu' => $baidu ],
+		'data' => [
+			'indexnow' => $indexnow,
+			'baidu' => $baidu,
+		],
 	];
 }

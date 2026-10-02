@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 if ( ! function_exists( 'jinyu_companion_encrypt' ) ) {
 	function jinyu_companion_encrypt( $plain ) {
-		if ( $plain === '' || $plain === null ) {
+		if ( '' === $plain || null === $plain ) {
 			return $plain;
 		}
 		if ( ! function_exists( 'openssl_encrypt' ) ) {
@@ -24,7 +24,7 @@ if ( ! function_exists( 'jinyu_companion_encrypt' ) ) {
 		$mac_key = hash( 'sha256', wp_salt( 'auth' ) . '|jinyu_mac', true );
 		$iv      = random_bytes( 16 );
 		$enc     = openssl_encrypt( (string) $plain, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv );
-		if ( $enc === false ) {
+		if ( false === $enc ) {
 			return $plain;
 		}
 		// encrypt-then-MAC：HMAC 覆盖 iv+密文，防御 CBC 篡改
@@ -47,7 +47,7 @@ if ( ! function_exists( 'jinyu_companion_decrypt' ) ) {
 			$key     = hash( 'sha256', wp_salt( 'auth' ), true );
 			$mac_key = hash( 'sha256', wp_salt( 'auth' ) . '|jinyu_mac', true );
 			$raw     = base64_decode( substr( $val, strlen( 'jinyu_enc2::' ) ), true );
-			if ( $raw === false || strlen( $raw ) < 16 + 32 ) {
+			if ( false === $raw || strlen( $raw ) < 16 + 32 ) {
 				return '';
 			}
 			$iv   = substr( $raw, 0, 16 );
@@ -58,7 +58,7 @@ if ( ! function_exists( 'jinyu_companion_decrypt' ) ) {
 				return ''; // 完整性校验失败，拒绝
 			}
 			$dec = openssl_decrypt( $enc, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv );
-			return $dec === false ? '' : $dec;
+			return false === $dec ? '' : $dec;
 		}
 
 		// 兼容旧格式（无 MAC）：仅解密不校验，保证历史密文可读
@@ -68,13 +68,13 @@ if ( ! function_exists( 'jinyu_companion_decrypt' ) ) {
 			}
 			$key = hash( 'sha256', wp_salt( 'auth' ), true );
 			$raw = base64_decode( substr( $val, strlen( 'jinyu_enc::' ) ), true );
-			if ( $raw === false || strlen( $raw ) < 17 ) {
+			if ( false === $raw || strlen( $raw ) < 17 ) {
 				return '';
 			}
 			$iv  = substr( $raw, 0, 16 );
 			$enc = substr( $raw, 16 );
 			$dec = openssl_decrypt( $enc, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv );
-			return $dec === false ? '' : $dec;
+			return false === $dec ? '' : $dec;
 		}
 
 		return $val;

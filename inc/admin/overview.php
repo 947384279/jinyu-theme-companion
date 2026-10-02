@@ -3,9 +3,9 @@
  * 设置面板「概览」分区磁贴的数据层（加载性能 / 优化待办 / 数据库健康）。
  *
  * 三张磁贴全部复用既有模块的数据，不新增采集、不新增存储：
- *  - 加载性能   ← jyc_perf_web_vitals_stats()（前台 web-vitals 聚合）
+ *  - 加载性能   ← jinyu_perf_web_vitals_stats()（前台 web-vitals 聚合）
  *  - 优化待办   ← 各分区开关 / 配置项（规格同时下发给前端，未保存时也能实时重算）
- *  - 数据库健康 ← jyc_perf_status_snapshot()（autoload / transient / 表碎片）
+ *  - 数据库健康 ← jinyu_perf_status_snapshot()（autoload / transient / 表碎片）
  *
  * @package jinyu-theme-companion
  */
@@ -30,23 +30,23 @@ if ( ! function_exists( 'jinyu_companion_overview_vitals' ) ) {
 			'note' => __( '暂无样本 · 等待前台访问', 'jinyu-theme-companion' ),
 		);
 
-		foreach ( array( 'jyc_perf_web_vitals_stats', 'jyc_perf_wv_meta', 'jyc_perf_wv_rate' ) as $fn ) {
+		foreach ( array( 'jinyu_perf_web_vitals_stats', 'jinyu_perf_wv_meta', 'jinyu_perf_wv_rate' ) as $fn ) {
 			if ( ! function_exists( $fn ) ) {
 				return $empty;
 			}
 		}
 
-		$wv = jyc_perf_web_vitals_stats();
+		$wv = jinyu_perf_web_vitals_stats();
 		$lcp = (int) ( $wv['avg']['lcp'] ?? 0 );
 		if ( empty( $wv['n'] ) || $lcp <= 0 ) {
 			return $empty;
 		}
 
-		$meta = jyc_perf_wv_meta();
+		$meta = jinyu_perf_wv_meta();
 		$note = sprintf(
 			/* translators: 1: 综合评分 2: 样本数 */
 			__( '综合 %1$d 分 · %2$s 样本', 'jinyu-theme-companion' ),
-			function_exists( 'jyc_perf_wv_score' ) ? (int) jyc_perf_wv_score( $wv, $meta )['score'] : 0,
+			function_exists( 'jinyu_perf_wv_score' ) ? (int) jinyu_perf_wv_score( $wv, $meta )['score'] : 0,
 			number_format_i18n( (int) $wv['n'] )
 		);
 		if ( empty( $wv['fresh'] ) ) {
@@ -54,7 +54,7 @@ if ( ! function_exists( 'jinyu_companion_overview_vitals' ) ) {
 		}
 
 		return array(
-			'rate' => jyc_perf_wv_rate( (float) $lcp, $meta['lcp'] ),
+			'rate' => jinyu_perf_wv_rate( (float) $lcp, $meta['lcp'] ),
 			'main' => $lcp >= 1000 ? number_format( $lcp / 1000, 1 ) . 's' : $lcp . 'ms',
 			'note' => $note,
 		);
@@ -134,7 +134,7 @@ if ( ! function_exists( 'jinyu_companion_overview_db' ) ) {
 	 * @return array{rate:string,main:string,note:string}
 	 */
 	function jinyu_companion_overview_db(): array {
-		if ( ! function_exists( 'jyc_perf_status_snapshot' ) && ! function_exists( 'jyc_perf_status' ) ) {
+		if ( ! function_exists( 'jinyu_perf_status_snapshot' ) && ! function_exists( 'jinyu_perf_status' ) ) {
 			return array(
 				'rate' => 'none',
 				'main' => '—',
@@ -142,7 +142,7 @@ if ( ! function_exists( 'jinyu_companion_overview_db' ) ) {
 			);
 		}
 
-		$st       = function_exists( 'jyc_perf_status_snapshot' ) ? jyc_perf_status_snapshot() : jyc_perf_status();
+		$st       = function_exists( 'jinyu_perf_status_snapshot' ) ? jinyu_perf_status_snapshot() : jinyu_perf_status();
 		$expired  = (int) ( $st['transient_expired'] ?? 0 );
 		$total    = (int) ( $st['transient_total'] ?? 0 );
 		$overhead = (float) ( $st['table_overhead'] ?? 0 );

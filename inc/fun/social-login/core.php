@@ -3,7 +3,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/* ==========================================================================
+/*
+==========================================================================
  * Provider 注册表（第三方插件可通过 filter 注入新平台）
  * ======================================================================== */
 function jinyu_sl_default_providers(): array {
@@ -26,7 +27,8 @@ function jinyu_sl_providers(): array {
 	return $map;
 }
 
-/* ==========================================================================
+/*
+==========================================================================
  * 配置读写（自有 option，与主题解耦）
  * 结构：['enable'=>bool, 'accounts'=>[ platform => ['client_id'=>,'client_secret'=>enc, ...] ]]
  * ======================================================================== */
@@ -49,7 +51,7 @@ function jinyu_sl_get_config( string $platform ): array {
 		return [];
 	}
 	// 解密可能存在的密文字段
-		foreach ( [ 'client_secret', 'private_key' ] as $k ) {
+	foreach ( [ 'client_secret', 'private_key' ] as $k ) {
 		if ( ! empty( $a[ $k ] ) ) {
 			$a[ $k ] = jinyu_sl_decrypt( $a[ $k ] );
 			// 兼容迁移可能造成的二次加密：解密结果若仍是主题格式密文（jinyu_enc2::/jinyu_enc::），再解一层。
@@ -63,7 +65,7 @@ function jinyu_sl_get_config( string $platform ): array {
 			$guard = 0;
 			while ( is_string( $a[ $k ] ) && strpos( $a[ $k ], 'jinyu_sl_enc::' ) === 0 && $guard < 3 ) {
 				$a[ $k ] = jinyu_sl_decrypt( $a[ $k ] );
-				$guard++;
+				++$guard;
 			}
 		}
 	}
@@ -114,7 +116,8 @@ function jinyu_sl_decrypt_theme_secret( string $val ): string {
 	return false === $dec ? '' : $dec;
 }
 
-/* ==========================================================================
+/*
+==========================================================================
  * 对外公开 API（主题以同名函数调用；插件未启用时主题侧提供降级空实现）
  * ======================================================================== */
 function jinyu_oauth_enabled(): bool {
@@ -165,7 +168,10 @@ function jinyu_oauth_bindings( int $uid ): array {
  */
 function jinyu_oauth_bind_url( string $platform, string $redirect_to = '' ): string {
 	$start = admin_url( 'admin-post.php?action=jinyu_social_login&mode=start' );
-	$args  = [ 'platform' => $platform, 'intent' => 'bind' ];
+	$args  = [
+		'platform' => $platform,
+		'intent' => 'bind',
+	];
 	if ( $redirect_to ) {
 		$args['redirect_to'] = $redirect_to;
 	}
@@ -204,13 +210,17 @@ function jinyu_get_oauth_accounts(): array {
 	foreach ( jinyu_sl_providers() as $p => $prov ) {
 		$prov->set_config( jinyu_sl_get_config( $p ) );
 		if ( $prov->is_configured() ) {
-			$out[] = [ 'platform' => $p, 'client_id' => $prov->conf['client_id'] ];
+			$out[] = [
+				'platform' => $p,
+				'client_id' => $prov->conf['client_id'],
+			];
 		}
 	}
 	return $out;
 }
 
-/* ==========================================================================
+/*
+==========================================================================
  * 回调分发（admin-post.php?action=jinyu_social_login）
  *   mode=start  → 发起授权
  *   无 mode     → 平台回调（GET query / POST form_post）
@@ -291,7 +301,12 @@ function jinyu_sl_begin( string $platform ): void {
 	// state 存 transient（多 worker 共享，替代 $_SESSION），并下发 cookie 绑定浏览器
 	set_transient(
 		'jinyu_sl_' . $state,
-		[ 'platform' => $platform, 'nonce' => $nonce, 'intent' => $intent, 'redirect_to' => $redirect_to ],
+		[
+			'platform' => $platform,
+			'nonce' => $nonce,
+			'intent' => $intent,
+			'redirect_to' => $redirect_to,
+		],
 		600
 	);
 	setcookie(
@@ -389,17 +404,20 @@ function jinyu_sl_callback(): void {
 	// 绑定意图：回跳用户中心（或指定 redirect_to），不再落到写文章页
 	if ( 'bind' === $intent ) {
 		$to = ! empty( $stored['redirect_to'] ) ? $stored['redirect_to'] : jinyu_sl_user_center_url();
-		if ( ob_get_level() ) { ob_end_clean(); }
+		if ( ob_get_level() ) {
+			ob_end_clean(); }
 		wp_safe_redirect( $to );
 		exit;
 	}
 	// 非绑定：登录页/弹窗显式传入的同域回跳地址优先，否则回前台首页（避免落到 wp-admin 在登录态未即时生效时回落 wp-login）
 	if ( ! empty( $stored['redirect_to'] ) ) {
-		if ( ob_get_level() ) { ob_end_clean(); }
+		if ( ob_get_level() ) {
+			ob_end_clean(); }
 		wp_safe_redirect( $stored['redirect_to'] );
 		exit;
 	}
-	if ( ob_get_level() ) { ob_end_clean(); }
+	if ( ob_get_level() ) {
+		ob_end_clean(); }
 	wp_safe_redirect( home_url() );
 	exit;
 }
@@ -409,7 +427,8 @@ function jinyu_sl_bail( string $msg ): void {
 	error_log( 'Jinyu Social Login failed: ' . $msg );
 	$tid = wp_generate_password( 12, false );
 	set_transient( 'jinyu_sl_err_' . $tid, $msg, 60 );
-	if ( ob_get_level() ) { ob_end_clean(); }
+	if ( ob_get_level() ) {
+		ob_end_clean(); }
 	wp_safe_redirect( add_query_arg( 'jinyu_oauth_err', $tid, wp_login_url() ) );
 	exit;
 }
@@ -453,7 +472,7 @@ function jinyu_sl_find_or_create( string $platform, array $ud, bool $logged_in )
 			return $existing;
 		}
 		// 2) 站内已存在同邮箱且邮箱经平台验证：绑定到该账号（防邮箱伪造接管）。
-		//    email_verified 由 provider 在拉取用户信息时保证（仅取平台标记为 verified 的邮箱）。
+		// email_verified 由 provider 在拉取用户信息时保证（仅取平台标记为 verified 的邮箱）。
 		if ( ! empty( $ud['email'] ) && ! empty( $ud['email_verified'] ) ) {
 			$mail_uid = (int) email_exists( $ud['email'] );
 			if ( $mail_uid ) {
@@ -560,7 +579,8 @@ function jinyu_sl_create_oauth_user( string $platform, array $ud ): int|WP_Error
 	return $uid;
 }
 
-/* ==========================================================================
+/*
+==========================================================================
  * 用户中心解绑（AJAX，登录态）
  * ======================================================================== */
 add_action( 'wp_ajax_jinyu_sl_unbind', 'jinyu_sl_ajax_unbind' );
@@ -588,7 +608,7 @@ function jinyu_sl_ajax_unbind(): void {
 	$others = 0;
 	foreach ( array_keys( $providers ) as $p ) {
 		if ( $p !== $platform && '' !== (string) get_user_meta( $uid, jinyu_sl_oauth_id_key( $p ), true ) ) {
-			$others++;
+			++$others;
 		}
 	}
 	if ( 0 === $others && get_user_meta( $uid, 'jinyu_sl_no_password', true ) ) {
@@ -604,7 +624,8 @@ function jinyu_sl_ajax_unbind(): void {
 	wp_send_json_success( [ 'msg' => __( '解绑成功。', 'jinyu-theme-companion' ) ] );
 }
 
-/* ==========================================================================
+/*
+==========================================================================
  * 从主题旧配置一次性迁移（插件首次接管时）
  * ======================================================================== */
 function jinyu_sl_maybe_migrate(): void {
@@ -635,7 +656,7 @@ function jinyu_sl_maybe_migrate(): void {
 		$cfg        = is_array( $a ) ? $a : [];
 		$client_id  = $cfg['client_id'] ?? '';
 		// 主题侧 client_secret 已是 jinyu_enc2:: 密文，迁移前先解主题格式再按插件格式重加密，避免二次加密
-		$secret     = jinyu_sl_decrypt_theme_secret( $cfg['client_secret'] ?? '' );
+		$secret = jinyu_sl_decrypt_theme_secret( $cfg['client_secret'] ?? '' );
 		if ( '' === $client_id ) {
 			continue;
 		}
@@ -650,6 +671,10 @@ function jinyu_sl_maybe_migrate(): void {
 	}
 	update_option(
 		JINYU_SL_OPT,
-		[ 'enable' => $old_enable, 'accounts' => $accounts ], true
+		[
+			'enable' => $old_enable,
+			'accounts' => $accounts,
+		],
+        true
 	);
 }

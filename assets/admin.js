@@ -156,7 +156,7 @@ if (nav) {
 		showPane(mod);
 		var ap = document.getElementById('jyc-activePane');
 		if (ap) { ap.value = mod; }
-		try { localStorage.setItem('jyc_pane', mod); } catch (e) {}
+		try { localStorage.setItem('jinyu_pane', mod); } catch (e) {}
 		try {
 			var u = new URL(window.location.href);
 			if (mod === 'overview') { u.searchParams.delete('pane'); }
@@ -182,7 +182,7 @@ if (nav) {
 			if (p && panes[p]) { return p; }
 		} catch (e) {}
 		try {
-			var s = localStorage.getItem('jyc_pane');
+			var s = localStorage.getItem('jinyu_pane');
 			if (s && panes[s]) { return s; }
 		} catch (e) {}
 		for (var k in panes) {
@@ -218,7 +218,7 @@ if (nav) {
 		/* 同步到 body：深色下把 WP 后台容器底色一并涂黑，杜绝画布外露出的浅色条 */
 		document.body.classList.toggle('jyc-dark', dark);
 		if (ico) { ico.innerHTML = dark ? sun : moon; }
-		try { localStorage.setItem('jyc_theme', dark ? 'dark' : 'light'); } catch (e) {}
+		try { localStorage.setItem('jinyu_theme', dark ? 'dark' : 'light'); } catch (e) {}
 	}
 
 	if (tog) {
@@ -228,7 +228,7 @@ if (nav) {
 		});
 	}
 	try {
-		var saved = localStorage.getItem('jyc_theme');
+		var saved = localStorage.getItem('jinyu_theme');
 		if (saved) { applyTheme(saved === 'dark'); }
 	} catch (e) {}
 
@@ -2043,7 +2043,7 @@ if (nav) {
 
 		/* 控制域不参与脏比较：它们只决定「提交哪套动作 / 落到哪个分区 / 走哪条通道」，
 		 * 改它们不代表用户改了配置，纳入比较会把「点了下导入确认框」误判成未保存。 */
-		var SKIP = /^(jinyu_companion_nonce|jinyu_companion_save|jinyu_companion_ajax|jyc_active_pane|jyc_import|jyc_import_file|jyc_import_text|jyc_import_confirm|action|jyc_import_submit)$/;
+		var SKIP = /^(jinyu_companion_nonce|jinyu_companion_save|jinyu_companion_ajax|jinyu_active_pane|jinyu_import|jinyu_import_file|jinyu_import_text|jinyu_import_confirm|action|jinyu_import_submit)$/;
 
 		var bar = document.getElementById('jyc-dirtybar');
 		var cntEl = document.getElementById('jyc-db-count');
@@ -2216,10 +2216,10 @@ if (nav) {
 		});
 
 		// 顶栏保存按钮 / 无 JS 降级：拦截整页提交，改走 ajax。
-		// 排除导入按钮（name=jyc_import，整表单动作按钮），它必须走原生提交。
+		// 排除导入按钮（name=jinyu_import，整表单动作按钮），它必须走原生提交。
 		form.addEventListener('submit', function (e) {
 			var sub = e.submitter || e.target;
-			if (sub && ('jyc_import' === sub.getAttribute('name') || 'jyc-import-submit' === sub.id)) { return; }
+			if (sub && ('jinyu_import' === sub.getAttribute('name') || 'jyc-import-submit' === sub.id)) { return; }
 			e.preventDefault();
 			saveNow();
 		});

@@ -113,21 +113,27 @@ function jinyu_indexnow_submit( int $post_id, WP_Post $post, bool $update ): voi
 		return;
 	}
 
-	$payload = wp_json_encode( [
-		'host'        => $host,
-		'key'         => $key,
-		'keyLocation' => home_url( '/' . $key . '.txt' ),
-		'urlList'     => [ $url ],
-	], JSON_UNESCAPED_SLASHES );
+	$payload = wp_json_encode(
+        [
+			'host'        => $host,
+			'key'         => $key,
+			'keyLocation' => home_url( '/' . $key . '.txt' ),
+			'urlList'     => [ $url ],
+		],
+		JSON_UNESCAPED_SLASHES
+    );
 
 	// 非阻塞触发：IndexNow 接口慢/不可达时不阻塞后台发布流程（保存即返回，推送在后台异步完成）。
-	wp_remote_post( 'https://api.indexnow.org/indexnow', [
-		'headers'   => [ 'Content-Type' => 'application/json; charset=utf-8' ],
-		'body'      => $payload,
-		'timeout'   => 10,
-		'blocking'  => false,
-		'sslverify' => true,
-	] );
+	wp_remote_post(
+        'https://api.indexnow.org/indexnow',
+        [
+			'headers'   => [ 'Content-Type' => 'application/json; charset=utf-8' ],
+			'body'      => $payload,
+			'timeout'   => 10,
+			'blocking'  => false,
+			'sslverify' => true,
+		]
+    );
 
 	// 留痕：非阻塞请求读不到响应，记为「已提交（异步）」。
 	if ( function_exists( 'jinyu_push_log_add' ) ) {

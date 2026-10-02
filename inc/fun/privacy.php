@@ -65,7 +65,10 @@ function jinyu_privacy_register_exporter( array $exporters ): array {
 function jinyu_privacy_export_user_data( string $email, int $page = 1 ): array {
 	$user = get_user_by( 'email', $email );
 	if ( ! $user ) {
-		return array( 'data' => array(), 'done' => true );
+		return array(
+			'data' => array(),
+			'done' => true,
+		);
 	}
 	$items = array();
 	foreach ( array( 'github', 'gitee', 'qq', 'apple' ) as $platform ) {
@@ -115,7 +118,10 @@ function jinyu_privacy_export_user_data( string $email, int $page = 1 ): array {
 			'items'             => $items,
 		);
 	}
-	return array( 'data' => $data, 'done' => true );
+	return array(
+		'data' => $data,
+		'done' => true,
+	);
 }
 
 /**
@@ -139,8 +145,14 @@ function jinyu_privacy_detach_from_others( int $uid ): void {
 			'fields'     => 'ID',
 			'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- 关系数组为序列化值，无法 SQL 精确匹配；含关注数据的用户是小集合。
 				'relation' => 'OR',
-				array( 'key' => 'jinyu_following', 'compare' => 'EXISTS' ),
-				array( 'key' => 'jinyu_followers', 'compare' => 'EXISTS' ),
+				array(
+        'key' => 'jinyu_following',
+        'compare' => 'EXISTS',
+			),
+				array(
+			'key' => 'jinyu_followers',
+			'compare' => 'EXISTS',
+			),
 			),
 			'number'     => 500,
 		)

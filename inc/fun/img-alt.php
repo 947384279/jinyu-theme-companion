@@ -96,7 +96,7 @@ function jinyu_img_alt_postid_cached( string $url ): int {
 	if ( ! function_exists( 'attachment_url_to_postid' ) ) {
 		return 0;
 	}
-	$key     = 'jyc_alt_pid_' . md5( $url );
+	$key     = 'jinyu_alt_pid_' . md5( $url );
 	$cached  = get_transient( $key );
 	if ( false !== $cached && is_numeric( $cached ) ) {
 		$memo[ $url ] = (int) $cached;
@@ -126,7 +126,7 @@ function jinyu_img_seo_dims_cached( string $url ): array {
 	if ( isset( $memo[ $url ] ) ) {
 		return $memo[ $url ];
 	}
-	$key = 'jyc_img_dim_' . md5( $url );
+	$key = 'jinyu_img_dim_' . md5( $url );
 	$hit = get_transient( $key );
 	if ( is_array( $hit ) && isset( $hit[0], $hit[1] ) ) {
 		$memo[ $url ] = $hit;
@@ -169,7 +169,7 @@ function jinyu_img_seo_audit_ajax() {
 }
 
 function jinyu_img_seo_audit( bool $force = false ): array {
-	$key = 'jyc_img_audit_v3';
+	$key = 'jinyu_img_audit_v3';
 	if ( ! $force ) {
 		$cached = get_transient( $key );
 		if ( is_array( $cached ) ) {
@@ -188,46 +188,74 @@ function jinyu_img_seo_audit( bool $force = false ): array {
 	// 口径：统计的是数据库原文。前台输出层会自动补 alt（附件标题/文件名兜底）与尺寸（媒体库元数据），
 	// 因此分级呈现：①真问题=前台补不了的（外链图/已删附件 stuck、只能文件名兜底 alt weak）；
 	// ②已自动兜底=原文没写但前台已补齐的，属正面信息，不作为问题列出。
-	$imgs = 0; $no_alt = 0; $no_dim = 0; $stuck_dim = 0; $weak_alt = 0; $found = []; $auto_found = [];
+	$imgs = 0;
+	$no_alt = 0;
+	$no_dim = 0;
+	$stuck_dim = 0;
+	$weak_alt = 0;
+	$found = [];
+	$auto_found = [];
 	foreach ( $rows as $r ) {
 		if ( ! preg_match_all( '#<img\s([^>]*?)/?>#i', (string) $r->post_content, $ms ) ) {
 			continue;
 		}
-		$na = 0; $nd = 0; $ns = 0; $nw = 0;
+		$na = 0;
+		$nd = 0;
+		$ns = 0;
+		$nw = 0;
 		foreach ( $ms[1] as $attrs ) {
-			$imgs++;
+			++$imgs;
 			$src = '';
 			if ( preg_match( '#\bsrc\s*=\s*["\']([^"\']+)["\']#i', $attrs, $s ) ) {
 				$src = $s[1];
 			}
 			if ( ! preg_match( '#\balt\s*=#i', $attrs ) ) {
-				$no_alt++; $na++;
+				++$no_alt;
+				++$na;
 				$id = $src ? jinyu_img_alt_postid_cached( $src ) : 0;
 				if ( ! $id || ! get_the_title( $id ) ) {
-					$weak_alt++; $nw++;
+					++$weak_alt;
+					++$nw;
 				}
 			}
 			if ( ! preg_match( '#\bwidth\s*=#i', $attrs ) ) {
-				$no_dim++; $nd++;
+				++$no_dim;
+				++$nd;
 				$dims = $src ? jinyu_img_seo_dims_cached( $src ) : [];
 				if ( ! $dims ) {
-					$stuck_dim++; $ns++;
+					++$stuck_dim;
+					++$ns;
 				}
 			}
 		}
 		if ( $ns || $nw ) {
 			// 真问题：有前台补不了的项。
-			$found[] = [ 'id' => (int) $r->ID, 'title' => $r->post_title, 'a' => $na, 'd' => $nd, 's' => $ns, 'w' => $nw ];
+			$found[] = [
+				'id' => (int) $r->ID,
+				'title' => $r->post_title,
+				'a' => $na,
+				'd' => $nd,
+				's' => $ns,
+				'w' => $nw,
+			];
 		} elseif ( $na || $nd ) {
 			// 已自动兜底：原文没写但前台能补齐。
-			$auto_found[] = [ 'id' => (int) $r->ID, 'title' => $r->post_title, 'a' => $na, 'd' => $nd ];
+			$auto_found[] = [
+				'id' => (int) $r->ID,
+				'title' => $r->post_title,
+				'a' => $na,
+				'd' => $nd,
+			];
 		}
 	}
 
 	// 真问题排序：外链图最多在前，其次文件名兜底 alt 多的
-	usort( $found, static function ( $x, $y ) {
-		return ( $y['s'] * 100 + $y['w'] * 10 ) - ( $x['s'] * 100 + $x['w'] * 10 );
-	} );
+	usort(
+        $found,
+        static function ( $x, $y ) {
+			return ( $y['s'] * 100 + $y['w'] * 10 ) - ( $x['s'] * 100 + $x['w'] * 10 );
+		}
+    );
 	$top  = array_slice( $found, 0, 20 );
 	$list = [];
 	foreach ( $top as $it ) {
@@ -242,9 +270,12 @@ function jinyu_img_seo_audit( bool $force = false ): array {
 		];
 	}
 	// 已兜底明细（默认折叠展示，取缺得最多的前 10 篇）
-	usort( $auto_found, static function ( $x, $y ) {
-		return ( $y['a'] + $y['d'] ) - ( $x['a'] + $x['d'] );
-	} );
+	usort(
+        $auto_found,
+        static function ( $x, $y ) {
+			return ( $y['a'] + $y['d'] ) - ( $x['a'] + $x['d'] );
+		}
+    );
 	$auto_top  = array_slice( $auto_found, 0, 10 );
 	$auto_list = [];
 	foreach ( $auto_top as $it ) {

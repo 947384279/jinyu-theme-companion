@@ -12,7 +12,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 经典 add_meta_box 在两种编辑器侧栏都会渲染。
  * 注意：编辑入口始终可用；实际是否输出 <meta> 由 seo.php 的 seo_open 开关与 SEO 插件让位逻辑决定。
  */
-
 function jinyu_post_seo_register_meta(): void {
 	foreach ( [ 'jinyu_seo_desc', 'jinyu_seo_keys' ] as $key ) {
 		register_meta(

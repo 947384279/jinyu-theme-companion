@@ -150,7 +150,7 @@ if ( ! function_exists( 'jinyu_companion_io_export_url' ) ) {
 	function jinyu_companion_io_export_url( bool $full = false ): string {
 		$args = array(
 			'page'       => 'jinyu-theme-companion',
-			'jyc_export' => '1',
+			'jinyu_export' => '1',
 		);
 		if ( $full ) {
 			$args['full'] = '1';
@@ -162,16 +162,16 @@ if ( ! function_exists( 'jinyu_companion_io_export_url' ) ) {
 
 if ( ! function_exists( 'jinyu_companion_io_perf_export' ) ) {
 	/**
-	 * 性能中心开关导出（独立 option jyc_perf_options，全部为 0/1 非敏感开关）。
+	 * 性能中心开关导出（独立 option jinyu_perf_options，全部为 0/1 非敏感开关）。
 	 *
 	 * @return array
 	 */
 	function jinyu_companion_io_perf_export(): array {
-		if ( ! function_exists( 'jyc_perf_get_options' ) ) {
+		if ( ! function_exists( 'jinyu_perf_get_options' ) ) {
 			return array();
 		}
 		// 解析后的完整开关集（含默认值），保证新站点导入即得一致行为。
-		return jyc_perf_get_options();
+		return jinyu_perf_get_options();
 	}
 }
 
@@ -283,7 +283,7 @@ if ( ! function_exists( 'jinyu_companion_handle_export' ) ) {
 	 * 故安全边界不因此放宽，文件名加 -full 便于识别。
 	 */
 	function jinyu_companion_handle_export(): void {
-		if ( ! isset( $_GET['jyc_export'] ) ) {
+		if ( ! isset( $_GET['jinyu_export'] ) ) {
 			return;
 		}
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -400,17 +400,20 @@ if ( ! function_exists( 'jinyu_companion_import_apply' ) ) {
 
 if ( ! function_exists( 'jinyu_companion_import_perf' ) ) {
 	/**
-	 * 导入性能中心开关（白名单 key，仅写回 jyc_perf_toggle_meta 列出的键）。
+	 * 导入性能中心开关（白名单 key，仅写回 jinyu_perf_toggle_meta 列出的键）。
 	 *
 	 * @param mixed $incoming 导出文件内的 perf_options。
 	 * @return array{updated:int,ignored:int}
 	 */
 	function jinyu_companion_import_perf( $incoming ): array {
-		if ( ! is_array( $incoming ) || ! function_exists( 'jyc_perf_toggle_meta' ) ) {
-			return array( 'updated' => 0, 'ignored' => 0 );
+		if ( ! is_array( $incoming ) || ! function_exists( 'jinyu_perf_toggle_meta' ) ) {
+			return array(
+				'updated' => 0,
+				'ignored' => 0,
+			);
 		}
-		$allowed = array_keys( jyc_perf_toggle_meta() );
-		$current = (array) get_option( 'jyc_perf_options', array() );
+		$allowed = array_keys( jinyu_perf_toggle_meta() );
+		$current = (array) get_option( 'jinyu_perf_options', array() );
 		$next    = $current;
 		$updated = 0;
 		foreach ( $allowed as $k ) {
@@ -425,9 +428,12 @@ if ( ! function_exists( 'jinyu_companion_import_perf' ) ) {
 			++$updated;
 		}
 		if ( $updated > 0 ) {
-			update_option( 'jyc_perf_options', $next, false );
+			update_option( 'jinyu_perf_options', $next, false );
 		}
-		return array( 'updated' => $updated, 'ignored' => 0 );
+		return array(
+			'updated' => $updated,
+			'ignored' => 0,
+		);
 	}
 }
 
@@ -444,7 +450,10 @@ if ( ! function_exists( 'jinyu_companion_import_social_login' ) ) {
 	 */
 	function jinyu_companion_import_social_login( $incoming, bool $with_secrets = false ): array {
 		if ( ! is_array( $incoming ) || ! function_exists( 'jinyu_sl_providers' ) || ! function_exists( 'jinyu_sl_get_option' ) || ! defined( 'JINYU_SL_OPT' ) ) {
-			return array( 'changed' => false, 'accounts' => 0 );
+			return array(
+				'changed' => false,
+				'accounts' => 0,
+			);
 		}
 		$allowed_roles = array( 'subscriber', 'contributor', 'author' );
 		$old           = jinyu_sl_get_option();
@@ -493,7 +502,10 @@ if ( ! function_exists( 'jinyu_companion_import_social_login' ) ) {
 		$next['accounts'] = $accounts;
 
 		update_option( JINYU_SL_OPT, $next, true );
-		return array( 'changed' => true, 'accounts' => count( $accounts ) );
+		return array(
+			'changed' => true,
+			'accounts' => count( $accounts ),
+		);
 	}
 }
 
@@ -566,7 +578,7 @@ if ( ! function_exists( 'jinyu_companion_handle_import' ) ) {
 	 */
 	function jinyu_companion_handle_import(): void {
 		// 覆盖确认：误点「导入」不该静默改配置，必须显式勾选。
-		if ( empty( $_POST['jyc_import_confirm'] ) ) {
+		if ( empty( $_POST['jinyu_import_confirm'] ) ) {
 			jinyu_companion_import_result(
 				array(
 					'ok'      => false,
@@ -579,8 +591,8 @@ if ( ! function_exists( 'jinyu_companion_handle_import' ) ) {
 		$raw = '';
 
 		// 优先文件：仅接受 .json，体积超限直接拒绝（不进解析阶段）。
-		if ( isset( $_FILES['jyc_import_file'] ) && ! empty( $_FILES['jyc_import_file']['tmp_name'] ) ) {
-			$file = wp_unslash( $_FILES['jyc_import_file'] );
+		if ( isset( $_FILES['jinyu_import_file'] ) && ! empty( $_FILES['jinyu_import_file']['tmp_name'] ) ) {
+			$file = wp_unslash( $_FILES['jinyu_import_file'] );
 			$type = wp_check_filetype( $file['name'], array( 'json' => 'application/json' ) );
 			if ( 'json' !== $type['ext'] ) {
 				jinyu_companion_import_result(
@@ -607,8 +619,8 @@ if ( ! function_exists( 'jinyu_companion_handle_import' ) ) {
 			}
 			$raw = (string) file_get_contents( $file['tmp_name'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions -- 本地临时文件，无远程调用。
 			@wp_delete_file( $file['tmp_name'] );
-		} elseif ( ! empty( $_POST['jyc_import_text'] ) ) {
-			$raw = sanitize_textarea_field( wp_unslash( $_POST['jyc_import_text'] ) );
+		} elseif ( ! empty( $_POST['jinyu_import_text'] ) ) {
+			$raw = sanitize_textarea_field( wp_unslash( $_POST['jinyu_import_text'] ) );
 		}
 
 		if ( '' === trim( (string) $raw ) ) {
@@ -692,7 +704,7 @@ if ( ! function_exists( 'jinyu_companion_handle_import' ) ) {
 		if ( $social_stats['changed'] && $social_stats['accounts'] > 0 ) {
 			$parts[] = sprintf(
 				/* translators: 1: 社交登录恢复的平台数 */
-				__('社交登录恢复 %1$d 个平台（凭据需重新填写）', 'jinyu-theme-companion' ),
+				__( '社交登录恢复 %1$d 个平台（凭据需重新填写）', 'jinyu-theme-companion' ),
 				(int) $social_stats['accounts']
 			);
 		}

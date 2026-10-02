@@ -126,9 +126,12 @@ if ( ! function_exists( 'jinyu_auto_link_content' ) ) {
 		}
 
 		// 长词优先，避免短词先占位
-		uksort( $local, function ( $a, $b ) {
-			return mb_strlen( $b, 'UTF-8' ) - mb_strlen( $a, 'UTF-8' );
-		} );
+		uksort(
+            $local,
+            function ( $a, $b ) {
+				return mb_strlen( $b, 'UTF-8' ) - mb_strlen( $a, 'UTF-8' );
+			}
+        );
 
 		$doc = new DOMDocument();
 		$doc->substituteEntities = false;
@@ -155,7 +158,7 @@ if ( ! function_exists( 'jinyu_auto_link_content' ) ) {
 		$count       = 0;
 		$linked_keys = [];
 		// 上限面板可调（1-20），未配置时回退常量默认值 5
-		$limit       = max( 1, min( 20, (int) jinyu_companion_get_option( 'auto_link_limit', JINYU_AUTO_LINK_LIMIT ) ) );
+		$limit = max( 1, min( 20, (int) jinyu_companion_get_option( 'auto_link_limit', JINYU_AUTO_LINK_LIMIT ) ) );
 
 		foreach ( $targets as $t ) {
 			if ( $count >= $limit ) {
@@ -173,7 +176,7 @@ if ( ! function_exists( 'jinyu_auto_link_content' ) ) {
 					continue;
 				}
 				$pos = mb_stripos( $text, $key, 0, 'UTF-8' );
-				if ( $pos === false ) {
+				if ( false === $pos ) {
 					continue;
 				}
 				$hits[] = [ $pos, mb_strlen( $key, 'UTF-8' ), $key, $info ];
@@ -181,12 +184,15 @@ if ( ! function_exists( 'jinyu_auto_link_content' ) ) {
 			if ( empty( $hits ) ) {
 				continue;
 			}
-			usort( $hits, function ( $a, $b ) {
-				if ( $a[0] === $b[0] ) {
-					return $b[1] - $a[1]; // 同位置长词优先
+			usort(
+                $hits,
+                function ( $a, $b ) {
+					if ( $a[0] === $b[0] ) {
+						return $b[1] - $a[1]; // 同位置长词优先
+					}
+					return $a[0] - $b[0];
 				}
-				return $a[0] - $b[0];
-			} );
+            );
 
 			$frag     = $doc->createDocumentFragment();
 			$last_end = 0;
@@ -201,7 +207,7 @@ if ( ! function_exists( 'jinyu_auto_link_content' ) ) {
 				}
 				$before = mb_substr( $text, $last_end, $pos - $last_end, 'UTF-8' );
 				$match  = mb_substr( $text, $pos, $len, 'UTF-8' );
-				if ( $before !== '' ) {
+				if ( '' !== $before ) {
 					$frag->appendChild( $doc->createTextNode( $before ) );
 				}
 				$a = $doc->createElement( 'a', $match );
@@ -210,12 +216,12 @@ if ( ! function_exists( 'jinyu_auto_link_content' ) ) {
 				$a->setAttribute( 'rel', 'bookmark' );
 				$frag->appendChild( $a );
 				$last_end = $pos + $len;
-				$count ++;
+				++$count;
 				$linked_keys[ $key ] = true;
 				$linked = true;
 			}
 			$tail = mb_substr( $text, $last_end, null, 'UTF-8' );
-			if ( $tail !== '' ) {
+			if ( '' !== $tail ) {
 				$frag->appendChild( $doc->createTextNode( $tail ) );
 			}
 			if ( $linked ) {
@@ -239,7 +245,12 @@ add_filter( 'the_content', 'jinyu_auto_link_content', 12 );
 
 // 内容变更时让关键词索引失效重建
 foreach ( [ 'save_post', 'deleted_post', 'trashed_post' ] as $hook ) {
-	add_action( $hook, function () {
-		delete_transient( 'jinyu_auto_link_map' );
-	}, 10, 0 );
+	add_action(
+        $hook,
+        function () {
+			delete_transient( 'jinyu_auto_link_map' );
+		},
+        10,
+        0
+    );
 }

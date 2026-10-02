@@ -14,21 +14,28 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * 依赖：openssl（服务器 PHP 8.5 已验证支持 prime256v1 / ES256 / RS256）。
  */
-class Jinyu_OAuth_Provider_Apple extends Jinyu_OAuth_Provider
-{
-	public function id(): string { return 'apple'; }
-	public function label(): string { return 'Apple'; }
+class Jinyu_OAuth_Provider_Apple extends Jinyu_OAuth_Provider {
+
+	public function id(): string {
+		return 'apple'; }
+	public function label(): string {
+		return 'Apple'; }
 	public function icon(): string {
 		// simple-icons 官方 Apple 路径，currentColor 跟随按钮文字色（白）。
 		return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg>';
 	}
-	public function color(): string { return '#000000'; }
-	public function response_mode(): string { return 'form_post'; }
-	public function returns_email(): bool { return true; }
-	public function console_url(): string { return 'https://developer.apple.com/account/resources/identifiers/list/serviceId'; }
+	public function color(): string {
+		return '#000000'; }
+	public function response_mode(): string {
+		return 'form_post'; }
+	public function returns_email(): bool {
+		return true; }
+	public function console_url(): string {
+		return 'https://developer.apple.com/account/resources/identifiers/list/serviceId'; }
 
 	/** Apple 的“密钥”是 .p8 私钥；且须 Team ID / Key ID 齐全才算配置完整 */
-	protected function secret_field(): string { return 'private_key'; }
+	protected function secret_field(): string {
+		return 'private_key'; }
 
 	public function is_configured(): bool {
 		return ! empty( $this->conf['client_id'] )
@@ -39,9 +46,21 @@ class Jinyu_OAuth_Provider_Apple extends Jinyu_OAuth_Provider
 
 	public function config_fields(): array {
 		return [
-			[ 'id' => 'team_id', 'label' => 'Team ID', 'type' => 'text' ],
-			[ 'id' => 'key_id', 'label' => 'Key ID（Auth Key）', 'type' => 'text' ],
-			[ 'id' => 'private_key', 'label' => '私钥 .p8 内容', 'type' => 'textarea' ],
+			[
+				'id' => 'team_id',
+				'label' => 'Team ID',
+				'type' => 'text',
+			],
+			[
+				'id' => 'key_id',
+				'label' => 'Key ID（Auth Key）',
+				'type' => 'text',
+			],
+			[
+				'id' => 'private_key',
+				'label' => '私钥 .p8 内容',
+				'type' => 'textarea',
+			],
 		];
 	}
 
@@ -142,7 +161,10 @@ class Jinyu_OAuth_Provider_Apple extends Jinyu_OAuth_Provider
 			return new WP_Error( 'jinyu_apple_cfg', 'Apple 私钥 / Team ID / Key ID 未配置完整' );
 		}
 
-		$header  = [ 'alg' => 'ES256', 'kid' => $key_id ];
+		$header  = [
+			'alg' => 'ES256',
+			'kid' => $key_id,
+		];
 		$now     = time();
 		$payload = [
 			'iss' => $team,
@@ -250,13 +272,13 @@ class Jinyu_OAuth_Provider_Apple extends Jinyu_OAuth_Provider
 		$enc_n = $this->der_int( $n );
 		$enc_e = $this->der_int( $e );
 		// RSAPublicKey = SEQUENCE { modulus, publicExponent }
-		$rsa   = "\x30" . $this->der_len( strlen( $enc_n ) + strlen( $enc_e ) ) . $enc_n . $enc_e;
+		$rsa = "\x30" . $this->der_len( strlen( $enc_n ) + strlen( $enc_e ) ) . $enc_n . $enc_e;
 		// SubjectPublicKeyInfo：BIT STRING 包着上面的 RSAPublicKey（注意前缀 0x03 + 未用位 0x00）
 		$bit   = "\x03" . $this->der_len( strlen( $rsa ) + 1 ) . "\x00" . $rsa;
 		$spki  = "\x30" . $this->der_len( strlen( $alg ) + strlen( $bit ) ) . $alg . $bit;
 		return "-----BEGIN PUBLIC KEY-----\n"
-			   . chunk_split( base64_encode( $spki ), 64, "\n" )
-			   . "-----END PUBLIC KEY-----\n";
+				. chunk_split( base64_encode( $spki ), 64, "\n" )
+				. "-----END PUBLIC KEY-----\n";
 	}
 
 	private function der_len( int $n ): string {
@@ -289,7 +311,7 @@ class Jinyu_OAuth_Provider_Apple extends Jinyu_OAuth_Provider
 		}
 		$b64 = preg_replace( '/\s+/', '', $raw );
 		return "-----BEGIN PRIVATE KEY-----\n"
-			   . chunk_split( $b64, 64, "\n" )
-			   . "-----END PRIVATE KEY-----\n";
+				. chunk_split( $b64, 64, "\n" )
+				. "-----END PRIVATE KEY-----\n";
 	}
 }

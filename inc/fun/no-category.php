@@ -14,86 +14,79 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 
 if ( jinyu_companion_is_checked( 'no_category_enable', false ) ) {
-	add_action('load-themes.php', 'jinyu_no_category_base_flush');
-	add_action('created_category', 'jinyu_no_category_base_flush');
-	add_action('edited_category', 'jinyu_no_category_base_flush');
-	add_action('delete_category', 'jinyu_no_category_base_flush');
-	add_action('admin_init', 'jinyu_no_category_base_maybe_flush');
-	add_action('init', 'jinyu_no_category_base_permastruct');
-	add_filter('category_rewrite_rules', 'jinyu_no_category_base_rewrite_rules');
-	add_filter('query_vars', 'jinyu_no_category_base_query_vars');
-	add_filter('request', 'jinyu_no_category_base_request');
-	add_filter('category_link', 'jinyu_no_category_base_link', 10, 2);
+	add_action( 'load-themes.php', 'jinyu_no_category_base_flush' );
+	add_action( 'created_category', 'jinyu_no_category_base_flush' );
+	add_action( 'edited_category', 'jinyu_no_category_base_flush' );
+	add_action( 'delete_category', 'jinyu_no_category_base_flush' );
+	add_action( 'admin_init', 'jinyu_no_category_base_maybe_flush' );
+	add_action( 'init', 'jinyu_no_category_base_permastruct' );
+	add_filter( 'category_rewrite_rules', 'jinyu_no_category_base_rewrite_rules' );
+	add_filter( 'query_vars', 'jinyu_no_category_base_query_vars' );
+	add_filter( 'request', 'jinyu_no_category_base_request' );
+	add_filter( 'category_link', 'jinyu_no_category_base_link', 10, 2 );
 }
 
-function jinyu_no_category_base_flush(): void
-{
+function jinyu_no_category_base_flush(): void {
     flush_rewrite_rules();
 }
 
 // 开启后首次进入后台自动刷新一次重写规则（避免手动去固定链接页保存）
-function jinyu_no_category_base_maybe_flush(): void
-{
-    if (false === get_transient('jinyu_no_cat_rules_ok')) {
+function jinyu_no_category_base_maybe_flush(): void {
+    if ( false === get_transient( 'jinyu_no_cat_rules_ok' ) ) {
         flush_rewrite_rules();
-        set_transient('jinyu_no_cat_rules_ok', 1, HOUR_IN_SECONDS);
+        set_transient( 'jinyu_no_cat_rules_ok', 1, HOUR_IN_SECONDS );
     }
 }
 
-function jinyu_no_category_base_permastruct(): void
-{
+function jinyu_no_category_base_permastruct(): void {
     global $wp_rewrite;
-    if (empty($wp_rewrite->extra_permastructs['category'])) {
+    if ( empty( $wp_rewrite->extra_permastructs['category'] ) ) {
         return;
     }
     $wp_rewrite->extra_permastructs['category']['struct'] = '%category%';
 }
 
-function jinyu_no_category_base_rewrite_rules(array $category_rewrite): array
-{
+function jinyu_no_category_base_rewrite_rules( array $category_rewrite ): array {
     $category_rewrite = [];
-    $categories = get_categories(['hide_empty' => false]);
-    foreach ($categories as $category) {
+    $categories = get_categories( [ 'hide_empty' => false ] );
+    foreach ( $categories as $category ) {
         $nicename = $category->slug;
-        if ($category->parent != 0) {
-            $nicename = get_category_parents($category->parent, false, '/', true) . $nicename;
+        if ( $category->parent != 0 ) {
+            $nicename = get_category_parents( $category->parent, false, '/', true ) . $nicename;
         }
-        $category_rewrite['(' . $nicename . ')/(?:feed/)?(feed|rdf|rss|rss2|atom)/?$'] = 'index.php?category_name=$matches[1]&feed=$matches[2]';
-        $category_rewrite['(' . $nicename . ')/page/?([0-9]{1,})/?$'] = 'index.php?category_name=$matches[1]&paged=$matches[2]';
-        $category_rewrite['(' . $nicename . ')/?$'] = 'index.php?category_name=$matches[1]';
+        $category_rewrite[ '(' . $nicename . ')/(?:feed/)?(feed|rdf|rss|rss2|atom)/?$' ] = 'index.php?category_name=$matches[1]&feed=$matches[2]';
+        $category_rewrite[ '(' . $nicename . ')/page/?([0-9]{1,})/?$' ] = 'index.php?category_name=$matches[1]&paged=$matches[2]';
+        $category_rewrite[ '(' . $nicename . ')/?$' ] = 'index.php?category_name=$matches[1]';
     }
-    $base = trim(get_option('category_base') ?: 'category', '/');
-    if ($base) {
-        $category_rewrite[$base . '/(.*)$'] = 'index.php?category_redirect=$matches[1]';
+    $base = trim( get_option( 'category_base' ) ?: 'category', '/' );
+    if ( $base ) {
+        $category_rewrite[ $base . '/(.*)$' ] = 'index.php?category_redirect=$matches[1]';
     }
     return $category_rewrite;
 }
 
-function jinyu_no_category_base_query_vars(array $vars): array
-{
+function jinyu_no_category_base_query_vars( array $vars ): array {
     $vars[] = 'category_redirect';
     return $vars;
 }
 
-function jinyu_no_category_base_request(array $vars)
-{
-    if (isset($vars['category_redirect'])) {
+function jinyu_no_category_base_request( array $vars ) {
+    if ( isset( $vars['category_redirect'] ) ) {
         // 只放行分类路径语义的值（字母数字与连字符/斜杠段），杜绝任意字符串进 301 Location；
         // 并改走 wp_safe_redirect（校验后仍限本站，PHP 层对换行的拒绝只是最后一道兜底）。
         $target = (string) $vars['category_redirect'];
         if ( ! preg_match( '#^[A-Za-z0-9\x{4e00}-\x{9fa5}][A-Za-z0-9\x{4e00}-\x{9fa5}\-/_%]*$#u', $target ) ) {
             return $vars;
         }
-        $link = trailingslashit(home_url()) . user_trailingslashit($target, 'category');
+        $link = trailingslashit( home_url() ) . user_trailingslashit( $target, 'category' );
         wp_safe_redirect( esc_url_raw( $link ), 301 );
         exit;
     }
     return $vars;
 }
 
-function jinyu_no_category_base_link(string $link, int $term_id): string
-{
-    $base = trim(get_option('category_base') ?: 'category', '/');
+function jinyu_no_category_base_link( string $link, int $term_id ): string {
+    $base = trim( get_option( 'category_base' ) ?: 'category', '/' );
     $search = $base ? '/' . $base . '/' : '/category/';
-    return str_replace($search, '/', $link);
+    return str_replace( $search, '/', $link );
 }

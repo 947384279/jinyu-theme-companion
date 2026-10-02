@@ -30,7 +30,12 @@ $tables = [
 
 /* Multisite：清理所有站点（表名按各站前缀） */
 if ( is_multisite() ) {
-	$site_ids = get_sites( [ 'fields' => 'ids', 'number' => 0 ] );
+	$site_ids = get_sites(
+        [
+			'fields' => 'ids',
+			'number' => 0,
+		]
+    );
 	foreach ( $site_ids as $site_id ) {
 		switch_to_blog( $site_id );
 		jinyu_companion_uninstall_site( $options, $tables );
@@ -72,9 +77,10 @@ function jinyu_companion_uninstall_site( array $options, array $tables ): void {
 		    OR option_name LIKE '\_transient\_timeout\_jy\_captcha\_%'"
 	);
 
-	/* 图片水印的残留清理：
+	/*
+	图片水印的残留清理：
 	 * 1) 附件上的水印签名 meta，删掉插件后就是没人认识的空字段；
-	 * 2) 水印限流与批量任务的 transient（限流键是 jyc_wm_rl_，不在上面的通用前缀里）；
+	 * 2) 水印限流与批量任务的 transient（限流键是 jinyu_wm_rl_，不在上面的通用前缀里）；
 	 * 3) uploads 里的 xxx-jywmo.* 孤儿备份——按设计它们只是水印前的原图替身，
 	 *    插件卸载后没有任何东西再引用它们，留着就是纯占地方。 */
 	$wpdb->delete( $wpdb->postmeta, [ 'meta_key' => '_jinyu_wm_sig' ], [ '%s' ] );

@@ -14,7 +14,7 @@ add_action( 'wp_ajax_jinyu_db_optimize', 'jinyu_db_optimize' );
 function jinyu_db_optimize() {
 	check_ajax_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_send_json_error( __( '权限不足', 'jinyu-theme-companion') );
+		wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
 	}
 
 	global $wpdb;
@@ -71,17 +71,19 @@ function jinyu_db_optimize() {
 
 	$total = 0;
 	foreach ( $items as $k => $v ) {
-		if ( $k === 'optimized_tables' ) {
+		if ( 'optimized_tables' === $k ) {
 			continue;
 		}
 		$total += (int) $v;
 	}
 
-	wp_send_json_success( [
-// translators: Placeholder values are substituted at runtime.
-		'msg'  => sprintf( __( '数据库优化完成：共清理 %1$d 条冗余记录，优化 %2$d 张表。', 'jinyu-theme-companion'), $total, $optimized ),
-		'data' => $items,
-	] );
+	wp_send_json_success(
+        [
+			// translators: Placeholder values are substituted at runtime.
+						'msg'  => sprintf( __( '数据库优化完成：共清理 %1$d 条冗余记录，优化 %2$d 张表。', 'jinyu-theme-companion' ), $total, $optimized ),
+			'data' => $items,
+		]
+    );
 }
 
 /**
@@ -122,7 +124,7 @@ function jinyu_db_delete_expired_transients(): int {
  */
 function jinyu_db_optimize_tables(): int {
 	global $wpdb;
-	$tables = $wpdb->get_col( "SHOW TABLES LIKE " . $wpdb->prepare( '%s', $wpdb->prefix . '%' ) );
+	$tables = $wpdb->get_col( 'SHOW TABLES LIKE ' . $wpdb->prepare( '%s', $wpdb->prefix . '%' ) );
 	if ( empty( $tables ) ) {
 		return 0;
 	}
@@ -132,9 +134,9 @@ function jinyu_db_optimize_tables(): int {
 		if ( strpos( $table, $wpdb->prefix ) !== 0 ) {
 			continue;
 		}
-		$res = $wpdb->query( "ANALYZE TABLE " . esc_sql( $table ) );
-		if ( $res !== false ) {
-			$done++;
+		$res = $wpdb->query( 'ANALYZE TABLE ' . esc_sql( $table ) );
+		if ( false !== $res ) {
+			++$done;
 		}
 	}
 	return $done;
@@ -167,15 +169,45 @@ function jinyu_autoload_min_size(): int {
  */
 function jinyu_autoload_protected( string $name ): bool {
 	$exact = [
-		'rewrite_rules', 'cron', 'active_plugins', 'active_sitewide_plugins', 'wp_user_roles',
-		'template', 'stylesheet', 'siteurl', 'home', 'admin_email', 'new_admin_email',
-		'users_can_register', 'blog_public', 'timezone_string', 'start_of_week',
-		'permalink_structure', 'sidebars_widgets', 'recently_edited', 'uninstall_plugins',
-		'can_compress_scripts', 'show_on_front', 'page_on_front', 'page_for_posts',
-		'category_children', 'theme_switched', 'auto_updater.lock', 'db_version',
-		'initial_db_version', 'upload_path', 'upload_url_path', 'wp_user_settings',
-		'wpseo', 'wpseo_taxonomy_meta', 'wpseo_permalinks', 'wpseo_titles',
-		'wpseo_social', 'wpseo_ms', 'wpseo_rss', 'wpseo_flush_rewrite',
+		'rewrite_rules',
+		'cron',
+		'active_plugins',
+		'active_sitewide_plugins',
+		'wp_user_roles',
+		'template',
+		'stylesheet',
+		'siteurl',
+		'home',
+		'admin_email',
+		'new_admin_email',
+		'users_can_register',
+		'blog_public',
+		'timezone_string',
+		'start_of_week',
+		'permalink_structure',
+		'sidebars_widgets',
+		'recently_edited',
+		'uninstall_plugins',
+		'can_compress_scripts',
+		'show_on_front',
+		'page_on_front',
+		'page_for_posts',
+		'category_children',
+		'theme_switched',
+		'auto_updater.lock',
+		'db_version',
+		'initial_db_version',
+		'upload_path',
+		'upload_url_path',
+		'wp_user_settings',
+		'wpseo',
+		'wpseo_taxonomy_meta',
+		'wpseo_permalinks',
+		'wpseo_titles',
+		'wpseo_social',
+		'wpseo_ms',
+		'wpseo_rss',
+		'wpseo_flush_rewrite',
 	];
 	if ( in_array( $name, $exact, true ) ) {
 		return true;
@@ -221,8 +253,8 @@ function jinyu_autoload_scan() {
 		$wpdb->prepare(
 			"SELECT option_name, LENGTH(option_value) AS sz
 			 FROM {$wpdb->options}
-			 WHERE " . jinyu_autoload_sql_in() . " AND LENGTH(option_value) > %d
-			 ORDER BY sz DESC LIMIT 30",
+			 WHERE " . jinyu_autoload_sql_in() . ' AND LENGTH(option_value) > %d
+			 ORDER BY sz DESC LIMIT 30',
 			$min
 		)
 	);
@@ -241,18 +273,20 @@ function jinyu_autoload_scan() {
 		];
 	}
 
-	wp_send_json_success( [
-		'msg'         => sprintf(
-			/* translators: 1: option count, 2: total size */
-			__( 'Autoload 选项共 %1$d 条、%2$s；其中 %3$d 条超过 128KB。', 'jinyu-theme-companion' ),
-			$total_count,
-			size_format( $total_size ),
-			count( $items )
-		),
-		'items'       => $items,
-		'total_size'  => size_format( $total_size ),
-		'total_count' => $total_count,
-	] );
+	wp_send_json_success(
+        [
+			'msg'         => sprintf(
+				/* translators: 1: option count, 2: total size */
+				__( 'Autoload 选项共 %1$d 条、%2$s；其中 %3$d 条超过 128KB。', 'jinyu-theme-companion' ),
+				$total_count,
+				size_format( $total_size ),
+				count( $items )
+			),
+			'items'       => $items,
+			'total_size'  => size_format( $total_size ),
+			'total_count' => $total_count,
+		]
+    );
 }
 
 /**
@@ -290,21 +324,23 @@ function jinyu_autoload_fix() {
 		if ( ! $ok ) {
 			wp_send_json_error( __( '恢复失败，请重试。', 'jinyu-theme-companion' ) );
 		}
-		wp_send_json_success( [
-			'msg'  => sprintf(
-				/* translators: %s: option name */
-				__( '已将 %s 恢复为自动加载（autoload=yes）。', 'jinyu-theme-companion' ),
-				$name
-			),
-			'name' => $name,
-		] );
+		wp_send_json_success(
+            [
+				'msg'  => sprintf(
+					/* translators: %s: option name */
+					__( '已将 %s 恢复为自动加载（autoload=yes）。', 'jinyu-theme-companion' ),
+					$name
+				),
+				'name' => $name,
+			]
+        );
 	}
 
 	$min = jinyu_autoload_min_size();
  // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.NotPrepared
 	$still = $wpdb->get_var(
 		$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			"SELECT option_name FROM {$wpdb->options} WHERE option_name = %s AND " . jinyu_autoload_sql_in() . " AND LENGTH(option_value) > %d", // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- 动态 SQL，已用 $wpdb->prepare / 可信 helper 构造
+			"SELECT option_name FROM {$wpdb->options} WHERE option_name = %s AND " . jinyu_autoload_sql_in() . ' AND LENGTH(option_value) > %d', // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- 动态 SQL，已用 $wpdb->prepare / 可信 helper 构造
 			$name,
 			$min
 		)
@@ -318,14 +354,16 @@ function jinyu_autoload_fix() {
 		wp_send_json_error( __( '更新失败，请重试。', 'jinyu-theme-companion' ) );
 	}
 
-	wp_send_json_success( [
-		'msg' => sprintf(
-			/* translators: %s: option name */
-			__( '已将 %s 改为按需加载（autoload=no）。若前台出现异常，刷新本页扫描后点「恢复」可改回。', 'jinyu-theme-companion' ),
-			$name
-		),
-		'name' => $name,
-	] );
+	wp_send_json_success(
+        [
+			'msg' => sprintf(
+				/* translators: %s: option name */
+				__( '已将 %s 改为按需加载（autoload=no）。若前台出现异常，刷新本页扫描后点「恢复」可改回。', 'jinyu-theme-companion' ),
+				$name
+			),
+			'name' => $name,
+		]
+    );
 }
 
 /**

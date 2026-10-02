@@ -146,14 +146,14 @@ function jinyu_cn_notify_blocked( $comment_id, $comment ) {
 	}
 
 	// 降噪：15 分钟内只发一封（垃圾攻击场景），期间条数计入下一封；计数 1 小时自然过期，避免陈旧累加。
-	$queued = (int) get_transient( 'jyc_cn_blocked_queued' );
-	set_transient( 'jyc_cn_blocked_queued', $queued + 1, HOUR_IN_SECONDS );
-	$last = (int) get_transient( 'jyc_cn_blocked_last' );
+	$queued = (int) get_transient( 'jinyu_cn_blocked_queued' );
+	set_transient( 'jinyu_cn_blocked_queued', $queued + 1, HOUR_IN_SECONDS );
+	$last = (int) get_transient( 'jinyu_cn_blocked_last' );
 	if ( $last && ( time() - $last ) < 900 ) {
 		return;
 	}
-	set_transient( 'jyc_cn_blocked_last', time(), DAY_IN_SECONDS );
-	delete_transient( 'jyc_cn_blocked_queued' );
+	set_transient( 'jinyu_cn_blocked_last', time(), DAY_IN_SECONDS );
+	delete_transient( 'jinyu_cn_blocked_queued' );
 
 	$to = get_option( 'admin_email' );
 	if ( ! $to || ! is_email( $to ) ) {
@@ -221,14 +221,14 @@ function jinyu_cn_notify_approved( $new_status, $old_status, $comment ) {
 		return;
 	}
 	// 幂等：同一条评论只通知一次（避免「通过 → 待审 → 再通过」重复发信）
-	if ( get_comment_meta( $comment->comment_ID, 'jyc_cn_approved_sent', true ) ) {
+	if ( get_comment_meta( $comment->comment_ID, 'jinyu_cn_approved_sent', true ) ) {
 		return;
 	}
 	$to = $comment->comment_author_email;
 	if ( ! $to || ! is_email( $to ) ) {
 		return;
 	}
-	update_comment_meta( $comment->comment_ID, 'jyc_cn_approved_sent', 1 );
+	update_comment_meta( $comment->comment_ID, 'jinyu_cn_approved_sent', 1 );
 
 	$post = get_post( $comment->comment_post_ID );
 	$body = '<p>' . sprintf(

@@ -40,11 +40,11 @@ function jinyu_companion_find_font(): string {
 	}
 	// 兜底：扫描插件自带字体目录，让「把开源字体放进 assets/fonts/」真正生效。
 	// GLOB_BRACE 部分平台（musl/Alpine 编译的 PHP）不存在，缺常量时按扩展名逐一 glob，避免 fatal。
-	$font_dir = dirname( dirname( dirname( __FILE__ ) ) ) . '/assets/fonts';
+	$font_dir = dirname( dirname( __DIR__ ) ) . '/assets/fonts';
 	if ( is_dir( $font_dir ) ) {
 		$font_files = defined( 'GLOB_BRACE' )
 			? glob( $font_dir . '/*.{ttf,ttc,otf,woff,woff2}', GLOB_BRACE )
-			: array_merge( ... array_map( static fn( $ext ) => glob( $font_dir . '/*.' . $ext ) ?: array(), array( 'ttf', 'ttc', 'otf', 'woff', 'woff2' ) ) );
+			: array_merge( ...array_map( static fn( $ext ) => glob( $font_dir . '/*.' . $ext ) ?: array(), array( 'ttf', 'ttc', 'otf', 'woff', 'woff2' ) ) );
 		foreach ( (array) $font_files as $ff ) {
 			if ( $ff && is_file( $ff ) ) {
 				$cached = (string) $ff;
@@ -147,8 +147,8 @@ final class Jinyu_Watermark {
 	 */
 	const WEBP_Q = 80;
 
-/** 保护性跳过（不算失败）的原因。 */
-const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'unsupported_type', 'not_found', 'backup_exists', 'inherited' );
+	/** 保护性跳过（不算失败）的原因。 */
+	const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'unsupported_type', 'not_found', 'backup_exists', 'inherited' );
 
 	/**
 	 * 同族原图：把 -WxH 尺寸后缀剥掉后指向的那份文件。
@@ -208,7 +208,18 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 	public static function signature(): string {
 		$c     = self::config();
 		$raw   = array();
-		$keys  = array( 'text', 'logo', 'size', 'color', 'opacity', 'pos', 'margin', 'quality', 'sizes', 'ver' => self::VER );
+		$keys  = array(
+			'text',
+			'logo',
+			'size',
+			'color',
+			'opacity',
+			'pos',
+			'margin',
+			'quality',
+			'sizes',
+			'ver' => self::VER,
+		);
 		foreach ( $keys as $k => $v ) {
 			$raw[ $k ] = is_int( $k ) ? $c[ $v ] : $v;
 		}
@@ -334,7 +345,8 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 		}
 		$list = array_values( array_unique( $list ) );
 
-		/* 补两类「磁盘上有、metadata 里没有」的 webp，它们的共同点是：
+		/*
+		补两类「磁盘上有、metadata 里没有」的 webp，它们的共同点是：
 		 * 前台在用的就是它们，而引擎从头到尾不知道它们的存在。
 		 *
 		 * ① 有 jpg/png 源的（派生同步）：不在此处理，apply/remove 结束后会由
@@ -343,7 +355,7 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 		 * ② 没有 jpg/png 源的孤儿 webp（典型：源图当年转 webp 后 jpg 尺寸被删了）：
 		 *    它已经是没有源可参考的独立文件，只能按普通文件处理，走 rename 备份。 */
 		foreach ( $list as $f ) {
-			$d    = dirname( $f );
+			$d = dirname( $f );
 			// 该文件的「族名」：x.jpg 与 x-768x512.jpg 同族，都是 x
 			$fam  = (string) pathinfo( basename( $f ), PATHINFO_FILENAME );
 			$dups = array(); // 本轮已认领的副本，避免同族多个文件重复收
@@ -459,14 +471,19 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 	/**
 	 * 对单个文件应用水印（rename 式备份）。
 	 *
-	 * @param string   $file  目标文件绝对路径。
+	 * @param string     $file  目标文件绝对路径。
 	 * @param array|null $proof 登记簿里该文件的 [水印版 md5, 原图 md5]：
 	 *   命中 [0]（现图确是我们打的水印版）时，允许「还原到备份原图再按当前配置重打」，
 	 *   这是配置变更后水印能跟着更新的唯一路径；无登记则维持保护性跳过。
 	 * @return array {file, ok, skip, reason}
 	 */
 	public static function apply_file( string $file, $proof = null ): array {
-		$out = array( 'file' => $file, 'ok' => false, 'skip' => false, 'reason' => '' );
+		$out = array(
+			'file' => $file,
+			'ok' => false,
+			'skip' => false,
+			'reason' => '',
+		);
 
 		$ext = strtolower( (string) pathinfo( $file, PATHINFO_EXTENSION ) );
 		if ( ! in_array( $ext, self::EXTS, true ) ) {
@@ -510,7 +527,8 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 
 		$backup = self::backup_path( $file );
 
-		/* 备份已存在 = 这张图以前处理过、而水印版已经不在了（被删、被别的插件挪走、
+		/*
+		备份已存在 = 这张图以前处理过、而水印版已经不在了（被删、被别的插件挪走、
 		 * 或上次处理到一半崩了）。rename 会直接覆盖它，那份旧原图就永久没了。
 		 * 只有「内容与现图完全一致」（重复处理的残留）才允许覆盖。
 		 *
@@ -538,7 +556,8 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 			}
 		}
 
-		/* 继承水印防护：本文件没有备份，但同族原图带水印（有备份为证），而且
+		/*
+		继承水印防护：本文件没有备份，但同族原图带水印（有备份为证），而且
 		 * 本文件比那份备份晚生成 —— 说明它是原图打上水印之后才派生出来的
 		 * （regen_sizes 重建、外部脚本重采样等），水印已随原图缩小一份在里面。
 		 * 这个时点之后再补打，就是用户看到的「双水印重影」。mtime 留 2 秒余量，
@@ -554,7 +573,8 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 			}
 		}
 
-		/* ① 先在内存里合成。这一步磁盘不动，失败就是干净失败。
+		/*
+		① 先在内存里合成。这一步磁盘不动，失败就是干净失败。
 		 *    合成必须单独做成「先于任何文件操作」，否则下面 rename 之后才发现
 		 *    底下没人动过原图，回滚逻辑就要多绕一圈。 */
 		if ( ! self::composite( $editor, $c ) ) {
@@ -562,7 +582,8 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 			return $out;
 		}
 
-		/* ② 原图 → 备份名。rename 是原子的：并发请求里只有一个能抢到这个名字，
+		/*
+		② 原图 → 备份名。rename 是原子的：并发请求里只有一个能抢到这个名字，
 		 *    另一个失败退出，不会互相踩。这正是去掉「临时文件 + rename」方案的理由——
 		 *    WP 7.1 的 get_output_format() 会把自定义后缀当成扩展名剥掉再换回标准扩展名，
 		 *    给 save() 传 $file . '.jyc-wm-xxx' 会被改写到 $file . '.jpg'，
@@ -630,7 +651,8 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 		}
 		$bt = (int) @filemtime( $backup );
 		$ct = (int) @filemtime( $file );
-		/* filemtime 只有秒级精度，而整张图（读图 → 合成 → 编码）在快机器上常常落在一秒内：
+		/*
+		filemtime 只有秒级精度，而整张图（读图 → 合成 → 编码）在快机器上常常落在一秒内：
 		 * 此时备份与水印图的 mtime 相等，用 >= 判断会把它误认成「用户重新上传过原图」，
 		 * 于是正常的还原被整批拦下，用户看到的是「点了去除却纹丝不动」。
 		 * 留 1 秒余量：真·换过原图时备份 mtime 明确更新，照样拦得住。 */
@@ -671,9 +693,12 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 		// 若整表替换，之前打过水印的缩略图会掉出表外，将来还原时反被当成「不是我们打的」。
 		$marked = self::registry( $attach_id );
 
-		$done = 0; $errors = 0; $webp = 0;
+		$done = 0;
+		$errors = 0;
+		$webp = 0;
 		foreach ( $files as $f ) {
-			/* 传入登记指纹：现图确是登记在册的水印版时，apply_file 内部会先
+			/*
+			传入登记指纹：现图确是登记在册的水印版时，apply_file 内部会先
 			 * 还原到备份原图再重打（配置变更后水印跟着更新的唯一路径）。 */
 			$b = basename( $f );
 			$r = self::apply_file( $f, isset( $marked[ $b ] ) ? $marked[ $b ] : null );
@@ -681,32 +706,39 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 				continue; // 保护性跳过不算失败
 			}
 			if ( $r['ok'] ) {
-				$done++;
-				/* 记下这一对指纹：水印版内容 + 备份内容。还原时据此确认现图
+				++$done;
+				/*
+				记下这一对指纹：水印版内容 + 备份内容。还原时据此确认现图
 				 * 就是我们打的那一张，而不是用户后来换上的另一张。 */
 				$marked[ basename( $f ) ] = array(
 					(string) @md5_file( $f ),
 					(string) @md5_file( self::backup_path( $f ) ),
 				);
-				/* 源图落定后同步派生副本。必须排在 apply_file 之后：
+				/*
+				源图落定后同步派生副本。必须排在 apply_file 之后：
 				 * 此刻 $f 已经是水印版，副本照着它重算才带得上水印。
 				 * 没有副本可同步的（孤儿 webp 自己就是目标文件）不记失败。 */
 				if ( '' !== self::webp_of( $f ) ) {
 					if ( self::sync_webp( $f ) ) {
-						$webp++;
+						++$webp;
 					} else {
 						error_log( 'jinyu watermark: webp sync failed for ' . $f );
 					}
 				}
 			} else {
-				$errors++;
+				++$errors;
 			}
 		}
 		if ( $done > 0 ) {
 			update_post_meta( $attach_id, self::META, $sig );
 			update_post_meta( $attach_id, self::META_FILES, $marked );
 		}
-		return array( 'done' => $done, 'total' => count( $files ), 'errors' => $errors, 'webp' => $webp );
+		return array(
+			'done' => $done,
+			'total' => count( $files ),
+			'errors' => $errors,
+			'webp' => $webp,
+		);
 	}
 
 	/**
@@ -721,7 +753,12 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 	 * @return array {done, total, errors, webp}
 	 */
 	public static function sync_attachment( int $attach_id ): array {
-		$out    = array( 'done' => 0, 'total' => 0, 'errors' => 0, 'webp' => 0 );
+		$out    = array(
+			'done' => 0,
+			'total' => 0,
+			'errors' => 0,
+			'webp' => 0,
+		);
 		$sig    = self::signature();
 		$stored = (string) get_post_meta( $attach_id, self::META, true );
 		$marked = self::registry( $attach_id );
@@ -731,7 +768,8 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 				continue;
 			}
 			if ( '' !== self::webp_of( $f ) ) {
-				/* 有派生副本的源图。三种情形：
+				/*
+				有派生副本的源图。三种情形：
 				 * ① 在册且指纹吻合 → 水印版没被动过，只同步副本；
 				 * ② 指纹变了或在册但内容被 regen 重写过 → 只刷新登记，绝不补打
 				 *    （regen 是按「当前原图」重采样的，原图带水印时产物天生带一层，
@@ -743,35 +781,36 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 					$prev = isset( $marked[ $name ] ) && is_array( $marked[ $name ] ) ? $marked[ $name ] : array( '', '' );
 					if ( isset( $marked[ $name ] ) || self::family_watermarked( $f ) ) {
 						$marked[ $name ] = array( $cur, (string) $prev[1] );
-						$out['done']++;
+						++$out['done'];
 					} else {
 						$r = self::apply_file( $f );
 						if ( $r['skip'] && in_array( $r['reason'], self::SKIPS, true ) ) {
 							continue;
 						}
 						if ( ! $r['ok'] ) {
-							$out['errors']++;
+							++$out['errors'];
 							continue;
 						}
 						$marked[ $name ] = array(
 							(string) @md5_file( $f ),
 							(string) @md5_file( self::backup_path( $f ) ),
 						);
-						$out['done']++;
+						++$out['done'];
 					}
 				}
-				$out['total']++;
+				++$out['total'];
 				if ( self::sync_webp( $f ) ) {
-					$out['webp']++;
+					++$out['webp'];
 				} else {
-					$out['errors']++;
+					++$out['errors'];
 				}
 				continue;
 			}
 			if ( 'webp' !== strtolower( (string) pathinfo( $f, PATHINFO_EXTENSION ) ) ) {
 				continue; // 源图本身已被登记，本方法不重复打
 			}
-			/* 孤儿副本（源图不在）：只能当独立文件处理。已经打过水印的不再重复打，
+			/*
+			孤儿副本（源图不在）：只能当独立文件处理。已经打过水印的不再重复打，
 			 * 否则就是把水印叠到水印上。 */
 			if ( $stored === $sig && isset( $marked[ basename( $f ) ] ) ) {
 				continue;
@@ -782,13 +821,13 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 				continue;
 			}
 			if ( $r['ok'] ) {
-				$out['done']++;
+				++$out['done'];
 				$marked[ $b ] = array(
 					(string) @md5_file( $f ),
 					(string) @md5_file( self::backup_path( $f ) ),
 				);
 			} else {
-				$out['errors']++;
+				++$out['errors'];
 			}
 		}
 		if ( $out['done'] > 0 || $out['webp'] > 0 ) {
@@ -806,27 +845,32 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 	 * @return array {done, errors, blocked, webp}
 	 */
 	public static function remove_attachment( int $attach_id ): array {
-		/* 登记簿：只有在这张表里的文件才被认定是「本插件生成的水印版」。
+		/*
+		登记簿：只有在这张表里的文件才被认定是「本插件生成的水印版」。
 		 * 表整个是空的说明装的是旧版本、从没写过表——那是历史行为，按「放行」处理，
 		 * 免得刚升级的用户点一次去除发现全被拦下。 */
 		$reg     = self::registry( $attach_id );
 		$has_reg = ! empty( $reg );
 
-		$done = 0; $errors = 0; $blocked = 0; $webp = 0;
+		$done = 0;
+		$errors = 0;
+		$blocked = 0;
+		$webp = 0;
 		foreach ( self::target_files( $attach_id ) as $f ) {
-			if ( ! is_file( $f ) ) { continue; } // 文件已不在，不算失败
+			if ( ! is_file( $f ) ) {
+				continue; } // 文件已不在，不算失败
 			$reason = '';
 			$proof  = $has_reg ? ( $reg[ basename( $f ) ] ?? false ) : null;
 			if ( self::remove_file( $f, $reason, $proof ) ) {
 				// 只认真正动过文件的两种结果：no_backup 表示这张本来就干净，
 				// 混进来会让汇总虚报「已还原 N 张」，用户以为清干净了其实没有。
 				if ( 'ok' === $reason || 'renamed' === $reason ) {
-					$done++;
+					++$done;
 					// 源图已还原成干净原图，派生副本跟着重算：前台拿到的是无水印版，
 					// 而不是还留着水印的那份旧副本。孤儿副本自己就是目标，无需再同步。
 					if ( '' !== self::webp_of( $f ) ) {
 						if ( self::sync_webp( $f ) ) {
-							$webp++;
+							++$webp;
 						} else {
 							error_log( 'jinyu watermark: webp sync failed on remove for ' . $f );
 						}
@@ -834,10 +878,10 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 				}
 			} elseif ( 'conflict' === $reason || 'stale_backup' === $reason ) {
 				// 现图不是本插件打的水印版，还原会把用户现行的图盖掉 → 一动不动
-				$blocked++;
+				++$blocked;
 			} elseif ( 'no_backup' !== $reason ) {
 				// 无备份 = 这张本来就没打过水印，还原无事可做，不该在汇总里报失败
-				$errors++;
+				++$errors;
 			}
 		}
 		// 有被拦下的文件说明这批没清干净，此时保留签名：下次还能重新处理这些图，
@@ -849,7 +893,12 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 		// 原图回去了，派生出来的缩略图也得跟着还原（它们此刻还是带水印的旧文件）。
 		// 重建产物此刻是干净的（原图已还原），不登记 —— 这张附件正在走出引擎的管理。
 		self::regen_sizes( $attach_id, false );
-		return array( 'done' => $done, 'errors' => $errors, 'blocked' => $blocked, 'webp' => $webp );
+		return array(
+			'done' => $done,
+			'errors' => $errors,
+			'blocked' => $blocked,
+			'webp' => $webp,
+		);
 	}
 
 	/**
@@ -904,7 +953,8 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 		}
 		jinyu_companion_wm_guard( false );
 
-		/* 重建出的尺寸文件是从「当前原图」重采样的：原图带水印时它们天生就带着
+		/*
+		重建出的尺寸文件是从「当前原图」重采样的：原图带水印时它们天生就带着
 		 * 一层随缩放的水印，绝不能让后续流程再补打一次（那正是「双水印重影」
 		 * 的成因）。这里直接把新指纹写进登记簿：在册的刷新第一项；不在册的按
 		 * [新指纹, ''] 收进（'' = 它没有独立备份，水印来自原图，还原时由本方法
@@ -1083,21 +1133,31 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 				$draw->setFontSize( $size );
 				$m = ( new Imagick() )->queryFontMetrics( $draw, $text );
 				if ( ! empty( $m['textWidth'] ) ) {
-					return array( 'w' => (int) ceil( (float) $m['textWidth'] ), 'h' => (int) ceil( (float) $m['textHeight'] ) );
+					return array(
+						'w' => (int) ceil( (float) $m['textWidth'] ),
+						'h' => (int) ceil( (float) $m['textHeight'] ),
+					);
 				}
-			} catch ( Exception $e ) { /* 走回退 */ }
+			} catch ( Exception $e ) {
+				/* 走回退 */ }
 		}
 		if ( $editor instanceof WP_Image_Editor_GD && function_exists( 'imagettfbbox' ) ) {
 			$box = @imagettfbbox( $size, 0, $font, $text );
 			if ( is_array( $box ) ) {
-				return array( 'w' => abs( (int) $box[2] - (int) $box[0] ) + 2, 'h' => abs( (int) $box[5] - (int) $box[1] ) );
+				return array(
+					'w' => abs( (int) $box[2] - (int) $box[0] ) + 2,
+					'h' => abs( (int) $box[5] - (int) $box[1] ),
+				);
 			}
 		}
 		$w = 0;
 		foreach ( mb_str_split( $text ) as $ch ) {
 			$w += ( ord( $ch ) < 128 ) ? (int) round( $size * 0.55 ) : $size;
 		}
-		return array( 'w' => max( 1, $w ), 'h' => (int) round( $size * 1.6 ) );
+		return array(
+			'w' => max( 1, $w ),
+			'h' => (int) round( $size * 1.6 ),
+		);
 	}
 
 	/** 九宫格定位：返回 [x, y]。 */
@@ -1214,26 +1274,26 @@ const SKIPS = array( 'too_small', 'too_large', 'too_big_file', 'backup_file', 'u
 			if ( ! $src || is_wp_error( $src ) || ! $src->load() ) {
 				return false;
 			}
-		// imagecopyresampled 缩放贴合 + alpha 混合；不用 imagecopymerge（truecolor 忽略不透明度）
-		$cv   = self::canvas( $editor );
-		$logo = self::canvas( $src );
-		list( $sw, $sh ) = self::dims( $src );
-		if ( ! is_gd_image( $cv ) || ! is_gd_image( $logo ) || $sw < 1 || $sh < 1 ) {
-			return false;
-		}
-		imagealphablending( $cv, true );
-		return (bool) imagecopyresampled(
-			$cv,
-			$logo,
-			$x,
-			$y,
-			0,
-			0,
-			$lw,
-			$lh,
-			$sw,
-			$sh
-		);
+			// imagecopyresampled 缩放贴合 + alpha 混合；不用 imagecopymerge（truecolor 忽略不透明度）
+			$cv   = self::canvas( $editor );
+			$logo = self::canvas( $src );
+			list( $sw, $sh ) = self::dims( $src );
+			if ( ! is_gd_image( $cv ) || ! is_gd_image( $logo ) || $sw < 1 || $sh < 1 ) {
+				return false;
+			}
+			imagealphablending( $cv, true );
+			return (bool) imagecopyresampled(
+                $cv,
+                $logo,
+                $x,
+                $y,
+                0,
+                0,
+                $lw,
+                $lh,
+                $sw,
+                $sh
+			);
 		}
 		return false;
 	}
@@ -1271,7 +1331,7 @@ function jinyu_companion_wm_metadata( $metadata, $attach_id ) {
 	$attach_id = (int) $attach_id;
 	// 两条防重路径：① 正处于内部处理流程（重算缩略图会再触发本回调）；
 	// ② 本请求内已处理过该附件（WP 调用方在 wp_generate_attachment_metadata()
-	//    返回后还会补一次 wp_update_attachment_metadata，同样会踢到本回调）。
+	// 返回后还会补一次 wp_update_attachment_metadata，同样会踢到本回调）。
 	// 少了任何一条，一次上传就会把原图连打两次水印。
 	if ( jinyu_companion_wm_guarding() || jinyu_companion_wm_handled( $attach_id ) ) {
 		return $metadata;
@@ -1294,7 +1354,8 @@ function jinyu_companion_wm_metadata( $metadata, $attach_id ) {
 		// 水印不是内容正确性的前提：上传链路里失败只记日志，绝不阻断上传
 		error_log( 'jinyu watermark skipped: attachment=' . $attach_id . ' errors=' . $res['errors'] );
 	}
-	/* 缩略图必须在这里重建：本回调跑在 wp_generate_attachment_metadata() 的最后一行，
+	/*
+	缩略图必须在这里重建：本回调跑在 wp_generate_attachment_metadata() 的最后一行，
 	 * 此刻各尺寸文件已经按「还没打水印的原图」生成完毕。apply 只是换掉了原路径上的文件，
 	 * 尺寸文件不会跟着变——不重建，前台看到的 medium / large 永远是没有水印的旧图。
 	 * 仅在水印确实打上时重建：否则等于白删一遍尺寸文件再生成。 */

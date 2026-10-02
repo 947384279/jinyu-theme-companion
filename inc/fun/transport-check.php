@@ -67,7 +67,7 @@ function jinyu_transport_fetch( string $url ): array {
 	}
 
 	return array(
-		'code'    => ( int ) wp_remote_retrieve_response_code( $res ),
+		'code'    => (int) wp_remote_retrieve_response_code( $res ),
 		'headers' => $headers,
 		'size'    => strlen( (string) wp_remote_retrieve_body( $res ) ),
 	);
@@ -275,7 +275,13 @@ function jinyu_transport_cached(): array {
 	if ( is_array( $cached ) && isset( $cached['rows'] ) ) {
 		return $cached;
 	}
-	return array( 'ok' => true, 'at' => 0, 'error' => '', 'target' => '', 'rows' => array() );
+	return array(
+		'ok' => true,
+		'at' => 0,
+		'error' => '',
+		'target' => '',
+		'rows' => array(),
+	);
 }
 
 /**

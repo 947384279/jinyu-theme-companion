@@ -19,7 +19,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * - 所有动作默认关闭，开启/配置后才生效，不影响任何现有功能。
  */
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * 适配器接口
  * ─────────────────────────────────────────────────────────── */
 interface Jinyu_Storage_Adapter {
@@ -32,10 +33,12 @@ interface Jinyu_Storage_Adapter {
 	public function put_multi( array $items, $concurrency );
 }
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * 并行上传辅助（curl_multi，带并发上限）
  * ─────────────────────────────────────────────────────────── */
-/* 全局函数名必须唯一：历史私有插件 wordpress-plugin-jinyu/inc/fun/storage.php 已有同名
+/*
+全局函数名必须唯一：历史私有插件 wordpress-plugin-jinyu/inc/fun/storage.php 已有同名
  * jinyu_curl_headers()，两插件同时加载时会「Cannot redeclare function」整站 500。
  * 本插件（公开插件）侧统一加 jinyu_companion_ 前缀。 */
 function jinyu_companion_curl_headers( $assoc ) {
@@ -70,6 +73,7 @@ function jinyu_storage_ssl_host(): int {
 
 /**
  * 用 curl_multi 并发执行一批已配置好的 handle。
+ *
  * @param array $handles 每项 ['ch'=>curl_handle, 'index'=>int]
  * @param int   $concurrency 同时进行的请求上限
  * @return array index => bool（HTTP 2xx 视为成功）
@@ -122,7 +126,8 @@ function jinyu_storage_run_multi( $handles, $concurrency = 8 ) {
 	return $results;
 }
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * 工厂
  * ─────────────────────────────────────────────────────────── */
 class Jinyu_Storage_Factory {
@@ -137,7 +142,8 @@ class Jinyu_Storage_Factory {
 	}
 }
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * S3 厂商识别与预设
  * 仅用于「给出更精准的配置校验提示」与「路径式寻址回退判定」，
  * 不影响签名算法本身（签名始终按 AWS SigV4）。
@@ -145,6 +151,7 @@ class Jinyu_Storage_Factory {
 
 /**
  * 根据 endpoint 推断 S3 厂商，用于 Region 格式校验与寻址风格选择。
+ *
  * @return string oss|cos|obs|qiniu|aws|minio|generic
  */
 function jinyu_storage_detect_s3_vendor( $endpoint ) {
@@ -209,7 +216,8 @@ function jinyu_storage_s3_vendor_presets() {
 	);
 }
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * S3 兼容适配器（AWS Signature V4）
  * 覆盖：阿里云 OSS / 腾讯云 COS / 华为云 OBS / 七牛云 Kodo 等
  * ─────────────────────────────────────────────────────────── */
@@ -271,18 +279,31 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 	private function guess_type( $path ) {
 		$ext = strtolower( pathinfo( $path, PATHINFO_EXTENSION ) );
 		$map = array(
-			'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png',
-			'gif' => 'image/gif', 'webp' => 'image/webp', 'svg' => 'image/svg+xml',
-			'mp4' => 'video/mp4', 'webm' => 'video/webm', 'mp3' => 'audio/mpeg',
-			'pdf' => 'application/pdf', 'zip' => 'application/zip', 'txt' => 'text/plain',
-			'json' => 'application/json', 'css' => 'text/css', 'js' => 'application/javascript',
-			'html' => 'text/html', 'xml' => 'application/xml', 'woff2' => 'font/woff2',
+			'jpg' => 'image/jpeg',
+			'jpeg' => 'image/jpeg',
+			'png' => 'image/png',
+			'gif' => 'image/gif',
+			'webp' => 'image/webp',
+			'svg' => 'image/svg+xml',
+			'mp4' => 'video/mp4',
+			'webm' => 'video/webm',
+			'mp3' => 'audio/mpeg',
+			'pdf' => 'application/pdf',
+			'zip' => 'application/zip',
+			'txt' => 'text/plain',
+			'json' => 'application/json',
+			'css' => 'text/css',
+			'js' => 'application/javascript',
+			'html' => 'text/html',
+			'xml' => 'application/xml',
+			'woff2' => 'font/woff2',
 		);
 		return $map[ $ext ] ?? 'application/octet-stream';
 	}
 
 	/**
 	 * 计算 SigV4 鉴权头。
+     *
 	 * @param string $method PUT/GET/DELETE
 	 * @param string $uri    已编码路径（不含 query）
 	 * @param string $body   请求体（PUT 用 UNSIGNED-PAYLOAD）
@@ -297,7 +318,7 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 		$access    = trim( $this->cfg['access_key'] ?? '' );
 		$secret    = trim( $this->cfg['secret'] ?? '' );
 
-		$payload_hash = ( $method === 'PUT' ) ? 'UNSIGNED-PAYLOAD' : hash( 'sha256', $body );
+		$payload_hash = ( 'PUT' === $method ) ? 'UNSIGNED-PAYLOAD' : hash( 'sha256', $body );
 
 		$headers = array(
 			'host'               => $host,
@@ -342,7 +363,7 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 
 	public function put( $local, $key ) {
 		$body = @file_get_contents( $local );
-		if ( $body === false ) {
+		if ( false === $body ) {
 			return false;
 		}
 		$ct      = $this->guess_type( $local );
@@ -351,12 +372,12 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 		$res     = wp_remote_request(
 			$this->base() . $uri,
 			array(
-			'method'      => 'PUT',
-			'headers'     => $headers,
-			'body'        => $body,
-			'timeout'     => 120,
-			'sslverify' => jinyu_storage_ssl_verify(),
-		)
+				'method'      => 'PUT',
+				'headers'     => $headers,
+				'body'        => $body,
+				'timeout'     => 120,
+				'sslverify' => jinyu_storage_ssl_verify(),
+            )
 		);
 		if ( is_wp_error( $res ) ) {
 			return false;
@@ -373,7 +394,7 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 			$local = $items[ $i ]['local'];
 			$key   = $items[ $i ]['key'];
 			$body  = @file_get_contents( $local );
-			if ( $body === false ) {
+			if ( false === $body ) {
 				continue;
 			}
 			$ct      = $this->guess_type( $local );
@@ -394,7 +415,10 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 					CURLOPT_CONNECTTIMEOUT => 15,
 				)
 			);
-			$handles[] = array( 'ch' => $ch, 'index' => $i );
+			$handles[] = array(
+				'ch' => $ch,
+				'index' => $i,
+			);
 		}
 		$ok = jinyu_storage_run_multi( $handles, $concurrency );
 		foreach ( $ok as $idx => $v ) {
@@ -439,7 +463,7 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 			return false;
 		}
 		$code = (int) wp_remote_retrieve_response_code( $res );
-		return $code === 204 || $code === 200 || $code === 404;
+		return 204 === $code || 200 === $code || 404 === $code;
 	}
 
 	public function test( $prefix = '' ) {
@@ -458,7 +482,7 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 		}
 		$back = $this->get( $key );
 		$this->delete( $key );
-		return ( $back !== false ) ? true : '上传成功但回读验证失败';
+		return ( false !== $back ) ? true : '上传成功但回读验证失败';
 	}
 
 	public function list_keys( $prefix = '' ) {
@@ -467,14 +491,14 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 		$pages = 0;
 		do {
 			$params = array( 'list-type' => '2' );
-			if ( $prefix !== '' ) {
+			if ( '' !== $prefix ) {
 				$params['prefix'] = $prefix;
 			}
-			if ( $token !== '' ) {
+			if ( '' !== $token ) {
 				$params['continuation-token'] = $token;
 			}
 			ksort( $params );
-			$qsa  = array();
+			$qsa = array();
 			foreach ( $params as $k => $v ) {
 				$qsa[] = rawurlencode( $k ) . '=' . rawurlencode( $v );
 			}
@@ -528,26 +552,27 @@ class Jinyu_Storage_S3 implements Jinyu_Storage_Adapter {
 				break;
 			}
 			$xml = simplexml_load_string( wp_remote_retrieve_body( $res ) );
-			if ( $xml === false ) {
+			if ( false === $xml ) {
 				break;
 			}
 			foreach ( $xml->Contents as $c ) {
 				if ( isset( $c->Key ) ) {
 					$key = (string) $c->Key;
 					// 跳过目录占位对象（以 / 结尾），否则「一键拉回」会尝试下载目录而失败
-					if ( $key !== '' && substr( $key, -1 ) !== '/' ) {
+					if ( '' !== $key && substr( $key, -1 ) !== '/' ) {
 						$keys[] = $key;
 					}
 				}
 			}
 			$token = isset( $xml->NextContinuationToken ) ? (string) $xml->NextContinuationToken : '';
-			$pages++;
-		} while ( $token !== '' && $pages < 50 );
+			++$pages;
+		} while ( '' !== $token && $pages < 50 );
 		return $keys;
 	}
 }
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * 又拍云适配器（REST Basic Auth）
  * ─────────────────────────────────────────────────────────── */
 class Jinyu_Storage_Upyun implements Jinyu_Storage_Adapter {
@@ -561,7 +586,7 @@ class Jinyu_Storage_Upyun implements Jinyu_Storage_Adapter {
 		$endpoint = trim( $this->cfg['endpoint'] ?? '' );
 		// 又拍云 API 域名不带桶前缀（与 S3 机制不同），默认 v0.api.upyun.com。
 		// 兼容误填 CDN 域（如 xxx.b0.upaiyun.com）：自动回退到 API 域，避免 "invisible domain"。
-		if ( $endpoint === '' || ( strpos( $endpoint, 'upaiyun.com' ) !== false && strpos( $endpoint, 'api' ) === false ) ) {
+		if ( '' === $endpoint || ( strpos( $endpoint, 'upaiyun.com' ) !== false && strpos( $endpoint, 'api' ) === false ) ) {
 			$endpoint = 'v0.api.upyun.com';
 		}
 		return preg_replace( '#^https?://#i', '', $endpoint );
@@ -585,17 +610,24 @@ class Jinyu_Storage_Upyun implements Jinyu_Storage_Adapter {
 	private function guess_type( $path ) {
 		$ext = strtolower( pathinfo( $path, PATHINFO_EXTENSION ) );
 		$map = array(
-			'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png',
-			'gif' => 'image/gif', 'webp' => 'image/webp',
-			'mp4' => 'video/mp4', 'mp3' => 'audio/mpeg', 'pdf' => 'application/pdf',
-			'zip' => 'application/zip', 'txt' => 'text/plain', 'json' => 'application/json',
+			'jpg' => 'image/jpeg',
+			'jpeg' => 'image/jpeg',
+			'png' => 'image/png',
+			'gif' => 'image/gif',
+			'webp' => 'image/webp',
+			'mp4' => 'video/mp4',
+			'mp3' => 'audio/mpeg',
+			'pdf' => 'application/pdf',
+			'zip' => 'application/zip',
+			'txt' => 'text/plain',
+			'json' => 'application/json',
 		);
 		return $map[ $ext ] ?? 'application/octet-stream';
 	}
 
 	public function put( $local, $key ) {
 		$body = @file_get_contents( $local );
-		if ( $body === false ) {
+		if ( false === $body ) {
 			return false;
 		}
 		$url     = $this->base() . '/' . ltrim( $key, '/' );
@@ -630,7 +662,7 @@ class Jinyu_Storage_Upyun implements Jinyu_Storage_Adapter {
 			$local = $items[ $i ]['local'];
 			$key   = $items[ $i ]['key'];
 			$body  = @file_get_contents( $local );
-			if ( $body === false ) {
+			if ( false === $body ) {
 				continue;
 			}
 			$url  = $this->base() . '/' . ltrim( $key, '/' );
@@ -656,7 +688,10 @@ class Jinyu_Storage_Upyun implements Jinyu_Storage_Adapter {
 					CURLOPT_CONNECTTIMEOUT => 15,
 				)
 			);
-			$handles[] = array( 'ch' => $ch, 'index' => $i );
+			$handles[] = array(
+				'ch' => $ch,
+				'index' => $i,
+			);
 		}
 		$ok = jinyu_storage_run_multi( $handles, $concurrency );
 		foreach ( $ok as $idx => $v ) {
@@ -702,7 +737,7 @@ class Jinyu_Storage_Upyun implements Jinyu_Storage_Adapter {
 			return false;
 		}
 		$code = (int) wp_remote_retrieve_response_code( $res );
-		return $code === 200 || $code === 204 || $code === 404;
+		return 200 === $code || 204 === $code || 404 === $code;
 	}
 
 	public function test( $prefix = '' ) {
@@ -721,7 +756,7 @@ class Jinyu_Storage_Upyun implements Jinyu_Storage_Adapter {
 		}
 		$back = $this->get( $key );
 		$this->delete( $key );
-		return ( $back !== false ) ? true : '上传成功但回读验证失败';
+		return ( false !== $back ) ? true : '上传成功但回读验证失败';
 	}
 
 	public function list_keys( $prefix = '' ) {
@@ -742,14 +777,14 @@ class Jinyu_Storage_Upyun implements Jinyu_Storage_Adapter {
 		$iter  = '';
 		$pages = 0;
 		do {
-			$url     = $this->base() . '/' . ( $dir !== '' ? $dir . '/' : '' );
+			$url     = $this->base() . '/' . ( '' !== $dir ? $dir . '/' : '' );
 			$headers = array(
 				'Authorization' => $this->auth(),
 				'Date'          => $this->date_header(),
 				'Accept'        => 'application/json',
 				'x-list-limit'  => '100',
 			);
-			if ( $iter !== '' ) {
+			if ( '' !== $iter ) {
 				$headers['x-list-iter'] = $iter;
 			}
 			$res = wp_remote_get(
@@ -769,10 +804,10 @@ class Jinyu_Storage_Upyun implements Jinyu_Storage_Adapter {
 			}
 			foreach ( (array) ( $data['files'] ?? array() ) as $f ) {
 				$name = (string) ( $f['name'] ?? '' );
-				if ( $name === '' ) {
+				if ( '' === $name ) {
 					continue;
 				}
-				$full = ( $dir !== '' ? $dir . '/' : '' ) . $name;
+				$full = ( '' !== $dir ? $dir . '/' : '' ) . $name;
 				if ( ( $f['type'] ?? '' ) === 'folder' ) {
 					$keys = array_merge( $keys, $this->list_dir( $full, $depth + 1 ) );
 				} else {
@@ -780,13 +815,14 @@ class Jinyu_Storage_Upyun implements Jinyu_Storage_Adapter {
 				}
 			}
 			$iter = (string) ( $data['iter'] ?? '' );
-			$pages++;
-		} while ( $iter !== '' && $pages < 200 );
+			++$pages;
+		} while ( '' !== $iter && $pages < 200 );
 		return $keys;
 	}
 }
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * 一次性迁移：主题 JINYU_OPT → 本插件独立选项 jinyu_companion_settings
  * 插件加载期主题函数尚不存在（WP 先加载插件后加载主题），故挂 after_setup_theme 执行。
  * 迁移后存储配置完全归本插件所有，主题设置页的导入 / 重置不再影响对象存储。
@@ -829,7 +865,8 @@ if ( ! function_exists( 'jinyu_storage_maybe_migrate' ) ) {
 	jinyu_storage_maybe_migrate();
 }
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * 配置读取
  * ─────────────────────────────────────────────────────────── */
 function jinyu_storage_config( $input = null ) {
@@ -905,19 +942,20 @@ function jinyu_storage_validate_cfg( $cfg ) {
 	$presets = jinyu_storage_s3_vendor_presets();
 	$rule    = $presets[ $vendor ] ?? $presets['generic'];
 	$region  = trim( (string) ( $cfg['region'] ?? '' ) );
-	if ( $region !== '' && $rule['region_regex'] !== '' && ! preg_match( $rule['region_regex'], $region ) ) {
+	if ( '' !== $region && $rule['region_regex'] !== '' && ! preg_match( $rule['region_regex'], $region ) ) {
 		return sprintf(
 			/* translators: 1: 厂商名 2: 格式说明 3: 示例 */
 			__( '%1$s 的 Region 格式不正确：应为「%2$s」（示例：%3$s）', 'jinyu-theme-companion' ),
 			$rule['label'],
-			( $vendor === 'oss' ) ? 'oss-地域-编号（必须含 oss- 前缀）' : '地域标识（小写字母、数字、连字符）',
+			( 'oss' === $vendor ) ? 'oss-地域-编号（必须含 oss- 前缀）' : '地域标识（小写字母、数字、连字符）',
 			$rule['region_example']
 		);
 	}
 	return true;
 }
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * 加速域名 URL 重写（仅前台；优先级 5 先于主题 cdn_url）
  * ─────────────────────────────────────────────────────────── */
 if ( ! function_exists( 'jinyu_storage_rewrite_active' ) ) {
@@ -949,7 +987,7 @@ add_filter(
 			// URL 也带上前缀，确保「加速域名(绑桶根) + 前缀 + 相对路径」与桶内文件一一对应，避免 404。
 			$rel    = ltrim( substr( $url, strlen( $base ) ), '/' );
 			$prefix = trim( (string) $cfg['prefix'], '/' );
-			$path   = ( $prefix !== '' ? $prefix . '/' : '' ) . $rel;
+			$path   = ( '' !== $prefix ? $prefix . '/' : '' ) . $rel;
 			return rtrim( $cfg['domain'], '/' ) . '/' . $path;
 		}
 		return $url;
@@ -957,7 +995,8 @@ add_filter(
 	5
 );
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * 新附件自动同步到存储
  * ─────────────────────────────────────────────────────────── */
 add_action(
@@ -1005,7 +1044,10 @@ add_action(
 					continue;
 				}
 				$rel = wp_normalize_path( ltrim( str_replace( $basedir, '', $f ), '/' ) );
-				$items[] = array( 'local' => $f, 'key' => $prefix . $rel );
+				$items[] = array(
+					'local' => $f,
+					'key' => $prefix . $rel,
+				);
 			}
 		}
 		// curl_multi 并发上传（8 路），多尺寸图片不再逐个串行等待。
@@ -1015,7 +1057,8 @@ add_action(
 	}
 );
 
-/* 删除媒体时同步删除云端对象：delete_attachment 在本地文件删除前触发，
+/*
+删除媒体时同步删除云端对象：delete_attachment 在本地文件删除前触发，
  * 此时可完整取到主文件与全部尺寸的相对路径，远端 key 与推送映射一致。 */
 add_action(
 	'delete_attachment',
@@ -1046,14 +1089,15 @@ add_action(
 		}
 		foreach ( array_unique( $files ) as $f ) {
 			$rel = wp_normalize_path( ltrim( str_replace( $basedir, '', $f ), '/' ) );
-			if ( $rel !== '' ) {
+			if ( '' !== $rel ) {
 				$ad->delete( $prefix . $rel );
 			}
 		}
 	}
 );
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * 任务表（推送/拉回进度落 DB，避免 Memcached 下 transient 不可靠）
  * ─────────────────────────────────────────────────────────── */
 function jinyu_storage_table() {
@@ -1117,7 +1161,7 @@ function jinyu_storage_maybe_cleanup_tasks(): void {
 	global $wpdb;
 	// phpcs:disable PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.NotPrepared
 	$wpdb->query(
-		"DELETE FROM " . jinyu_storage_table() . "
+		'DELETE FROM ' . jinyu_storage_table() . "
 		 WHERE status IN ('done','failed')
 		   AND COALESCE(updated_at, created_at) < DATE_SUB(NOW(), INTERVAL 7 DAY)"
 	);
@@ -1138,7 +1182,7 @@ function jinyu_storage_parse_list( $raw ) {
 	foreach ( $parts as $p ) {
 		$p = trim( (string) $p );
 		$p = ltrim( $p, '.' );
-		if ( $p !== '' ) {
+		if ( '' !== $p ) {
 			$out[] = strtolower( $p );
 		}
 	}
@@ -1153,9 +1197,20 @@ function jinyu_storage_excluded_exts() {
 	$blocked = array(
 		'svg', // 矢量含脚本风险，默认不推
 		// 服务端脚本
-		'php', 'phtml', 'phar', 'py', 'pl', 'rb', 'cgi', 'asp', 'aspx', 'jsp',
+		'php',
+		'phtml',
+		'phar',
+		'py',
+		'pl',
+		'rb',
+		'cgi',
+		'asp',
+		'aspx',
+		'jsp',
 		// 配置
-		'htaccess', 'web.config', 'user.ini',
+		'htaccess',
+		'web.config',
+		'user.ini',
 	);
 	$user = jinyu_storage_parse_list( jinyu_companion_get_option( 'storage_exclude_exts', '' ) );
 	return array_values( array_unique( array_merge( $blocked, $user ) ) );
@@ -1197,24 +1252,72 @@ function jinyu_storage_scan_uploads() {
 	// 默认始终同步：前端核心静态资源（图片 / 字体 / 样式脚本）
 	$default_allowed = array(
 		// 图片
-		'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'tiff', 'tif', 'ico',
+		'jpg',
+		'jpeg',
+		'png',
+		'gif',
+		'webp',
+		'avif',
+		'bmp',
+		'tiff',
+		'tif',
+		'ico',
 		// 字体
-		'woff', 'woff2', 'ttf', 'otf', 'eot',
+		'woff',
+		'woff2',
+		'ttf',
+		'otf',
+		'eot',
 		// 样式 / 脚本
-		'css', 'js',
+		'css',
+		'js',
 	);
 	// 需用户勾选才同步：非媒体静态资源
 	$extra_allowed = array(
 		// 音视频
-		'mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'opus',
-		'mp4', 'webm', 'mov', 'avi', 'wmv', 'mkv', 'm4v', 'ogv', 'flv',
+		'mp3',
+		'wav',
+		'ogg',
+		'm4a',
+		'aac',
+		'flac',
+		'opus',
+		'mp4',
+		'webm',
+		'mov',
+		'avi',
+		'wmv',
+		'mkv',
+		'm4v',
+		'ogv',
+		'flv',
 		// 文档 / 办公
-		'pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx',
-		'odt', 'ods', 'odp', 'rtf', 'txt', 'csv',
+		'pdf',
+		'doc',
+		'docx',
+		'ppt',
+		'pptx',
+		'xls',
+		'xlsx',
+		'odt',
+		'ods',
+		'odp',
+		'rtf',
+		'txt',
+		'csv',
 		// 压缩包
-		'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz',
+		'zip',
+		'rar',
+		'7z',
+		'tar',
+		'gz',
+		'bz2',
+		'xz',
 		// 数据 / 标记
-		'json', 'xml', 'yaml', 'yml',
+		'json',
+		'xml',
+		'yaml',
+		'yml',
 	);
 
 	$allowed = array_flip( $default_allowed );
@@ -1283,7 +1386,8 @@ function jinyu_storage_safe_rel( string $rel ): string {
 	return $rel;
 }
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * 服务端批处理核心（AJAX 与 CLI 自愈共用）
  * 处理一个批次并推进 done；无活跃任务返回 null，出错返回 false。
  * 读已保存的主题配置，故可在无浏览器（cron/CLI）上下文独立运行。
@@ -1307,7 +1411,7 @@ function jinyu_storage_process_one( $type ) {
 		return null;
 	}
 
-	$data  = json_decode( $task->data, true );
+	$data = json_decode( $task->data, true );
 	if ( ! is_array( $data ) ) {
 		$data = array();
 	}
@@ -1319,18 +1423,21 @@ function jinyu_storage_process_one( $type ) {
 	$prefix  = rtrim( $cfg['prefix'], '/' ) . '/';
 	$errors  = 0;
 
-	if ( $type === 'push' ) {
+	if ( 'push' === $type ) {
 		$items = array();
 		for ( $i = $done; $i < $end; $i++ ) {
 			// 防目录穿越：任务数据被污染时不把读写路径引出 uploads（与 pull 侧同一守卫）
 			$rel = jinyu_storage_safe_rel( (string) $data[ $i ] );
 			if ( '' === $rel ) {
-				$done++;
+				++$done;
 				continue;
 			}
 			$local = $basedir . '/' . $rel;
 			if ( is_file( $local ) ) {
-				$items[] = array( 'local' => $local, 'key' => $prefix . $rel );
+				$items[] = array(
+					'local' => $local,
+					'key' => $prefix . $rel,
+				);
 			}
 		}
 		/**
@@ -1353,7 +1460,7 @@ function jinyu_storage_process_one( $type ) {
 		$results = $ad->put_multi( $items, 16 );
 		foreach ( $items as $k => $it ) {
 			if ( empty( $results[ $k ] ) ) {
-				$errors++;
+				++$errors;
 			} elseif ( jinyu_companion_is_checked( 'storage_delete_local' ) && jinyu_is_storage_enabled() && jinyu_storage_rewrite_active() ) {
 				@wp_delete_file( $it['local'] );
 			}
@@ -1365,39 +1472,51 @@ function jinyu_storage_process_one( $type ) {
 			$key = $data[ $i ];
 			// prefix 为空时 substr 会剥掉 key 首字符：先确认前缀命中再剥，未命中原样返回。
 			$rel = jinyu_storage_safe_rel( (string) ( 0 === strpos( $key, $prefix ) ? substr( $key, strlen( $prefix ) ) : $key ) );
-			if ( $rel === '' ) {
-				$done++;
+			if ( '' === $rel ) {
+				++$done;
 				continue;
 			}
 			$local = $basedir . '/' . $rel;
 			wp_mkdir_p( dirname( $local ) );
 			$body = $ad->get( $key );
-			if ( $body !== false && $body !== '' ) {
+			if ( false !== $body && '' !== $body ) {
 				if ( @file_put_contents( $local, $body ) === false ) {
-					$errors++;
+					++$errors;
 				}
 			} else {
-				$errors++;
+				++$errors;
 			}
-			$done++;
+			++$done;
 		}
 	}
 
 	$status = ( $done >= $total ) ? 'done' : 'running';
 	$msg    = ( $errors > 0 )
-// translators: Placeholder values are substituted at runtime.
+	// translators: Placeholder values are substituted at runtime.
 		? sprintf( __( '已处理 %1$d/%2$d，%3$d 个失败', 'jinyu-theme-companion' ), $done, $total, $errors )
-// translators: Placeholder values are substituted at runtime.
+	// translators: Placeholder values are substituted at runtime.
 		: sprintf( __( '已处理 %1$d/%2$d', 'jinyu-theme-companion' ), $done, $total );
 	$wpdb->update(
 		$table,
-		array( 'done' => $done, 'status' => $status, 'message' => $msg, 'updated_at' => current_time( 'mysql' ) ),
+		array(
+			'done' => $done,
+			'status' => $status,
+			'message' => $msg,
+			'updated_at' => current_time( 'mysql' ),
+        ),
 		array( 'id' => $task->id )
 	);
-	return array( 'done' => $done, 'total' => $total, 'errors' => $errors, 'status' => $status, 'message' => $msg );
+	return array(
+		'done' => $done,
+		'total' => $total,
+		'errors' => $errors,
+		'status' => $status,
+		'message' => $msg,
+	);
 }
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * AJAX：测试连接
  * ─────────────────────────────────────────────────────────── */
 add_action(
@@ -1412,7 +1531,7 @@ add_action(
 			wp_send_json_error( __( '请填写完整的存储配置（服务商 / 桶 / AccessKey / Secret）', 'jinyu-theme-companion' ) );
 		}
 		$validate = jinyu_storage_validate_cfg( $cfg );
-		if ( $validate !== true ) {
+		if ( true !== $validate ) {
 			wp_send_json_error( $validate );
 		}
 		$ad = Jinyu_Storage_Factory::make( $cfg );
@@ -1420,14 +1539,15 @@ add_action(
 			wp_send_json_error( __( '不支持的存储服务商', 'jinyu-theme-companion' ) );
 		}
 		$result = $ad->test( rtrim( $cfg['prefix'], '/' ) . '/' );
-		if ( $result === true ) {
+		if ( true === $result ) {
 			wp_send_json_success( __( '连接成功：已上传并删除测试文件', 'jinyu-theme-companion' ) );
 		}
 		wp_send_json_error( __( '连接失败：', 'jinyu-theme-companion' ) . $result );
 	}
 );
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * AJAX：一键推送（分批处理，进度落 DB）
  * ─────────────────────────────────────────────────────────── */
 add_action(
@@ -1445,7 +1565,7 @@ add_action(
 			wp_send_json_error( __( '请先填写并保存存储配置', 'jinyu-theme-companion' ) );
 		}
 		$validate = jinyu_storage_validate_cfg( $cfg );
-		if ( $validate !== true ) {
+		if ( true !== $validate ) {
 			wp_send_json_error( $validate );
 		}
 		$ad = Jinyu_Storage_Factory::make( $cfg );
@@ -1457,11 +1577,18 @@ add_action(
 		$task = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE type=%s AND status IN ('running','pending','stopped') ORDER BY id DESC LIMIT 1", 'push' ) );
 		if ( $task && $task->status === 'stopped' ) {
 			// 复活为 running，后续批次回写（WHERE status='running'）才能生效
-			$wpdb->update( $table, array( 'status' => 'running', 'updated_at' => current_time( 'mysql' ) ), array( 'id' => $task->id ) );
+			$wpdb->update(
+                $table,
+                array(
+					'status' => 'running',
+					'updated_at' => current_time( 'mysql' ),
+                ),
+                array( 'id' => $task->id )
+            );
 			$task->status = 'running';
 		}
 		if ( ! $task ) {
-			$list  = jinyu_storage_scan_uploads();
+			$list = jinyu_storage_scan_uploads();
 			$wpdb->insert(
 				$table,
 				array(
@@ -1484,7 +1611,7 @@ add_action(
 			);
 		}
 
-		$data  = json_decode( $task->data, true );
+		$data = json_decode( $task->data, true );
 		if ( ! is_array( $data ) ) {
 			$data = array();
 		}
@@ -1504,7 +1631,10 @@ add_action(
 			}
 			$local = $basedir . '/' . $rel;
 			if ( is_file( $local ) ) {
-				$items[] = array( 'local' => $local, 'key' => $prefix . $rel );
+				$items[] = array(
+					'local' => $local,
+					'key' => $prefix . $rel,
+				);
 			}
 		}
 		// 批内并行上传（并发上限 16，curl_multi），显著缩短大批量推送耗时
@@ -1521,21 +1651,38 @@ add_action(
 		$done   = $end;
 		$status = ( $done >= $total ) ? 'done' : 'running';
 		$msg    = ( $errors > 0 )
-// translators: Placeholder values are substituted at runtime.
+		// translators: Placeholder values are substituted at runtime.
 			? sprintf( __( '已处理 %1$d/%2$d，%3$d 个失败', 'jinyu-theme-companion' ), $done, $total, $errors )
-// translators: Placeholder values are substituted at runtime.
+		// translators: Placeholder values are substituted at runtime.
 			: sprintf( __( '已处理 %1$d/%2$d', 'jinyu-theme-companion' ), $done, $total );
 		// 仅当任务仍是 running 才回写：用户点「停止」后，在途批次不得把状态改回 running（否则下次进入会误续跑）。
 		$wpdb->update(
 			$table,
-			array( 'done' => $done, 'status' => $status, 'message' => $msg, 'updated_at' => current_time( 'mysql' ) ),
-			array( 'id' => $task->id, 'status' => 'running' )
+			array(
+				'done' => $done,
+				'status' => $status,
+				'message' => $msg,
+				'updated_at' => current_time( 'mysql' ),
+            ),
+			array(
+				'id' => $task->id,
+				'status' => 'running',
+            )
 		);
-		wp_send_json_success( array( 'done' => $done, 'total' => $total, 'errors' => $errors, 'status' => $status, 'message' => $msg ) );
+		wp_send_json_success(
+            array(
+				'done' => $done,
+				'total' => $total,
+				'errors' => $errors,
+				'status' => $status,
+				'message' => $msg,
+            )
+        );
 	}
 );
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * AJAX：一键拉回（先列出远端，再分批下载）
  * ─────────────────────────────────────────────────────────── */
 add_action(
@@ -1560,7 +1707,14 @@ add_action(
 		// 含 stopped：停止后再点同一按钮=从上次进度续传。
 		$task = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE type=%s AND status IN ('running','pending','stopped') ORDER BY id DESC LIMIT 1", 'pull' ) );
 		if ( $task && $task->status === 'stopped' ) {
-			$wpdb->update( $table, array( 'status' => 'running', 'updated_at' => current_time( 'mysql' ) ), array( 'id' => $task->id ) );
+			$wpdb->update(
+                $table,
+                array(
+					'status' => 'running',
+					'updated_at' => current_time( 'mysql' ),
+                ),
+                array( 'id' => $task->id )
+            );
 			$task->status = 'running';
 		}
 		if ( ! $task ) {
@@ -1588,7 +1742,7 @@ add_action(
 			);
 		}
 
-		$data  = json_decode( $task->data, true );
+		$data = json_decode( $task->data, true );
 		if ( ! is_array( $data ) ) {
 			$data = array();
 		}
@@ -1603,14 +1757,14 @@ add_action(
 			$key = $data[ $i ];
 			// prefix 为空时 substr 会剥掉 key 首字符：先确认前缀命中再剥，未命中原样返回。
 			$rel = jinyu_storage_safe_rel( (string) ( 0 === strpos( $key, $prefix ) ? substr( $key, strlen( $prefix ) ) : $key ) );
-			if ( $rel === '' ) {
+			if ( '' === $rel ) {
 				$done++;
 				continue;
 			}
 			$local = $basedir . '/' . $rel;
 			wp_mkdir_p( dirname( $local ) );
 			$body = $ad->get( $key );
-			if ( $body !== false && $body !== '' ) {
+			if ( false !== $body && '' !== $body ) {
 				if ( @file_put_contents( $local, $body ) === false ) {
 					$errors++;
 				}
@@ -1621,21 +1775,38 @@ add_action(
 		}
 		$status = ( $done >= $total ) ? 'done' : 'running';
 		$msg    = ( $errors > 0 )
-// translators: Placeholder values are substituted at runtime.
+		// translators: Placeholder values are substituted at runtime.
 			? sprintf( __( '已拉回 %1$d/%2$d，%3$d 个失败', 'jinyu-theme-companion' ), $done, $total, $errors )
-// translators: Placeholder values are substituted at runtime.
+		// translators: Placeholder values are substituted at runtime.
 			: sprintf( __( '已拉回 %1$d/%2$d', 'jinyu-theme-companion' ), $done, $total );
 		// 仅当任务仍是 running 才回写：停止后在途批次不得复活任务。
 		$wpdb->update(
 			$table,
-			array( 'done' => $done, 'status' => $status, 'message' => $msg, 'updated_at' => current_time( 'mysql' ) ),
-			array( 'id' => $task->id, 'status' => 'running' )
+			array(
+				'done' => $done,
+				'status' => $status,
+				'message' => $msg,
+				'updated_at' => current_time( 'mysql' ),
+            ),
+			array(
+				'id' => $task->id,
+				'status' => 'running',
+            )
 		);
-		wp_send_json_success( array( 'done' => $done, 'total' => $total, 'errors' => $errors, 'status' => $status, 'message' => $msg ) );
+		wp_send_json_success(
+            array(
+				'done' => $done,
+				'total' => $total,
+				'errors' => $errors,
+				'status' => $status,
+				'message' => $msg,
+            )
+        );
 	}
 );
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * AJAX：任务进度查询
  * ─────────────────────────────────────────────────────────── */
 add_action(
@@ -1664,7 +1835,8 @@ add_action(
 	}
 );
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * AJAX：停止批量任务（push/pull/sync 标记 stopped）
  * 在途批次回写带 status='running' 条件，不会复活已停止的任务。
  * ─────────────────────────────────────────────────────────── */
@@ -1689,7 +1861,8 @@ add_action(
 	}
 );
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * AJAX：同步指定资源（一个或多个，textarea 每行一个路径或本站 URL）
  * 大列表落库为 sync 任务，每批 50 个、并发 16，前端自动续批；
  * 中途关闭浏览器进度不丢，再次进入由 status 检测并带 sync_continue=1 续跑。
@@ -1718,7 +1891,15 @@ add_action(
 			// 续跑模式：接续最近一个未完成的 sync 任务
 			$task = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE type=%s AND status IN ('running','pending') ORDER BY id DESC LIMIT 1", 'sync' ) );
 			if ( ! $task ) {
-				wp_send_json_success( array( 'done' => 0, 'total' => 0, 'errors' => 0, 'status' => 'done', 'message' => __( '没有进行中的同步任务', 'jinyu-theme-companion' ) ) );
+				wp_send_json_success(
+                    array(
+						'done' => 0,
+						'total' => 0,
+						'errors' => 0,
+						'status' => 'done',
+						'message' => __( '没有进行中的同步任务', 'jinyu-theme-companion' ),
+                    )
+                );
 			}
 			$items = json_decode( (string) $task->data, true );
 			if ( ! is_array( $items ) ) {
@@ -1754,7 +1935,7 @@ add_action(
 					}
 				}
 				$rel = ltrim( $rel, '/' );
-				if ( $rel === '' ) {
+				if ( '' === $rel ) {
 					continue;
 				}
 				$local = $basedir . '/' . $rel;
@@ -1764,7 +1945,10 @@ add_action(
 					$bad[] = $rel;
 					continue;
 				}
-				$items[] = array( 'local' => $real, 'key' => $prefix . $rel );
+				$items[] = array(
+					'local' => $real,
+					'key' => $prefix . $rel,
+				);
 			}
 			if ( empty( $items ) ) {
 				wp_send_json_error( __( '没有找到有效文件：', 'jinyu-theme-companion' ) . implode( '、', array_slice( $bad, 0, 5 ) ) );
@@ -1782,7 +1966,12 @@ add_action(
 					'updated_at' => current_time( 'mysql' ),
 				)
 			);
-			$task = (object) array( 'id' => $wpdb->insert_id, 'total' => count( $items ), 'done' => 0, 'status' => 'running' );
+			$task = (object) array(
+				'id' => $wpdb->insert_id,
+				'total' => count( $items ),
+				'done' => 0,
+				'status' => 'running',
+			);
 		}
 
 		$total = (int) $task->total;
@@ -1805,22 +1994,38 @@ add_action(
 		}
 		$done   = $end;
 		$status = ( $done >= $total ) ? 'done' : 'running';
-// translators: Placeholder values are substituted at runtime.
-		$msg    = sprintf( __( '已同步 %1$d/%2$d', 'jinyu-theme-companion' ), $done, $total );
+		// translators: Placeholder values are substituted at runtime.
+		$msg = sprintf( __( '已同步 %1$d/%2$d', 'jinyu-theme-companion' ), $done, $total );
 		if ( $errors > 0 ) {
-// translators: Placeholder values are substituted at runtime.
+			// translators: Placeholder values are substituted at runtime.
 			$msg .= '，' . sprintf( __( '本批失败 %1$d 个：%2$s', 'jinyu-theme-companion' ), $errors, implode( '、', array_slice( $failed, 0, 5 ) ) );
-		} elseif ( $status === 'done' ) {
-// translators: Placeholder values are substituted at runtime.
+		} elseif ( 'done' === $status ) {
+			// translators: Placeholder values are substituted at runtime.
 			$msg = sprintf( __( '已同步 %d 个文件到云端', 'jinyu-theme-companion' ), $done );
 		}
 		// 仅当任务仍是 running 才回写：停止后在途批次不得复活任务。
 		$wpdb->update(
 			$table,
-			array( 'done' => $done, 'status' => $status, 'message' => $msg, 'updated_at' => current_time( 'mysql' ) ),
-			array( 'id' => $task->id, 'status' => 'running' )
+			array(
+				'done' => $done,
+				'status' => $status,
+				'message' => $msg,
+				'updated_at' => current_time( 'mysql' ),
+            ),
+			array(
+				'id' => $task->id,
+				'status' => 'running',
+            )
 		);
-		wp_send_json_success( array( 'done' => $done, 'total' => $total, 'errors' => $errors, 'status' => $status, 'message' => $msg ) );
+		wp_send_json_success(
+            array(
+				'done' => $done,
+				'total' => $total,
+				'errors' => $errors,
+				'status' => $status,
+				'message' => $msg,
+            )
+        );
 	}
 );
 
@@ -1881,18 +2086,19 @@ if ( ! function_exists( 'jinyu_storage_sync_theme_domain' ) ) {
 			$opts = array();
 		}
 		$domain = trim( (string) $domain );
-		if ( $domain !== '' && ! preg_match( '#^https?://#i', $domain ) ) {
+		if ( '' !== $domain && ! preg_match( '#^https?://#i', $domain ) ) {
 			$domain = 'https://' . $domain;
 		}
 		// 仅改动这两个键，敏感字段（storage_secret 等）原样保留。
 		$opts['storage_domain'] = $domain;
 		$p = trim( (string) $prefix, '/' );
-		$opts['storage_prefix'] = $p !== '' ? $p . '/' : '';
+		$opts['storage_prefix'] = '' !== $p ? $p . '/' : '';
 		update_option( $opt_key, $opts );
 	}
 }
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * AJAX：一键改加速域名（保存 storage_domain + 清缓存 + 改写正文链接 + 同步主题选项）
  * ─────────────────────────────────────────────────────────── */
 add_action(
@@ -1906,10 +2112,10 @@ add_action(
 		$s                   = jinyu_companion_get_settings();
 		$old_domain          = isset( $s['storage_domain'] ) ? trim( (string) $s['storage_domain'] ) : '';
 		// 输入框为空时回退已保存的域名（复原暂停后再开启的场景，配置保留所以无需重填）；两者皆空才拒绝。
-		if ( $domain === '' ) {
+		if ( '' === $domain ) {
 			$domain = $old_domain;
 		}
-		if ( $domain === '' ) {
+		if ( '' === $domain ) {
 			wp_send_json_error( __( '请先在上方填写加速域名', 'jinyu-theme-companion' ) );
 		}
 		if ( ! preg_match( '#^https?://#i', $domain ) ) {
@@ -1918,13 +2124,13 @@ add_action(
 		$s['storage_domain']  = $domain;
 		$s['storage_rewrite'] = '1'; // 一键替换 = 开启 URL 重写
 		jinyu_companion_save_settings( $s );
-		if ( $domain !== '' ) {
+		if ( '' !== $domain ) {
 			$base         = rtrim( wp_upload_dir()['baseurl'], '/' ) . '/';
 			$prefix       = trim( (string) ( $s['storage_prefix'] ?? '' ), '/' );
-			$cdn_marker   = rtrim( $domain, '/' ) . '/' . ( $prefix !== '' ? $prefix . '/' : '' );
+			$cdn_marker   = rtrim( $domain, '/' ) . '/' . ( '' !== $prefix ? $prefix . '/' : '' );
 			// 先把旧域名残留的正文链接归位本地，再整体切到新域名，避免切换后留下孤儿旧 CDN 链接。
-			if ( $old_domain !== '' && $old_domain !== $domain ) {
-				$old_cdn = rtrim( $old_domain, '/' ) . '/' . ( $prefix !== '' ? $prefix . '/' : '' );
+			if ( '' !== $old_domain && $old_domain !== $domain ) {
+				$old_cdn = rtrim( $old_domain, '/' ) . '/' . ( '' !== $prefix ? $prefix . '/' : '' );
 				jinyu_storage_rewrite_content_links( $old_cdn, $base );
 			}
 			jinyu_storage_rewrite_content_links( $base, $cdn_marker );
@@ -1936,17 +2142,18 @@ add_action(
 		}
 		// 必须清 Memcached：jinyu_options 是 autoload 选项，被对象缓存缓存，
 		// 不清则改完 DB 前台仍读旧 CDN（这正是早期「点了没用」的缓存陷阱）。
-		if ( function_exists( 'jyc_perf_flush_memcached' ) ) {
-			jyc_perf_flush_memcached();
+		if ( function_exists( 'jinyu_perf_flush_memcached' ) ) {
+			jinyu_perf_flush_memcached();
 		}
-		if ( function_exists( 'jyc_perf_flush_page_cache' ) ) {
-			jyc_perf_flush_page_cache();
+		if ( function_exists( 'jinyu_perf_flush_page_cache' ) ) {
+			jinyu_perf_flush_page_cache();
 		}
 		wp_send_json_success( __( '加速域名已更新并刷新缓存，正文与附件链接已切换', 'jinyu-theme-companion' ) );
 	}
 );
 
-/* ───────────────────────────────────────────────────────────
+/*
+───────────────────────────────────────────────────────────
  * AJAX：停用加速域名（回退本地 uploads + 清缓存 + 反向改写正文链接）——图片异常时一键止血
  * ─────────────────────────────────────────────────────────── */
 add_action(
@@ -1958,10 +2165,10 @@ add_action(
 		}
 		$s          = jinyu_companion_get_settings();
 		$old_domain = isset( $s['storage_domain'] ) ? trim( (string) $s['storage_domain'] ) : '';
-		if ( $old_domain !== '' ) {
+		if ( '' !== $old_domain ) {
 			$base        = rtrim( wp_upload_dir()['baseurl'], '/' ) . '/';
 			$prefix      = trim( (string) ( $s['storage_prefix'] ?? '' ), '/' );
-			$cdn_marker  = rtrim( $old_domain, '/' ) . '/' . ( $prefix !== '' ? $prefix . '/' : '' );
+			$cdn_marker  = rtrim( $old_domain, '/' ) . '/' . ( '' !== $prefix ? $prefix . '/' : '' );
 			jinyu_storage_rewrite_content_links( $cdn_marker, $base );
 		}
 		// 只暂停 URL 重写，已填的加速域名保留——恢复无需重新填写，再点「一键替换」即可。
@@ -1974,11 +2181,11 @@ add_action(
 		}
 		// 必须清 Memcached：jinyu_options 是 autoload 选项，被对象缓存缓存，
 		// 不清则改完 DB 前台仍读旧 CDN（这正是早期「点了没用」的缓存陷阱）。
-		if ( function_exists( 'jyc_perf_flush_memcached' ) ) {
-			jyc_perf_flush_memcached();
+		if ( function_exists( 'jinyu_perf_flush_memcached' ) ) {
+			jinyu_perf_flush_memcached();
 		}
-		if ( function_exists( 'jyc_perf_flush_page_cache' ) ) {
-			jyc_perf_flush_page_cache();
+		if ( function_exists( 'jinyu_perf_flush_page_cache' ) ) {
+			jinyu_perf_flush_page_cache();
 		}
 		wp_send_json_success( __( '已暂停加速域名重写（域名配置保留），正文与附件链接回退本地并刷新缓存；恢复请再点「一键替换为 CDN 链接」', 'jinyu-theme-companion' ) );
 	}

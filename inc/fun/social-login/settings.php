@@ -3,7 +3,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/* ==========================================================================
+/*
+==========================================================================
  * 后台：第三方登录（社交登录）设置面板
  * 作为配套插件设置面板「第三方登录」分区（pane-social）渲染。
  * 不单独挂菜单、不自带表单：复用主设置表单（#jyc-form）的 nonce 与整表提交，
@@ -109,7 +110,17 @@ function jinyu_sl_process_post(): void {
 		}
 	}
 
-	update_option( JINYU_SL_OPT, [ 'enable' => $enable, 'accounts' => $accounts, 'redirect_uri' => $ruri, 'allow_register' => $allow_register, 'role' => $role ], true );
+	update_option(
+        JINYU_SL_OPT,
+        [
+			'enable' => $enable,
+			'accounts' => $accounts,
+			'redirect_uri' => $ruri,
+			'allow_register' => $allow_register,
+			'role' => $role,
+		],
+		true
+    );
 }
 
 /** 判定提交值是否为「已设置，留空保持不变」的掩码占位（••••••••…）。 */
@@ -235,11 +246,11 @@ function jinyu_sl_settings_pane(): void {
 				// 让 client_id 独占一整行，否则行尾会留下一个空白格；字段总数 ≥4 的卡片在宽屏独占一整行。
 				$fields_total = 1 + ( $uses_cs ? 1 : 0 ) + count( $prov->config_fields() );
 				$textarea_num = 0;
-				foreach ( $prov->config_fields() as $f ) {
-					if ( 'textarea' === ( $f['type'] ?? '' ) ) {
-						++$textarea_num;
-					}
+			foreach ( $prov->config_fields() as $f ) {
+				if ( 'textarea' === ( $f['type'] ?? '' ) ) {
+					++$textarea_num;
 				}
+			}
 				$cid_full = 1 === ( $fields_total - $textarea_num ) % 2;
 				$wide     = $fields_total >= 4;
 			?>
@@ -255,27 +266,42 @@ function jinyu_sl_settings_pane(): void {
 
 				<div class="jyc-sl-card-bd">
 					<div class="jyc-sl-fields">
-						<label class="jyc-fl<?php echo $cid_full ? ' jyc-full' : ''; ?>"><span class="jyc-sl-lb"><?php echo esc_html__( 'App ID / Client ID', 'jinyu-theme-companion' ); ?><?php if ( $configured || '' !== $cid ) : ?><em class="jyc-sl-saved"><?php echo esc_html__( '已填写', 'jinyu-theme-companion' ); ?></em><?php endif; ?></span>
+						<label class="jyc-fl<?php echo $cid_full ? ' jyc-full' : ''; ?>"><span class="jyc-sl-lb"><?php echo esc_html__( 'App ID / Client ID', 'jinyu-theme-companion' ); ?>
+                        <?php
+                        if ( $configured || '' !== $cid ) :
+							?>
+                            <em class="jyc-sl-saved"><?php echo esc_html__( '已填写', 'jinyu-theme-companion' ); ?></em><?php endif; ?></span>
 							<input class="jyc-inp jyc-inp-mono" type="text" name="client_id_<?php echo esc_attr( $p ); ?>" value="<?php echo esc_attr( $cid ); ?>" placeholder="—" spellcheck="false" autocomplete="off">
 						</label>
 						<?php if ( $uses_cs ) : ?>
-						<label class="jyc-fl"><span class="jyc-sl-lb"><?php echo esc_html__( 'App Key / Client Secret', 'jinyu-theme-companion' ); ?><?php if ( $sec_enc ) : ?><em class="jyc-sl-saved"><?php echo esc_html__( '已保存', 'jinyu-theme-companion' ); ?></em><?php endif; ?></span>
+						<label class="jyc-fl"><span class="jyc-sl-lb"><?php echo esc_html__( 'App Key / Client Secret', 'jinyu-theme-companion' ); ?>
+							<?php
+							if ( $sec_enc ) :
+								?>
+                            <em class="jyc-sl-saved"><?php echo esc_html__( '已保存', 'jinyu-theme-companion' ); ?></em><?php endif; ?></span>
 							<input class="jyc-inp" type="password" name="client_secret_<?php echo esc_attr( $p ); ?>" value="" autocomplete="new-password" placeholder="<?php echo $sec_enc ? esc_attr__( '••••••••（留空保持不变）', 'jinyu-theme-companion' ) : esc_attr__( '—', 'jinyu-theme-companion' ); ?>">
 						</label>
-						<?php if ( $sec_enc ) : ?>
+							<?php if ( $sec_enc ) : ?>
 							<input type="hidden" name="client_secret_old_<?php echo esc_attr( $p ); ?>" value="<?php echo esc_attr( $sec_enc ); ?>">
 						<?php endif; ?>
 						<?php endif; ?>
 
 						<?php foreach ( $prov->config_fields() as $f ) : ?>
-							<?php if ( 'client_secret' === $f['id'] ) continue; ?>
+							<?php
+                            if ( 'client_secret' === $f['id'] ) {
+								continue;}
+							?>
 							<?php
 								$is_pk = 'private_key' === $f['id'];
 								$val   = $is_pk ? '' : ( $cfg[ $f['id'] ] ?? '' );
 								// 多行文本框独占整行；单行字段走两列栅格（与上方 client_id 的奇偶规则配套）
 								$f_full = 'textarea' === ( $f['type'] ?? '' );
 							?>
-							<label class="jyc-fl<?php echo $f_full ? ' jyc-full' : ''; ?>"><span class="jyc-sl-lb"><?php echo esc_html( $f['label'] ); ?><?php if ( $is_pk && $pk_enc ) : ?><em class="jyc-sl-saved"><?php echo esc_html__( '已保存', 'jinyu-theme-companion' ); ?></em><?php endif; ?></span>
+							<label class="jyc-fl<?php echo $f_full ? ' jyc-full' : ''; ?>"><span class="jyc-sl-lb"><?php echo esc_html( $f['label'] ); ?>
+                            <?php
+                            if ( $is_pk && $pk_enc ) :
+								?>
+                                <em class="jyc-sl-saved"><?php echo esc_html__( '已保存', 'jinyu-theme-companion' ); ?></em><?php endif; ?></span>
 								<?php if ( $is_pk ) : ?>
 									<textarea class="jyc-inp" name="private_key_<?php echo esc_attr( $p ); ?>" rows="3" placeholder="<?php echo ! empty( $pk_enc ) ? esc_attr__( '••••••••（已设置，留空保持不变）', 'jinyu-theme-companion' ) : esc_attr__( '—', 'jinyu-theme-companion' ); ?>"></textarea>
 									<span class="jyc-sl-hint"><?php echo esc_html__( '粘贴密钥文件完整内容，需包含首尾 BEGIN / END 行。', 'jinyu-theme-companion' ); ?></span>

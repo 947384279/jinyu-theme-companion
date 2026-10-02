@@ -23,12 +23,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/* ── A1. 缓存 ─────────────────────────────────────────────────────────────
+/*
+── A1. 缓存 ─────────────────────────────────────────────────────────────
  * transient 承载：站点装了持久对象缓存时 WP 自动落到对象缓存，未装则落 options 表，
  * 两种环境都能用，不依赖主题那套 Memcached 封装。 */
 
 function jinyu_companion_cache_key( string $seed ): string {
-	return 'jyc_' . md5( $seed );
+	return 'jinyu_' . md5( $seed );
 }
 
 function jinyu_companion_cache_get( string $key ) {
@@ -36,7 +37,7 @@ function jinyu_companion_cache_get( string $key ) {
 }
 
 function jinyu_companion_cache_set( string $key, $val, int $ttl = 3600 ): bool {
-	return ( bool ) set_transient( $key, $val, $ttl );
+	return (bool) set_transient( $key, $val, $ttl );
 }
 
 /* ── A2. 用户 meta ID 列表（社交关注 / 粉丝 / 关注的分类）─────────────────── */
@@ -53,7 +54,8 @@ function jinyu_companion_meta_ids( int $uid, string $key ): array {
 	return array_values( array_unique( array_filter( $ids ) ) );
 }
 
-/* ── A3. 文章封面 ────────────────────────────────────────────────────────
+/*
+── A3. 文章封面 ────────────────────────────────────────────────────────
  * 只取 WP 标准特色图像。主题另有「自定义字段封面 / 类目封面兜底 / 死图探测」等能力，
  * 那是主题的数据模型，插件不感知；站点需要统一封面时，用插件 SEO 面板的全局 og_image。 */
 
@@ -93,7 +95,8 @@ function jinyu_companion_hydrate_posts( array $ids, string $key, int $ttl = 600 
 	return $posts;
 }
 
-/* ── A5. WebP 地址转换 ───────────────────────────────────────────────────
+/*
+── A5. WebP 地址转换 ───────────────────────────────────────────────────
  * 仅在上传目录内、且同名 .webp 实体文件确实存在时才改写，避免返回死链。
  * 转换器由谁生成 .webp 不在本插件职责内（主题或图片插件均可），这里只做「有则用」。 */
 
@@ -125,7 +128,8 @@ function jinyu_companion_webp_url( string $url ): string {
 	return $up['baseurl'] . '/' . $webp_rel;
 }
 
-/* ── A6. CSP nonce 属性 ──────────────────────────────────────────────────
+/*
+── A6. CSP nonce 属性 ──────────────────────────────────────────────────
  * nonce 必须与响应头 Content-Security-Policy 里的值一致才有效。本插件不下发 CSP 头，
  * 默认返回空串（不加属性，脚本照常执行）；站点真启用了 CSP，由下发方经过滤器提供值。
  * 绝不自行生成随机 nonce —— 那会让内联脚本被自己的 CSP 拦掉。 */
@@ -154,7 +158,8 @@ function jinyu_companion_inline_script_tag( string $js ): string {
 	return wp_get_inline_script_tag( $js, $args );
 }
 
-/* ── A7. 限流 / 计数（固定窗口）───────────────────────────────────────────
+/*
+── A7. 限流 / 计数（固定窗口）───────────────────────────────────────────
  * 供海报生成 / Web Vitals / 验证码等匿名端点防滥用，也供登录失败计数复用。
  * 三个入口共用同一介质，避免「写进了对象缓存、却用 transient 去删」这类不一致。 */
 
@@ -253,7 +258,7 @@ function jinyu_companion_rate_limit( string $action, int $limit, int $window ): 
 	if ( '' === $ip ) {
 		return true; // 无法识别来源时放行，避免误杀.
 	}
-	return jinyu_companion_rate_limit_hit( 'jyc_rl_' . md5( $action . '|' . $ip ), $limit, $window );
+	return jinyu_companion_rate_limit_hit( 'jinyu_rl_' . md5( $action . '|' . $ip ), $limit, $window );
 }
 
 /* ── B. 扩展点契约（公开给任意主题 / 插件实现，本插件只给空实现兜底）───────── */

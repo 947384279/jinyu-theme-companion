@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<ruleset name="jinyu-theme-companion">
+	<description>jinyu-theme-companion 插件编码规范（WordPress 官方标准）。</description>
+
+	<file>.</file>
+	<arg name="extensions" value="php"/>
+	<arg name="colors"/>
+	<arg name="tab-width" value="4"/>
+	<arg value="sp"/>
+
+	<config name="prefixes" value="jinyu"/>
+	<config name="minimum_wp_version" value="6.6"/>
+
+	<!-- 预览与脚本/ 是线上排障用的临时探针与自检脚本，不进发布包、不参与门禁。 -->
+	<exclude-pattern>预览与脚本/*</exclude-pattern>
+	<exclude-pattern>tools/*</exclude-pattern>
+
+	<rule ref="WordPress"/>
+
+	<!-- 自建表（jinyu_*）读写用 $wpdb + prepare，属插件正常实现，非"直接查询未受控数据"。 -->
+	<rule ref="WordPress.DB.DirectDatabaseQuery">
+		<exclude name="WordPress.DB.DirectDatabaseQuery.DirectQuery"/>
+		<exclude name="WordPress.DB.DirectDatabaseQuery.NoCaching"/>
+		<exclude name="WordPress.DB.DirectDatabaseQuery.SchemaChange"/>
+	</rule>
+
+	<!-- 项目既定风格豁免 -->
+	<rule ref="Universal.Arrays.DisallowShortArraySyntax">
+		<exclude name="Universal.Arrays.DisallowShortArraySyntax.Found"/>
+	</rule>
+	<rule ref="Generic.WhiteSpace.DisallowSpaceIndent">
+		<exclude name="Generic.WhiteSpace.DisallowSpaceIndent.SpacesUsed"/>
+	</rule>
+	<rule ref="Generic.Formatting.MultipleStatementAlignment">
+		<exclude name="Generic.Formatting.MultipleStatementAlignment.NotSameWarning"/>
+	</rule>
+	<rule ref="WordPress.Arrays.MultipleStatementAlignment">
+		<exclude name="WordPress.Arrays.MultipleStatementAlignment.DoubleArrowNotAligned"/>
+		<exclude name="WordPress.Arrays.MultipleStatementAlignment.SingleArrowNotAligned"/>
+	</rule>
+	<!-- 插件用 class-*.php 是 WordPress 社区惯例，非 PSR-4。 -->
+	<rule ref="WordPress.Files.FileName">
+		<exclude name="WordPress.Files.FileName.NotHyphenatedLowercase"/>
+	</rule>
+	<!-- 中文行内注释不强求以英文句号收尾。 -->
+	<rule ref="Squiz.Commenting.InlineComment">
+		<exclude name="Squiz.Commenting.InlineComment.InvalidEndChar"/>
+	</rule>
+	<!-- 存量函数文档补齐另行安排，不批量灌空骨架注释。 -->
+	<rule ref="Squiz.Commenting.FunctionComment">
+		<exclude name="Squiz.Commenting.FunctionComment.Missing"/>
+		<exclude name="Squiz.Commenting.FunctionComment.MissingParamTag"/>
+		<exclude name="Squiz.Commenting.FunctionComment.ParamCommentFullStop"/>
+	</rule>
+	<!-- 清理/卸载路径上的文件系统抑制属有意为之，仅 warning 级。 -->
+	<rule ref="WordPress.PHP.NoSilencedErrors">
+		<severity>0</severity>
+	</rule>
+	<!-- 插件 IN 子句一律是 implode('%s') 占位符或 $wpdb->prefix 表名，非用户输入；
+	     该 sniff 对占位符插值报假阳性，其余 PreparedSQL 检查（NotPrepared 等）保留。 -->
+	<rule ref="WordPress.DB.PreparedSQL">
+		<exclude name="WordPress.DB.PreparedSQL.InterpolatedNotPrepared"/>
+	</rule>
+</ruleset>

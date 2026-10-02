@@ -48,18 +48,32 @@ if ( ! function_exists( 'jinyu_svg_github' ) ) {
 }
 
 // --- 提示框 [jinyu_tip] ---
-$jinyu_tip = function ($atts, $content = '') {
-	$a = shortcode_atts( [ 'type' => 'info', 'title' => '' ], $atts );
+$jinyu_tip = function ( $atts, $content = '' ) {
+	$a = shortcode_atts(
+        [
+			'type' => 'info',
+			'title' => '',
+		],
+		$atts
+    );
 	return '<div class="jinyu-tip jinyu-tip-' . esc_attr( $a['type'] ) . '">'
-		 . ( $a['title'] ? '<div class="jinyu-tip-title">' . esc_html( $a['title'] ) . '</div>' : '' )
-		 . '<div class="jinyu-tip-body">' . wp_kses_post( do_shortcode( $content ) ) . '</div>'
-		 . '</div>';
+		. ( $a['title'] ? '<div class="jinyu-tip-title">' . esc_html( $a['title'] ) . '</div>' : '' )
+		. '<div class="jinyu-tip-body">' . wp_kses_post( do_shortcode( $content ) ) . '</div>'
+		. '</div>';
 };
 add_shortcode( 'jinyu_tip', $jinyu_tip );
 
 // --- 下载按钮 [jinyu_download] ---
-$jinyu_download = function ($atts) {
-	$a = shortcode_atts( [ 'url' => '', 'name' => '下载', 'type' => 'free', 'pwd' => '' ], $atts );
+$jinyu_download = function ( $atts ) {
+	$a = shortcode_atts(
+        [
+			'url' => '',
+			'name' => '下载',
+			'type' => 'free',
+			'pwd' => '',
+		],
+		$atts
+    );
 	if ( ! $a['url'] ) {
 		return '';
 	}
@@ -77,19 +91,19 @@ $jinyu_download = function ($atts) {
 add_shortcode( 'jinyu_download', $jinyu_download );
 
 // --- 登录可见 [jinyu_login]...[/jinyu_login] ---
-$jinyu_login = function ($atts, $content = '') {
+$jinyu_login = function ( $atts, $content = '' ) {
 	if ( is_user_logged_in() ) {
 		return wp_kses_post( do_shortcode( $content ) );
 	}
 	return '<div class="jinyu-login-hide">'
-		 . '<div class="jinyu-login-hide-text">' . jinyu_svg_icon( 'lock' ) . ' ' . __( '登录后可见', 'jinyu-theme-companion') . '</div>'
-		 . '<a class="jinyu-btn" href="' . esc_url( wp_login_url( get_permalink() ) ) . '">' . __( '立即登录', 'jinyu-theme-companion') . '</a>'
-		 . '</div>';
+		. '<div class="jinyu-login-hide-text">' . jinyu_svg_icon( 'lock' ) . ' ' . __( '登录后可见', 'jinyu-theme-companion' ) . '</div>'
+		. '<a class="jinyu-btn" href="' . esc_url( wp_login_url( get_permalink() ) ) . '">' . __( '立即登录', 'jinyu-theme-companion' ) . '</a>'
+		. '</div>';
 };
 add_shortcode( 'jinyu_login', $jinyu_login );
 
 // --- 评论可见 [jinyu_comment]...[/jinyu_comment] ---
-$jinyu_comment = function ($atts, $content = '') {
+$jinyu_comment = function ( $atts, $content = '' ) {
 	// 「评论可见」按语义校验：当前用户须在本篇文章下有已通过的评论，
 	// 仅登录不够（否则登录即解锁，与提示文案「请先登录并评论」不符）。
 	$uid = get_current_user_id();
@@ -107,23 +121,29 @@ $jinyu_comment = function ($atts, $content = '') {
 		return wp_kses_post( do_shortcode( $content ) );
 	}
 	return '<div class="jinyu-comment-hide">'
-		 . '<svg class="jinyu-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> ' . __( '评论后可见，请先登录并评论', 'jinyu-theme-companion')
-		 . '</div>';
+		. '<svg class="jinyu-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> ' . __( '评论后可见，请先登录并评论', 'jinyu-theme-companion' )
+		. '</div>';
 };
 add_shortcode( 'jinyu_comment', $jinyu_comment );
 
 // --- 仅管理员可见 [jinyu_hide]...[/jinyu_hide] ---
-$jinyu_hide = function ($atts, $content = '') {
+$jinyu_hide = function ( $atts, $content = '' ) {
 	if ( current_user_can( 'manage_options' ) ) {
 		return wp_kses_post( do_shortcode( $content ) );
 	}
-	return '<div class="jinyu-comment-hide">' . jinyu_svg_icon( 'eye' ) . ' ' . __( '隐藏内容，仅管理员可见', 'jinyu-theme-companion') . '</div>';
+	return '<div class="jinyu-comment-hide">' . jinyu_svg_icon( 'eye' ) . ' ' . __( '隐藏内容，仅管理员可见', 'jinyu-theme-companion' ) . '</div>';
 };
 add_shortcode( 'jinyu_hide', $jinyu_hide );
 
 // --- GitHub 卡片 [jinyu_github user="xxx" repo="xxx"] ---
-$jinyu_github = function ($atts) {
-	$a = shortcode_atts( [ 'user' => '', 'repo' => '' ], $atts );
+$jinyu_github = function ( $atts ) {
+	$a = shortcode_atts(
+        [
+			'user' => '',
+			'repo' => '',
+		],
+		$atts
+    );
 	if ( ! $a['user'] ) {
 		return '';
 	}
@@ -131,15 +151,21 @@ $jinyu_github = function ($atts) {
 		? 'https://github.com/' . $a['user'] . '/' . $a['repo']
 		: 'https://github.com/' . $a['user'];
 	return '<a class="jinyu-github-card" href="' . esc_url( $url ) . '" target="_blank" rel="noopener">'
-		 . '<span class="jinyu-github-icon">' . jinyu_svg_github() . '</span>'
-		 . '<span class="jinyu-github-name">' . esc_html( $a['user'] ) . esc_html( $a['repo'] ? '/' . $a['repo'] : '' ) . '</span>'
-		 . '</a>';
+		. '<span class="jinyu-github-icon">' . jinyu_svg_github() . '</span>'
+		. '<span class="jinyu-github-name">' . esc_html( $a['user'] ) . esc_html( $a['repo'] ? '/' . $a['repo'] : '' ) . '</span>'
+		. '</a>';
 };
 add_shortcode( 'jinyu_github', $jinyu_github );
 
 // --- Gist 嵌入 [jinyu_gist id="xxx"] ---
-$jinyu_gist = function ($atts) {
-	$a = shortcode_atts( [ 'id' => '', 'file' => '' ], $atts );
+$jinyu_gist = function ( $atts ) {
+	$a = shortcode_atts(
+        [
+			'id' => '',
+			'file' => '',
+		],
+		$atts
+    );
 	if ( ! $a['id'] ) {
 		return '';
 	}
@@ -150,8 +176,14 @@ $jinyu_gist = function ($atts) {
 add_shortcode( 'jinyu_gist', $jinyu_gist );
 
 // --- 图片组 [jinyu_gallery ids="1,2,3"] ---
-$jinyu_gallery = function ($atts) {
-	$a = shortcode_atts( [ 'ids' => '', 'cols' => '3' ], $atts );
+$jinyu_gallery = function ( $atts ) {
+	$a = shortcode_atts(
+        [
+			'ids' => '',
+			'cols' => '3',
+		],
+		$atts
+    );
 	$ids = array_filter( array_map( 'intval', explode( ',', $a['ids'] ) ) );
 	if ( empty( $ids ) ) {
 		return '';
@@ -172,22 +204,29 @@ $jinyu_gallery = function ($atts) {
 add_shortcode( 'jinyu_gallery', $jinyu_gallery );
 
 // --- 徽章 [jinyu_badge color="primary"]...[/jinyu_badge] ---
-$jinyu_badge = function ($atts, $content = '') {
+$jinyu_badge = function ( $atts, $content = '' ) {
 	$a = shortcode_atts( [ 'color' => 'primary' ], $atts );
 	return '<span class="jinyu-badge jinyu-badge-' . esc_attr( $a['color'] ) . '">' . wp_kses_post( do_shortcode( $content ) ) . '</span>';
 };
 add_shortcode( 'jinyu_badge', $jinyu_badge );
 
 // --- 进度条 [jinyu_progress value="50" color="primary" label=""] ---
-$jinyu_progress = function ($atts) {
-	$a   = shortcode_atts( [ 'value' => '50', 'color' => 'primary', 'label' => '' ], $atts );
+$jinyu_progress = function ( $atts ) {
+	$a   = shortcode_atts(
+        [
+			'value' => '50',
+			'color' => 'primary',
+			'label' => '',
+		],
+		$atts
+    );
 	$v   = max( 0, min( 100, intval( $a['value'] ) ) );
 	return '<div class="jinyu-progress-wrap"><div class="jinyu-progress-label">' . esc_html( $a['label'] ) . ' <span>' . $v . '%</span></div><div class="jinyu-progress-bar"><div class="jinyu-progress-fill jinyu-progress-' . esc_attr( $a['color'] ) . '" style="width:' . $v . '%"></div></div></div>';
 };
 add_shortcode( 'jinyu_progress', $jinyu_progress );
 
 // --- 选项卡 [jinyu_tabs]...[jinyu_tab title="x"]...[/jinyu_tab]...[/jinyu_tabs] ---
-$jinyu_tabs = function ($atts, $content = '') {
+$jinyu_tabs = function ( $atts, $content = '' ) {
 	// PREG_SET_ORDER：同一正则内一次性捕获「属性串 + 正文」，标题与正文必须同源匹配，
 	// 独立收集会在某个 tab 缺 title 属性时错位串位。
 	preg_match_all( '/\[jinyu_tab([^\]]*)\](.*?)\[\/jinyu_tab\]/s', $content, $m, PREG_SET_ORDER );
@@ -197,12 +236,12 @@ $jinyu_tabs = function ($atts, $content = '') {
 	$tabs  = '';
 	$panes = '';
 	foreach ( $m as $i => $tab ) {
-		$title  = 'Tab ' . ( $i + 1 );
+		$title = 'Tab ' . ( $i + 1 );
 		if ( preg_match( '/title="([^"]*)"/', $tab[1], $tm ) && '' !== $tm[1] ) {
 			$title = $tm[1];
 		}
 		$body   = $tab[2];
-		$active = $i === 0 ? ' jinyu-tab-active' : '';
+		$active = 0 === $i ? ' jinyu-tab-active' : '';
 		$tabs  .= '<button class="jinyu-tab-btn' . $active . '" data-target="jinyu-tab-pane-' . $i . '">' . esc_html( $title ) . '</button>';
 		$panes .= '<div class="jinyu-tab-pane' . $active . '" id="jinyu-tab-pane-' . $i . '">' . wp_kses_post( do_shortcode( $body ) ) . '</div>';
 	}
@@ -211,24 +250,30 @@ $jinyu_tabs = function ($atts, $content = '') {
 add_shortcode( 'jinyu_tabs', $jinyu_tabs );
 
 // --- 折叠面板 [jinyu_collapse title=""]...[/jinyu_collapse] ---
-$jinyu_collapse = function ($atts, $content = '') {
+$jinyu_collapse = function ( $atts, $content = '' ) {
 	$a = shortcode_atts( [ 'title' => '' ], $atts );
 	return '<details class="jinyu-collapse"><summary class="jinyu-collapse-title">' . esc_html( $a['title'] ) . '</summary><div class="jinyu-collapse-body">' . wp_kses_post( do_shortcode( $content ) ) . '</div></details>';
 };
 add_shortcode( 'jinyu_collapse', $jinyu_collapse );
 
 // --- 代码块 [jinyu_pre lang="php" title="示例"]...[/jinyu_pre] ---
-$jinyu_pre = function ($atts, $content = '') {
-	$a    = shortcode_atts( [ 'lang' => '', 'title' => '' ], $atts );
+$jinyu_pre = function ( $atts, $content = '' ) {
+	$a    = shortcode_atts(
+        [
+			'lang' => '',
+			'title' => '',
+		],
+		$atts
+    );
 	$code = trim( (string) $content, "\n\r" );
 	// 先还原可视化编辑器可能已转成的实体（如 &lt;），再统一转义，避免双重编码
 	$code = html_entity_decode( $code, ENT_HTML5, 'UTF-8' );
 	$code = htmlspecialchars( $code, ENT_NOQUOTES | ENT_HTML5, 'UTF-8' );
-	$label = $a['title'] ?: ( $a['lang'] ? strtoupper( $a['lang'] ) : __( 'CODE', 'jinyu-theme-companion') );
+	$label = $a['title'] ?: ( $a['lang'] ? strtoupper( $a['lang'] ) : __( 'CODE', 'jinyu-theme-companion' ) );
 	return '<div class="jinyu-pre">'
 		. '<div class="jinyu-pre-bar">'
 		. '<span class="jinyu-pre-lang">' . esc_html( $label ) . '</span>'
-		. '<button type="button" class="jinyu-pre-copy" data-copy aria-label="' . esc_attr__( '复制代码', 'jinyu-theme-companion') . '">' . __( '复制', 'jinyu-theme-companion') . '</button>'
+		. '<button type="button" class="jinyu-pre-copy" data-copy aria-label="' . esc_attr__( '复制代码', 'jinyu-theme-companion' ) . '">' . __( '复制', 'jinyu-theme-companion' ) . '</button>'
 		. '</div>'
 		. '<pre class="jinyu-pre-code"><code>' . $code . '</code></pre>'
 		. '</div>';
@@ -236,8 +281,16 @@ $jinyu_pre = function ($atts, $content = '') {
 add_shortcode( 'jinyu_pre', $jinyu_pre );
 
 // --- 音乐播放器 [jinyu_music url="..." name="..." artist="..." cover="..."] 或 [jinyu_music]url[/jinyu_music] ---
-$jinyu_music = function ($atts, $content = '') {
-	$a   = shortcode_atts( [ 'url' => '', 'name' => '', 'artist' => '', 'cover' => '' ], $atts );
+$jinyu_music = function ( $atts, $content = '' ) {
+	$a   = shortcode_atts(
+        [
+			'url' => '',
+			'name' => '',
+			'artist' => '',
+			'cover' => '',
+		],
+		$atts
+    );
 	$src = $a['url'] ?: trim( (string) $content );
 	if ( ! $src ) {
 		return '';
@@ -258,7 +311,7 @@ $jinyu_music = function ($atts, $content = '') {
 		$html .= '<div class="jinyu-music-artist">' . $artist . '</div>';
 	}
 	if ( ! $name && ! $artist ) {
-		$html .= '<div class="jinyu-music-name">' . __( '音乐', 'jinyu-theme-companion') . '</div>';
+		$html .= '<div class="jinyu-music-name">' . __( '音乐', 'jinyu-theme-companion' ) . '</div>';
 	}
 	$html     .= '</div>';
 	$html     .= '<audio class="jinyu-music-audio" controls preload="none" src="' . $src . '"></audio>';
@@ -269,9 +322,14 @@ add_shortcode( 'jinyu_music', $jinyu_music );
 
 // --- 按钮 [jinyu_btn type="primary" href="..." target="_blank" icon=""]...[/jinyu_btn] ---
 // 对齐 Puock 的 btn-* 系列：用统一 type 参数替代 7 个独立标签
-$jinyu_btn = function ($atts, $content = '') {
+$jinyu_btn = function ( $atts, $content = '' ) {
 	$a     = shortcode_atts(
-		[ 'type' => 'primary', 'href' => '#', 'target' => '', 'icon' => '' ],
+		[
+			'type' => 'primary',
+			'href' => '#',
+			'target' => '',
+			'icon' => '',
+		],
 		$atts
 	);
 	$type  = sanitize_html_class( $a['type'] );
@@ -284,7 +342,7 @@ add_shortcode( 'jinyu_btn', $jinyu_btn );
 
 // --- 登录并验证邮箱可见 [jinyu_login_email]...[/jinyu_login_email] ---
 // 对齐 Puock 的 login_email：登录且拥有有效邮箱才可见
-$jinyu_login_email = function ($atts, $content = '') {
+$jinyu_login_email = function ( $atts, $content = '' ) {
 	if ( is_user_logged_in() ) {
 		$user  = wp_get_current_user();
 		$email = $user->user_email;
@@ -293,19 +351,19 @@ $jinyu_login_email = function ($atts, $content = '') {
 		}
 	}
 	return '<div class="jinyu-login-hide">'
-		 . '<div class="jinyu-login-hide-text">' . jinyu_svg_icon( 'lock' ) . ' ' . __( '登录并验证邮箱后可见', 'jinyu-theme-companion') . '</div>'
-		 . '<a class="jinyu-btn" href="' . esc_url( wp_login_url( get_permalink() ) ) . '">' . __( '立即登录', 'jinyu-theme-companion') . '</a>'
-		 . '</div>';
+		. '<div class="jinyu-login-hide-text">' . jinyu_svg_icon( 'lock' ) . ' ' . __( '登录并验证邮箱后可见', 'jinyu-theme-companion' ) . '</div>'
+		. '<a class="jinyu-btn" href="' . esc_url( wp_login_url( get_permalink() ) ) . '">' . __( '立即登录', 'jinyu-theme-companion' ) . '</a>'
+		. '</div>';
 };
 add_shortcode( 'jinyu_login_email', $jinyu_login_email );
 
 // --- 阅读密码 [jinyu_password_read pass="123" tip="请输入阅读密码"]...[/jinyu_password_read] ---
 // 锁定时不输出正文 HTML（真正隐藏，而非仅 CSS 遮挡）；输入正确后可查看，并写入 cookie 记忆
-$jinyu_password_read = function ($atts, $content = '') {
+$jinyu_password_read = function ( $atts, $content = '' ) {
 	$a = shortcode_atts(
 		[
 			'pass' => '',
-			'tip'  => __( '请输入阅读密码', 'jinyu-theme-companion'),
+			'tip'  => __( '请输入阅读密码', 'jinyu-theme-companion' ),
 		],
 		$atts
 	);
@@ -338,43 +396,52 @@ $jinyu_password_read = function ($atts, $content = '') {
 		. '<div class="jinyu-password-read-tip">' . esc_html( $a['tip'] ) . '</div>'
 		. '<input type="hidden" name="jinyu_pwd_key" value="' . esc_attr( $key ) . '">'
 		. '<div class="jinyu-password-read-row">'
-		. '<input type="password" class="jinyu-password-read-input" name="jinyu_pwd_val" placeholder="' . esc_attr__( '密码', 'jinyu-theme-companion') . '" autocomplete="off">'
-		. '<button type="submit" class="jinyu-password-read-btn">' . __( '查看', 'jinyu-theme-companion') . '</button>'
+		. '<input type="password" class="jinyu-password-read-input" name="jinyu_pwd_val" placeholder="' . esc_attr__( '密码', 'jinyu-theme-companion' ) . '" autocomplete="off">'
+		. '<button type="submit" class="jinyu-password-read-btn">' . __( '查看', 'jinyu-theme-companion' ) . '</button>'
 		. '</div>'
 		. '</form>';
 };
 add_shortcode( 'jinyu_password_read', $jinyu_password_read );
 
-/* ==========================================================================
-   视频短代码 [jinyu_video]：原生 HTML5 <video>；识别 B站 链接时自动转为 iframe 直嵌。
-   该短代码原注册于金玉主题，因 WordPress.org 主题库禁止主题注册短代码，迁入本配套插件。
-   ========================================================================== */
-add_shortcode( 'jinyu_video', function ( $atts ) {
-	$atts = shortcode_atts(
-		[ 'url' => '', 'cover' => '', 'title' => '', 'autoplay' => 'false' ],
-		$atts,
-		'jinyu_video'
-	);
-	$url = trim( $atts['url'] );
-	if ( ! $url ) {
-		return '';
-	}
-	$bili = jinyu_video_bilibili_src( $url );
-	if ( $bili ) {
-		$auto = ( 'true' === $atts['autoplay'] || '1' === $atts['autoplay'] ) ? 1 : 0;
-		$src  = $bili . '&autoplay=' . $auto;
-		return '<div class="jinyu-video jinyu-video-bili" style="position:relative;width:100%;padding-top:56.25%;">'
+/*
+==========================================================================
+    视频短代码 [jinyu_video]：原生 HTML5 <video>；识别 B站 链接时自动转为 iframe 直嵌。
+    该短代码原注册于金玉主题，因 WordPress.org 主题库禁止主题注册短代码，迁入本配套插件。
+    ========================================================================== */
+add_shortcode(
+    'jinyu_video',
+    function ( $atts ) {
+		$atts = shortcode_atts(
+            [
+				'url' => '',
+				'cover' => '',
+				'title' => '',
+				'autoplay' => 'false',
+            ],
+            $atts,
+            'jinyu_video'
+		);
+		$url = trim( $atts['url'] );
+		if ( ! $url ) {
+			return '';
+		}
+		$bili = jinyu_video_bilibili_src( $url );
+		if ( $bili ) {
+			$auto = ( 'true' === $atts['autoplay'] || '1' === $atts['autoplay'] ) ? 1 : 0;
+			$src  = $bili . '&autoplay=' . $auto;
+			return '<div class="jinyu-video jinyu-video-bili" style="position:relative;width:100%;padding-top:56.25%;">'
 			. '<iframe loading="lazy" style="position:absolute;width:100%;height:100%;left:0;top:0;border:0;border-radius:8px;" '
 			. 'src="' . esc_url( $src ) . '" scrolling="no" frameborder="no" allowfullscreen="true" '
 			. 'sandbox="allow-top-navigation allow-forms allow-scripts"></iframe></div>';
+		}
+		$out = '<video class="jinyu-video" src="' . esc_url( $url ) . '" controls style="width:100%;border-radius:8px;"';
+		if ( $atts['cover'] ) {
+			$out .= ' poster="' . esc_url( $atts['cover'] ) . '"';
+		}
+		$out .= '>' . esc_html( $atts['title'] ) . '</video>';
+		return $out;
 	}
-	$out = '<video class="jinyu-video" src="' . esc_url( $url ) . '" controls style="width:100%;border-radius:8px;"';
-	if ( $atts['cover'] ) {
-		$out .= ' poster="' . esc_url( $atts['cover'] ) . '"';
-	}
-	$out .= '>' . esc_html( $atts['title'] ) . '</video>';
-	return $out;
-} );
+);
 
 /**
  * 从链接解析 B站 播放地址：支持 bilibili.com/BVxxx、b23.tv、player.bilibili.com。

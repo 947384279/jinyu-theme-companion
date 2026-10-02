@@ -301,7 +301,7 @@ function jinyu_seo_meta()
         if ($author && !empty($author->description)) $desc = jinyu_truncate_desc($author->description);
     } elseif (is_front_page() || is_home()) {
         // 首页：未单独配置 seo_desc 时用站点副标题兜底，确保首页也有 <meta name="description">（JY-12）。
-        if ($desc === '') {
+        if ('' === $desc) {
             $desc = get_bloginfo('description');
         }
         $desc = jinyu_truncate_desc($desc);
