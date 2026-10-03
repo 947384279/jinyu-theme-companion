@@ -92,7 +92,7 @@ function jinyu_storage_run_multi( $handles, $concurrency = 8 ) {
 	$queue    = array_values( $handles );
 
 	$add_more = function () use ( &$queue, &$inflight, $mh, $concurrency ) {
-		while ( count( $inflight ) < $concurrency && ! empty( $queue ) ) {
+		while ( count( $inflight ) < $concurrency && ! empty( $queue ) ) { // phpcs:ignore Squiz.PHP.DisallowSizeFunctionsInLoops.Found,Squiz.PHP.DisallowSizeFunctionsInLoops.Found -- count() 在 O(1) 的并发槽位判断里，提取变量反而要在循环体重复赋值
 			$item = array_shift( $queue );
 			curl_multi_add_handle( $mh, $item['ch'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_add_handle -- 对象存储并行上传引擎
 			$inflight[] = $item;
@@ -105,7 +105,7 @@ function jinyu_storage_run_multi( $handles, $concurrency = 8 ) {
 		if ( $running ) {
 			curl_multi_select( $mh, 1.0 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_select -- 对象存储并行上传引擎
 		}
-		while ( ( $info = curl_multi_info_read( $mh ) ) !== false ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_info_read -- 对象存储并行上传引擎
+		while ( ( $info = curl_multi_info_read( $mh ) ) !== false ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_info_read,Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition -- 对象存储并行上传引擎
 			$ch = $info['handle'];
 			foreach ( $inflight as $k => $item ) {
 				if ( $item['ch'] === $ch ) {

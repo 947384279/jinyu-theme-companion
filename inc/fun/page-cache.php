@@ -1222,7 +1222,8 @@ function jinyu_page_cache_serve(): void {
         exit;
     }
     // 冷缓存（文件根本不存在）被他人占用：短暂轮询，等到就发新页，否则退回 WP 渲染。
-    for ( $i = 0; $i < 15 && ! is_readable( $file ); $i++ ) {
+    $i = 0;
+    while ( $i++ < 15 && ! is_readable( $file ) ) {
         usleep( 100000 );
     }
     if ( is_readable( $file ) ) {

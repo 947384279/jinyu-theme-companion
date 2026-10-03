@@ -178,7 +178,7 @@ class Jinyu_OAuth_Provider_Apple extends Jinyu_OAuth_Provider {
 		];
 
 		$seg  = static function ( $d ): string {
-			return rtrim( strtr( base64_encode( (string) json_encode( $d ) ), '+/', '-_' ), '=' );
+			return rtrim( strtr( base64_encode( (string) json_encode( $d ) ), '+/', '-_' ), '=' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode,WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Apple 登录 JWT 要求标准 JSON 序列化字节，wp_json_encode 的转义会改 payload 导致验签失败
 		};
 		$signing = $seg( $header ) . '.' . $seg( $payload );
 

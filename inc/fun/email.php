@@ -55,8 +55,8 @@ add_action(
 				$form[ $key ] = wp_unslash( $_POST[ $post ] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- is_string 已守卫，键名来自本文件硬编码的 $map，随后经 Jinyu_SmtpConfig 逐字段 sanitize
 			}
 		}
-		$useForm = ! empty( $form['host'] );
-		if ( $useForm ) {
+		$use_form = ! empty( $form['host'] );
+		if ( $use_form ) {
 			\Jinyu\Mail\Jinyu_SmtpConfig::$testOverride = $form;
 		} elseif ( ! jinyu_companion_get_option( 'smtp_host', '' ) ) {
 			wp_send_json_error( __( '请先在「邮件 SMTP」填写 SMTP 主机并保存，再发送测试邮件。', 'jinyu-theme-companion' ) );

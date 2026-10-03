@@ -349,6 +349,7 @@ function jinyu_sl_begin( string $platform ): void {
 	if ( '' !== $nonce ) {
 		$auth = add_query_arg( 'nonce', $nonce, $auth );
 	}
+	// phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- $auth 由 $prov->authorize_url() 按 provider 文档拼装（回调地址取自本站 home_url），不含 redirect_to 等用户输入；此处若换成 wp_safe_redirect 会把 provider 域名判成越权外链而不跳转，反而是退步。
 	wp_redirect( $auth );
 	exit;
 }
@@ -405,7 +406,7 @@ function jinyu_sl_callback(): void {
 		// user 是 Apple 回传的原始 JSON（含 name.firstName 等嵌套结构），**不能** sanitize_text_field：
 		// 那样会把双引号转成 HTML 实体，json_decode 直接失败 → 拿不到昵称。
 		// 它只被 json_decode 解析、不进数据库也不进 HTML，安全性由 decode 后的白名单取值保证。
-		$extra['user']     = wp_unslash( $_POST['user'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 原始 JSON，仅经 json_decode 解析后按字段白名单取值
+		$extra['user'] = wp_unslash( $_POST['user'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 原始 JSON，仅经 json_decode 解析后按字段白名单取值
 	}
 	if ( '' !== $nonce ) {
 		$extra['nonce'] = $nonce;

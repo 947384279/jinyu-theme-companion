@@ -17,7 +17,7 @@ class Jinyu_SmtpConfig {
      *
      * @var array|null
      */
-    public static ?array $testOverride = null;
+    public static ?array $test_override = null;
 
     /**
      * 将后台 SMTP 设置（或测试覆盖）应用到 PHPMailer 实例。
@@ -26,19 +26,19 @@ class Jinyu_SmtpConfig {
      */
     public function apply( $phpmailer ): void {
         // 「接管全站发信」未开启时不改道，让 wp_mail 走服务器默认 mail()；
-        // 测试邮件（testOverride）豁免此开关——需要先验证通道才谈得上是否启用。
-        if ( self::null === $testOverride && ! jinyu_companion_is_checked( 'smtp_enable', true ) ) {
+        // 测试邮件（test_override）豁免此开关——需要先验证通道才谈得上是否启用。
+        if ( null === self::$test_override && ! jinyu_companion_is_checked( 'smtp_enable', true ) ) {
             return;
         }
-        $cfg = self::$testOverride ?? $this->cfgFromDb();
-        self::applyConfig( $phpmailer, $cfg );
+        $cfg = self::$test_override ?? $this->cfg_from_db();
+        self::apply_config( $phpmailer, $cfg );
     }
 
     /**
      * 从插件独立 option（jinyu_companion_settings）读取 SMTP 配置；
      * 首次启用时由 jinyu_companion_maybe_migrate() 从主题 jinyu_options 回填（含已解密密码）。
      */
-    private function cfgFromDb(): array {
+    private function cfg_from_db(): array {
         return [
             'host'   => jinyu_companion_get_option( 'smtp_host', '' ),
             'port'   => (int) jinyu_companion_get_option( 'smtp_port', 465 ),
@@ -57,7 +57,7 @@ class Jinyu_SmtpConfig {
      * @param object $phpmailer PHPMailer 实例
      * @param array  $cfg       host/port/secure/user/pwd/from
      */
-    public static function applyConfig( $phpmailer, array $cfg ): void {
+    public static function apply_config( $phpmailer, array $cfg ): void {
         if ( ! is_object( $phpmailer ) ) {
 			return;
         }
@@ -86,13 +86,13 @@ class Jinyu_SmtpConfig {
         $from = (string) ( $cfg['from'] ?? '' );
         if ( $from && is_email( $from ) ) {
             // 发件人名称：后台可配置，留空回退站点名称
-            $fromName = trim( (string) ( $cfg['from_name'] ?? '' ) );
-            if ( '' === $fromName ) {
-                $fromName = get_bloginfo( 'name' );
+            $from_name = trim( (string) ( $cfg['from_name'] ?? '' ) );
+            if ( '' === $from_name ) {
+                $from_name = get_bloginfo( 'name' );
             }
             $phpmailer->From      = $from;
-            $phpmailer->FromName  = $fromName;
-            $phpmailer->addReplyTo( $from, $fromName );
+            $phpmailer->FromName  = $from_name;
+            $phpmailer->addReplyTo( $from, $from_name );
         }
     }
 }

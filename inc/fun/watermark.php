@@ -1137,7 +1137,7 @@ final class Jinyu_Watermark {
 						'h' => (int) ceil( (float) $m['textHeight'] ),
 					);
 				}
-			} catch ( Exception $e ) {
+			} catch ( Exception $e ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch,Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- 捕获 Imagick 查询字体尺寸失败后走 GD 回退，空 catch 是设计意图不是漏写
 				/* 走回退 */ }
 		}
 		if ( $editor instanceof WP_Image_Editor_GD && function_exists( 'imagettfbbox' ) ) {

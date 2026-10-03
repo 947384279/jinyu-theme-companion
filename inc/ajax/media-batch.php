@@ -278,7 +278,7 @@ function jinyu_companion_wm_stats(): array {
 	$mimes = array( 'image/jpeg', 'image/png', 'image/webp' );
 	$place = implode( ',', array_fill( 0, count( $mimes ), '%s' ) );
 	$where = "post_type = 'attachment' AND post_status = 'inherit' AND post_mime_type IN ($place)";
-	$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->posts WHERE $where", ...$mimes ) );
+	$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->posts WHERE $where", ...$mimes ) ); // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- 占位符由 $place 拼进 $where 后整段进 SQL，静态分析看不见内层 %s，运行时 prepare 有效
 	$done  = (int) $wpdb->get_var(
 		$wpdb->prepare(
 			"SELECT COUNT(*) FROM $wpdb->posts p

@@ -278,15 +278,15 @@ function jinyu_json_ld() {
     }
 
     // FAQ (检测 [jinyu_faq] / [jinyu_faq_item] 短代码，生成 FAQPage 结构化数据)
-    if ( is_singular() && preg_match_all( '/\[jinyu_faq_item\s*q="([^"]+)"\](.*?)\[\/jinyu_faq_item\]/s', get_the_content(), $faqMatches ) ) {
+    if ( is_singular() && preg_match_all( '/\[jinyu_faq_item\s*q="([^"]+)"\](.*?)\[\/jinyu_faq_item\]/s', get_the_content(), $faq_matches ) ) {
         $faqs = [];
-        foreach ( $faqMatches[1] as $i => $q ) {
+        foreach ( $faq_matches[1] as $i => $q ) {
             $faqs[] = [
                 '@type'          => 'Question',
                 'name'           => $q,
                 'acceptedAnswer' => [
 					'@type' => 'Answer',
-					'text' => trim( wp_strip_all_tags( $faqMatches[2][ $i ] ) ),
+					'text' => trim( wp_strip_all_tags( $faq_matches[2][ $i ] ) ),
 				],
             ];
         }
@@ -300,10 +300,10 @@ function jinyu_json_ld() {
     }
 
     // HowTo（兼容 [jinyu_step name="…"] 与 [jinyu_step] 两种写法）
-    if ( is_singular() && preg_match_all( '/\[jinyu_step(?:\s+name="([^"]*)")?\s*\](.*?)\[\/jinyu_step\]/s', get_the_content(), $stepMatches ) ) {
+    if ( is_singular() && preg_match_all( '/\[jinyu_step(?:\s+name="([^"]*)")?\s*\](.*?)\[\/jinyu_step\]/s', get_the_content(), $step_matches ) ) {
         $steps = [];
-        foreach ( $stepMatches[2] as $i => $text ) {
-            $name = isset( $stepMatches[1][ $i ] ) ? trim( $stepMatches[1][ $i ] ) : '';
+        foreach ( $step_matches[2] as $i => $text ) {
+            $name = isset( $step_matches[1][ $i ] ) ? trim( $step_matches[1][ $i ] ) : '';
             $text = trim( wp_strip_all_tags( $text ) );
             if ( '' === $name && '' === $text ) {
 				continue;

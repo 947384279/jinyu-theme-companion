@@ -76,7 +76,8 @@ function jinyu_get_following_users( int $uid, int $limit = 0 ): array {
     }
     $out = [];
     foreach ( $ids as $id ) {
-        if ( $u = get_userdata( $id ) ) {
+        $u = get_userdata( $id );
+        if ( $u ) {
 			$out[] = $u;
         }
     }

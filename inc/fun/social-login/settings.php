@@ -246,13 +246,13 @@ function jinyu_sl_settings_pane(): void {
 			// 让 client_id 独占一整行，否则行尾会留下一个空白格。
 			$fields_total = 1 + ( $uses_cs ? 1 : 0 ) + count( $prov->config_fields() );
 			$textarea_num = 0;
-		foreach ( $prov->config_fields() as $f ) {
-			if ( 'textarea' === ( $f['type'] ?? '' ) ) {
-				++$textarea_num;
+			foreach ( $prov->config_fields() as $f ) {
+				if ( 'textarea' === ( $f['type'] ?? '' ) ) {
+					++$textarea_num;
+				}
 			}
-		}
 			$cid_full = 1 === ( $fields_total - $textarea_num ) % 2;
-		?>
+			?>
 		<div class="jyc-sl-card" style="--pc:<?php echo esc_attr( $pc ); ?>;--pc-l:<?php echo esc_attr( jinyu_sl_hex_rgba( $pc, 0.34 ) ); ?>;--pc-t:<?php echo esc_attr( jinyu_sl_hex_rgba( $pc, 0.13 ) ); ?>">
 				<div class="jyc-sl-card-hd">
 					<span class="jyc-sl-badge" aria-hidden="true"><?php echo jinyu_sl_icon_markup( $prov->icon() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（SVG 图标标记），无需转义 ?></span>

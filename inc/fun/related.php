@@ -38,9 +38,8 @@ if ( ! function_exists( 'jinyu_get_related_post_ids' ) ) {
         ];
 
         $args = $base;
-        if ( 'random' === $type ) {
-            // 仅随机，不限定标签/分类
-        } elseif ( 'views' === $type ) {
+        // 默认（非 views）走随机排序：不额外限定标签/分类
+        if ( 'views' === $type ) {
             // 协同过滤（co-click 近似）：同标签/分类相关，再按浏览量降序——越热门越靠前
             if ( ! empty( $tags ) || ! empty( $cats ) ) {
                 $args['tax_query'] = [ 'relation' => 'OR' ];

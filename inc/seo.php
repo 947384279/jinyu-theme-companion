@@ -71,7 +71,7 @@ if ( ! function_exists( 'jinyu_og_image_dims' ) ) {
         static $memo = [];
         $key         = (string) $url;
         if ( array_key_exists( $key, $memo ) ) {
-            return $memo[$key];
+            return $memo[ $key ];
         }
 
         // 复用插件已有的两级缓存包装（请求内 memo + 24h transient），
@@ -90,7 +90,7 @@ if ( ! function_exists( 'jinyu_og_image_dims' ) ) {
             }
         }
 
-        $memo[$key] = $dims;
+        $memo[ $key ] = $dims;
         return $dims;
     }
 }
@@ -117,7 +117,7 @@ if ( ! function_exists( 'jinyu_og_image_mime' ) ) {
             'webp' => 'image/webp',
             'avif' => 'image/avif',
         ];
-        return isset( $map[$ext] ) ? $map[$ext] : '';
+        return isset( $map[ $ext ] ) ? $map[ $ext ] : '';
     }
 }
 
@@ -266,11 +266,11 @@ function jinyu_seo_meta() {
 
         $tags = wp_get_post_tags( get_the_ID(), [ 'fields' => 'names' ] );
         if ( ! empty( $tags ) ) {
-$keys = implode( ',', $tags );
+			$keys = implode( ',', $tags );
         }
         $custom_keys = get_post_meta( get_the_ID(), 'jinyu_seo_keys', true );
         if ( $custom_keys ) {
-$keys = $custom_keys;
+			$keys = $custom_keys;
         }
     } elseif ( is_category() || is_tag() || is_tax() ) {
         $term_id   = get_queried_object_id();
@@ -299,7 +299,7 @@ $keys = $custom_keys;
     } elseif ( is_author() ) {
         $author = get_queried_object();
         if ( $author && ! empty( $author->description ) ) {
-$desc = jinyu_truncate_desc( $author->description );
+			$desc = jinyu_truncate_desc( $author->description );
         }
     } elseif ( is_front_page() || is_home() ) {
         // 首页：未单独配置 seo_desc 时用站点副标题兜底，确保首页也有 <meta name="description">（JY-12）。
@@ -310,7 +310,7 @@ $desc = jinyu_truncate_desc( $author->description );
     }
 
     if ( $desc ) {
-echo '<meta name="description" content="' . esc_attr( $desc ) . '">' . PHP_EOL;
+		echo '<meta name="description" content="' . esc_attr( $desc ) . '">' . PHP_EOL;
     }
     // <meta name="keywords"> 属 legacy 标签，主流引擎（含 Google/Bing）早已不作为排序依据。
     // 默认关闭，仅保留有老式 SEO 需求的站点按需打开。
@@ -326,12 +326,12 @@ echo '<meta name="description" content="' . esc_attr( $desc ) . '">' . PHP_EOL;
         $og_image = $cover ?: ( $og_img ?: (string) get_site_icon_url() );
         $site_name = jinyu_companion_get_option( 'og_site_name', '' );
         if ( ! $site_name ) {
-$site_name = get_bloginfo( 'name' );
+			$site_name = get_bloginfo( 'name' );
         }
         // 分享图替代文本：全局配置优先，留空用文章标题兜底。
         $og_alt = jinyu_companion_get_option( 'og_image_alt', '' );
         if ( ! $og_alt ) {
-$og_alt = $title;
+			$og_alt = $title;
         }
         echo '<meta property="og:title" content="' . esc_attr( $title ) . '">' . PHP_EOL;
         echo '<meta property="og:type" content="article">' . PHP_EOL;
@@ -339,7 +339,7 @@ $og_alt = $title;
         echo '<meta property="og:site_name" content="' . esc_attr( $site_name ) . '">' . PHP_EOL;
         echo '<meta property="og:locale" content="' . esc_attr( str_replace( '_', '-', get_locale() ) ) . '">' . PHP_EOL;
         if ( $desc ) {
-echo '<meta property="og:description" content="' . esc_attr( $desc ) . '">' . PHP_EOL;
+			echo '<meta property="og:description" content="' . esc_attr( $desc ) . '">' . PHP_EOL;
         }
         if ( $og_image ) {
             $og_wh = jinyu_og_image_size( $og_image );
@@ -355,7 +355,7 @@ echo '<meta property="og:description" content="' . esc_attr( $desc ) . '">' . PH
         // 首页：让用户分享站点门面链接（微信群/朋友圈）也能出卡片。
         $site_name = jinyu_companion_get_option( 'og_site_name', '' );
         if ( ! $site_name ) {
-$site_name = get_bloginfo( 'name' );
+			$site_name = get_bloginfo( 'name' );
         }
         $home_desc = $desc ?: get_bloginfo( 'description' );
         // 优先用标准分享大图，其次站点 Logo，再次站点图标。
@@ -364,12 +364,12 @@ $site_name = get_bloginfo( 'name' );
             $home_img = wp_get_attachment_image_url( get_theme_mod( 'custom_logo' ), 'full' );
         }
         if ( ! $home_img ) {
-$home_img = get_site_icon_url();
+			$home_img = get_site_icon_url();
         }
         // 首页分享图替代文本：全局配置优先，留空用站点名称。
         $home_alt = jinyu_companion_get_option( 'og_image_alt', '' );
         if ( ! $home_alt ) {
-$home_alt = $site_name;
+			$home_alt = $site_name;
         }
         echo '<meta property="og:title" content="' . esc_attr( $site_name ) . '">' . PHP_EOL;
         echo '<meta property="og:type" content="website">' . PHP_EOL;
@@ -377,7 +377,7 @@ $home_alt = $site_name;
         echo '<meta property="og:site_name" content="' . esc_attr( $site_name ) . '">' . PHP_EOL;
         echo '<meta property="og:locale" content="' . esc_attr( str_replace( '_', '-', get_locale() ) ) . '">' . PHP_EOL;
         if ( $home_desc ) {
-echo '<meta property="og:description" content="' . esc_attr( $home_desc ) . '">' . PHP_EOL;
+			echo '<meta property="og:description" content="' . esc_attr( $home_desc ) . '">' . PHP_EOL;
         }
         if ( $home_img ) {
             $home_wh = jinyu_og_image_size( $home_img );
@@ -392,7 +392,7 @@ echo '<meta property="og:description" content="' . esc_attr( $home_desc ) . '">'
         // 归档页（分类/标签/作者/日期）：分享到微信 / QQ 也能出卡片。
         $site_name = jinyu_companion_get_option( 'og_site_name', '' );
         if ( ! $site_name ) {
-$site_name = get_bloginfo( 'name' );
+			$site_name = get_bloginfo( 'name' );
         }
         $arc_title = wp_strip_all_tags( get_the_archive_title() );
         $arc_desc  = '';
@@ -400,14 +400,14 @@ $site_name = get_bloginfo( 'name' );
             $arc_desc = wp_strip_all_tags( (string) get_the_archive_description() );
         }
         if ( ! $arc_desc ) {
-$arc_desc = get_bloginfo( 'description' );
+			$arc_desc = get_bloginfo( 'description' );
         }
         // 归档链接：术语 / 作者走标准函数，其余（日期等）按当前请求路径兜底。
         $queried = get_queried_object();
         if ( $queried instanceof WP_Term ) {
             $arc_url = get_term_link( $queried );
             if ( is_wp_error( $arc_url ) ) {
-$arc_url = '';
+				$arc_url = '';
             }
         } elseif ( $queried instanceof WP_User ) {
             $arc_url = get_author_posts_url( $queried->ID );
@@ -420,20 +420,20 @@ $arc_url = '';
             $arc_img = wp_get_attachment_image_url( get_theme_mod( 'custom_logo' ), 'full' );
         }
         if ( ! $arc_img ) {
-$arc_img = get_site_icon_url();
+			$arc_img = get_site_icon_url();
         }
         // 归档分页页 og:url 指向自身（带 /page/N/），与 canonical 口径一致
         $arc_paged = max( 1, (int) get_query_var( 'paged' ), (int) get_query_var( 'page' ) );
         if ( $arc_paged > 1 && $arc_url && ! is_wp_error( $arc_url ) ) {
             $arc_url = get_pagenum_link( $arc_paged );
             if ( is_wp_error( $arc_url ) ) {
-$arc_url = '';
+				$arc_url = '';
             }
         }
         // 归档分享图替代文本：全局配置优先，留空用归档标题。
         $arc_alt = jinyu_companion_get_option( 'og_image_alt', '' );
         if ( ! $arc_alt ) {
-$arc_alt = $arc_title;
+			$arc_alt = $arc_title;
         }
         if ( $arc_url ) {
             echo '<meta property="og:title" content="' . esc_attr( $arc_title ) . '">' . PHP_EOL;
@@ -442,7 +442,7 @@ $arc_alt = $arc_title;
             echo '<meta property="og:site_name" content="' . esc_attr( $site_name ) . '">' . PHP_EOL;
             echo '<meta property="og:locale" content="' . str_replace( '_', '-', get_locale() ) . '">' . PHP_EOL; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（SVG/JSON-LD/缓存页/CSP nonce/内部构造 HTML），无需转义
             if ( $arc_desc ) {
-echo '<meta property="og:description" content="' . esc_attr( $arc_desc ) . '">' . PHP_EOL;
+				echo '<meta property="og:description" content="' . esc_attr( $arc_desc ) . '">' . PHP_EOL;
             }
             if ( $arc_img ) {
                 $arc_wh = jinyu_og_image_size( $arc_img );
@@ -478,7 +478,7 @@ function jinyu_llms_head_link() {
 add_filter( 'document_title_parts', 'jinyu_archive_title_parts' );
 function jinyu_archive_title_parts( $parts ) {
     if ( is_admin() ) {
-return $parts;
+		return $parts;
     }
 
     if ( is_category() || is_tag() || is_tax() || is_author() || is_date() || is_post_type_archive() ) {
@@ -611,10 +611,10 @@ function jinyu_seo_diag() {
 
     wp_send_json_success(
         [
-        'short_title'       => $map( (array) $short_title ),
-        'short_title_total' => $short_title_total,
-        'short_desc'        => $map( (array) $short_desc ),
-        'short_desc_total'  => $short_desc_total,
+			'short_title'       => $map( (array) $short_title ),
+			'short_title_total' => $short_title_total,
+			'short_desc'        => $map( (array) $short_desc ),
+			'short_desc_total'  => $short_desc_total,
         ]
     );
 }
