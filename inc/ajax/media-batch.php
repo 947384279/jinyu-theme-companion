@@ -257,7 +257,6 @@ function jinyu_companion_wm_worker_pool( array $batch, int $concurrency, string 
 		foreach ( $handles as $ch ) {
 			$results[] = curl_multi_getcontent( $ch ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_getcontent -- 站内 admin-ajax worker 并发处理
 			curl_multi_remove_handle( $mh, $ch ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_remove_handle -- 站内 admin-ajax worker 并发处理
-			curl_close( $ch ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_close -- 站内 admin-ajax worker 并发处理
 		}
 		curl_multi_close( $mh ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_close -- 站内 admin-ajax worker 并发处理
 	}
@@ -279,13 +278,13 @@ function jinyu_companion_wm_stats(): array {
 	$mimes = array( 'image/jpeg', 'image/png', 'image/webp' );
 	$place = implode( ',', array_fill( 0, count( $mimes ), '%s' ) );
 	$where = "post_type = 'attachment' AND post_status = 'inherit' AND post_mime_type IN ($place)";
-	$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->posts WHERE $where", $mimes ) );
+	$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->posts WHERE $where", ...$mimes ) );
 	$done  = (int) $wpdb->get_var(
 		$wpdb->prepare(
 			"SELECT COUNT(*) FROM $wpdb->posts p
 			 INNER JOIN $wpdb->postmeta m ON m.post_id = p.ID AND m.meta_key = %s
 			 WHERE p.post_type = 'attachment' AND p.post_status = 'inherit' AND p.post_mime_type IN ($place)",
-			array_merge( array( Jinyu_Watermark::META ), $mimes )
+			...array_merge( array( Jinyu_Watermark::META ), $mimes )
 		)
 	);
 	return array(

@@ -170,7 +170,8 @@ $jinyu_gist = function ( $atts ) {
 		return '';
 	}
 	$src = 'https://gist.github.com/' . esc_attr( $a['id'] ) . '.js' . ( $a['file'] ? '?file=' . esc_attr( $a['file'] ) : '' );
-	wp_enqueue_script( 'jinyu-gist-' . sanitize_key( $a['id'] ), $src, array(), null, true );
+	// 版本号挂插件版本：Gist 的 js 内容随时人在后台改，靠版本号让客户端缓存跟着失效。
+	wp_enqueue_script( 'jinyu-gist-' . sanitize_key( $a['id'] ), $src, array(), JINYU_COMPANION_VER, true );
 	return '';
 };
 add_shortcode( 'jinyu_gist', $jinyu_gist );

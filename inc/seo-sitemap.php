@@ -115,10 +115,45 @@ function jinyu_sitemap_filter_post_types( $types ) {
 add_filter( 'wp_sitemaps_post_types', 'jinyu_sitemap_filter_post_types' );
 
 /**
+ * 站点地图额外排除的文章 ID。
+ *
+ * 【为什么需要这一层】noindex 只回答「搜索结果里展不展示」，管不住 sitemap ——
+ * 内核生成 XML 时并不读 wp_robots 的输出，一个已被 noindex 的低质页照样躺在
+ * sitemap.xml 里，等于一边说不收它、一边继续给它发邀请函。
+ * 本函数是 sitemap 侧的对称闸门，与 wp_robots 层的 noindex 成对使用。
+ *
+ * 【两个入口】面板填 ID（存 sitemap_exclude_ids）；或挂 jinyu_sitemap_exclude_ids
+ * 过滤器注入 —— mu-plugins 这类「非插件目录」的代码读不到插件设置，只能走过滤器。
+ *
+ * 解析：只认正整数，逗号 / 换行 / 空格分隔，其余字符一律丢弃（防止注入型字符入库）。
+ *
+ * @return array<int, int> 需从站点地图中剔除的文章 ID。
+ */
+function jinyu_sitemap_excluded_ids(): array {
+	$raw   = (string) jinyu_companion_get_option( 'sitemap_exclude_ids', '' );
+	$parts = preg_split( '/[^0-9]+/', $raw, -1, PREG_SPLIT_NO_EMPTY );
+	$ids   = array_map( 'absint', is_array( $parts ) ? $parts : array() );
+	$ids   = array_values( array_unique( array_filter( $ids ) ) );
+
+	/**
+	 * 过滤器：调整站点地图排除的文章 ID。
+	 *
+	 * @param array<int, int> $ids 排除的文章 ID。
+	 */
+	$ids = (array) apply_filters( 'jinyu_sitemap_exclude_ids', $ids );
+
+	return array_values( array_unique( array_map( 'absint', array_filter( (array) $ids ) ) ) );
+}
+
+/**
  * 调整内核文章 / 页面的站点地图查询参数。
  *
  * 内核已限定 post_status 为 publish（草稿与私有天然被排除），此处只额外排除密码保护文章：
  * 密码文章虽是 publish 状态，permalink 却需带 ?post_password= 才能打开，进 sitemap 只会产出死链。
+ *
+ * 再叠加显式排除 ID（jinyu_sitemap_excluded_ids），用于剔除已标记 noindex 的低质页。
+ * 注意与 post__in 的互斥：WP_Query 同时收到 post__in 与 post__not_in 时以 post__in 为准
+ * （not_in 被静默丢弃），故二者同时存在时改为做 post__in 差集，避免「排除项形同虚设」。
  *
  * @param array<string, mixed> $args      内核 WP_Sitemaps 的 WP_Query 参数。
  * @param string               $post_type 当前 provider 的文章类型。
@@ -129,6 +164,17 @@ function jinyu_sitemap_filter_query_args( $args, $post_type ) {
 		return $args;
 	}
 	$args['post_password'] = '';
+
+	$exclude = jinyu_sitemap_excluded_ids();
+	if ( empty( $exclude ) ) {
+		return $args;
+	}
+	if ( ! empty( $args['post__in'] ) && is_array( $args['post__in'] ) ) {
+		$args['post__in'] = array_values( array_diff( (array) $args['post__in'], $exclude ) );
+	} else {
+		$args['post__not_in'] = $exclude;
+	}
+
 	return $args;
 }
 add_filter( 'wp_sitemaps_posts_query_args', 'jinyu_sitemap_filter_query_args', 10, 2 );

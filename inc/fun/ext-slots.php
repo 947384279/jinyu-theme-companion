@@ -93,7 +93,7 @@ function jinyu_notify_page_payload( $default, $uid = 0, $page = 1 ): ?array {
 	}
 
 	return [
-		'html'     => '' !== $html ? $html : '<li class="jinyu-empty">' . esc_html__( 'No messages', 'jinyu' ) . '</li>',
+		'html'     => '' !== $html ? $html : '<li class="jinyu-empty">' . esc_html__( 'No messages', 'jinyu-theme-companion' ) . '</li>',
 		'unread'   => jinyu_get_unread_count( $uid ),
 		'has_more' => count( $list ) === $per,
 	];
@@ -137,7 +137,7 @@ function jinyu_sl_bindings_markup( $html, $uid = 0, $uc_url = '' ): string {
 	$bindings = jinyu_oauth_bindings( $uid );
 	$uc_url   = '' !== (string) $uc_url ? (string) $uc_url : home_url();
 
-	$out  = '<h3 class="jinyu-user-subtitle">' . esc_html__( '第三方账号绑定', 'jinyu' ) . '</h3>';
+	$out  = '<h3 class="jinyu-user-subtitle">' . esc_html__( '第三方账号绑定', 'jinyu-theme-companion' ) . '</h3>';
 	$out .= '<ul class="jinyu-bind-list">';
 	foreach ( $platforms as $p => $info ) {
 		$icon = (string) ( $info['icon'] ?? '' );
@@ -147,21 +147,21 @@ function jinyu_sl_bindings_markup( $html, $uid = 0, $uc_url = '' ): string {
 		$out .= esc_html( $info['label'] ?? $p );
 		if ( ! empty( $bindings[ $p ] ) ) {
 			/* translators: %s: 第三方平台名称。 */
-			$label = sprintf( __( '确定解除与「%s」的绑定吗？解绑后将无法再使用该平台一键登录。', 'jinyu' ), $info['label'] ?? $p );
+			$label = sprintf( __( '确定解除与「%s」的绑定吗？解绑后将无法再使用该平台一键登录。', 'jinyu-theme-companion' ), $info['label'] ?? $p );
 			$out  .= '<button type="button" class="jinyu-bind-off"'
 				. ' data-jinyu-unbind="' . esc_attr( $p ) . '"'
 				. ' data-nonce="' . esc_attr( wp_create_nonce( 'jinyu_sl_unbind' ) ) . '"'
 				. ' data-bind-url="' . esc_url( jinyu_oauth_bind_url( $p, $uc_url ) ) . '"'
 				. ' data-bind-label="' . esc_attr( $label ) . '">'
-				. esc_html__( '解除绑定', 'jinyu' ) . '</button>';
+				. esc_html__( '解除绑定', 'jinyu-theme-companion' ) . '</button>';
 		} else {
 			$out .= '<a class="jinyu-bind-go" href="' . esc_url( jinyu_oauth_bind_url( $p, $uc_url ) ) . '">'
-				. esc_html__( '去绑定', 'jinyu' ) . '</a>';
+				. esc_html__( '去绑定', 'jinyu-theme-companion' ) . '</a>';
 		}
 		$out .= '</li>';
 	}
 	$out .= '</ul>';
-	$out .= '<p class="jinyu-field-hint">' . esc_html__( '绑定后可使用该平台一键登录，并关联到当前账号。', 'jinyu' ) . '</p>';
+	$out .= '<p class="jinyu-field-hint">' . esc_html__( '绑定后可使用该平台一键登录，并关联到当前账号。', 'jinyu-theme-companion' ) . '</p>';
 
 	return $out;
 }

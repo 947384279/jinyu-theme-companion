@@ -274,7 +274,6 @@ final class Jinyu_Watermark {
 				} else {
 					@wp_delete_file( $png );
 				}
-				imagedestroy( $im );
 			}
 		}
 		// 临时文件探测失败（极端环境）：回退到扩展能力检测。
@@ -1224,9 +1223,6 @@ final class Jinyu_Watermark {
 		}
 		imagealphablending( $cv, true );
 		$ok = imagecopy( $cv, $layer, $x, $y, 0, 0, $lw, $lh );
-		if ( PHP_VERSION_ID < 80000 ) {
-			imagedestroy( $layer );
-		}
 		return (bool) $ok;
 	}
 

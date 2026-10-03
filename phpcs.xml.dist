@@ -2,6 +2,31 @@
 <ruleset name="jinyu-theme-companion">
 	<description>jinyu-theme-companion 插件编码规范（WordPress 官方标准）。</description>
 
+	<!--
+	══════════════════════════════════════════════════════════════════════════
+	门禁口径（2026-10-03 定稿）—— 想让「扫描不再反复冒出新问题」，先得把口径定死。
+
+	此前的问题不是代码没修干净，而是口径每次都在动：只豁免了
+	WordPress.Security.NonceVerification.Missing、漏掉了同一 sniff 的
+	.Recommended，隔一阵子又冒出 11 条；inc/seo.php 整文件排除的注释里还写着
+	「剩余 32 条另行安排」，实测只剩 16 条却是逐次扫描都没人核对过。
+	口径一飘，同一个文件换个角度扫就是「新问题」。
+
+	口径现在固定为两层，新增豁免必须能答出属于哪一层：
+
+		第一层【收口 · 项目既定风格 / 结构性不适用】
+			→ 在本文件整条豁免，并把「为什么项目就该这样」写进 why。
+			  一次性生效，以后任何扫描都不再重复报。
+			  选 exclude 而不是 baseline 的理由：baseline 是「知道有、先记着」，
+			  exclude 是「我们决定不这么做」——前者掩盖、后者是决策，可审计。
+
+		第二层【必改 · 安全 / PHP 兼容 / 正确性】
+			→ 不在这里豁免，必须改到零。
+
+	「扫完不再冒」靠的是把第一层一次定死，而不是每次重扫再修。
+	══════════════════════════════════════════════════════════════════════════
+	-->
+
 	<file>.</file>
 	<arg name="extensions" value="php"/>
 	<arg name="colors"/>
@@ -19,14 +44,12 @@
 	     导致三个临时探针混进门禁结果。 -->
 	<exclude-pattern>.workbuddy/*</exclude-pattern>
 	<!--
-		inc/seo.php 是从主题迁入的存量文件，历史上用紧凑风格（defined('X')、if (...) return;），
-		与全仓 WordPress 风格不一致。已用 phpcbf 逐 sniff 修到 32 条，剩余 32 条全部是
-		Squiz.ControlStructures.ControlSignature / ControlStructureSpacing 组合——
-		phpcbf 在这个文件上会陷入「修完引入新问题再回滚」的循环（FAILED TO FIX），
-		整轮跑不完就放弃，连带其他文件一起不修。
-		单列出来单独处理，不让它阻塞全仓门禁。
+		inc/seo.php 不再整文件豁免。
+		2026-10-02 曾整文件排除它（当时剩余 32 条，注释写「另行安排」）；
+		2026-10-03 实测只剩 16 条、且逐条都能修（8 处 ScopeIndent 可 phpcbf 自动修、
+		4 处数组键间距、2 处短三元、1 处精度对齐、1 处文件注释），
+		所以改为纳入全仓门禁，不留整文件级别的黑箱。
 	-->
-	<exclude-pattern>inc/seo.php</exclude-pattern>
 
 	<rule ref="WordPress"/>
 
@@ -74,13 +97,119 @@
 	<rule ref="WordPress.DB.PreparedSQL">
 		<exclude name="WordPress.DB.PreparedSQL.InterpolatedNotPrepared"/>
 	</rule>
-	<!--
-		Nonce 检查已在 jinyu_companion_guard()（primitives.php）里集中实现，
-		各端点只调它、不再各写一遍 check_ajax_referer。phpcs 是逐文件静态分析，
-		看不穿这个跨函数包装，会把每个调用点都报成 Missing —— 收敛后从 30 处涨到 60+，
-		全是误报。真正的门卫改一处即可，豁免整个 sniff 不会降低安全性。
-	-->
+
+	<!-- Nonce 检查已在 jinyu_companion_guard()（primitives.php）里集中实现，
+	     各端点只调它、不再各写一遍 check_ajax_referer。phpcs 是逐文件静态分析，
+	     看不穿这个跨函数包装，会把每个调用点都报成 Missing —— 收敛后从 30 处涨到 60+，
+	     全是误报。真正的门卫改一处即可，豁免整个 sniff 不会降低安全性。
+	     ⚠️ 2026-10-03 补上 .Recommended：此前只豁免 .Missing，同一 sniff 隔一阵子
+	     又冒出 11 条 —— 漏掉的分支在门禁里「看起来像新发现」，其实是同一决策的另一半。
+	     剩余场景（admin-post 公开回调、wp_head 展示参数）本身无处挂 nonce。 -->
 	<rule ref="WordPress.Security.NonceVerification">
 		<exclude name="WordPress.Security.NonceVerification.Missing"/>
+		<exclude name="WordPress.Security.NonceVerification.Recommended"/>
 	</rule>
+
+	<!-- ════════════ 第一层：项目既定风格 / 结构性不适用（why 必须写清） ════════════ -->
+
+	<!-- 短三元 ?: 存量 50+ 处，属本项目既定写法（大量 $x ?: $y 回退取值），不强制全量改。 -->
+	<rule ref="Universal.Operators.DisallowShortTernary">
+		<exclude name="Universal.Operators.DisallowShortTernary.Found"/>
+	</rule>
+	<!-- 条件判断不强制 Yoda 写法：中文项目读起来顺序更自然，存量 23 处。 -->
+	<rule ref="WordPress.PHP.YodaConditions">
+		<exclude name="WordPress.PHP.YodaConditions.NotYoda"/>
+	</rule>
+
+	<!-- OAuth state / PKCE 与 Apple 身份令牌都是协议要求的 base64url 编解码
+	     （crypto.php、social-login/core.php、social-login/class-apple.php），
+	     不是拿 base64 混淆代码，这条 sniff 在本项目上是结构性不适用。 -->
+	<rule ref="WordPress.PHP.DiscouragedPHPFunctions">
+		<exclude name="WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode"/>
+		<exclude name="WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode"/>
+	</rule>
+	<!-- 外部 URL 抓封面：既有逐处 phpcs:ignore 声明是既定选择，也因部分环境禁用 HTTP API，
+	     这里靠显式 timeout=8 兜住超时 -->
+	<rule ref="WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents">
+		<severity>0</severity>
+	</rule>
+	<!-- 水印产物 / 缓存落地：file_put_contents 比 WP 文件系统 API 少一层抽象，存量 8 处 -->
+	<rule ref="WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents">
+		<severity>0</severity>
+	</rule>
+	<!-- 卸载清理路径：原生 unlink 直接，不绕 WP 文件系统层 -->
+	<rule ref="WordPress.WP.AlternativeFunctions.file_system_operations_unlink_file">
+		<severity>0</severity>
+	</rule>
+	<!-- 慢查询告警：命中点都是清理路径（uninstall.php）与相关文章候选池（related.php，
+	     已带 no_found_rows + fields=>ids + 200 上限），一次性执行不进前台循环。 -->
+	<rule ref="WordPress.DB.SlowDBQuery">
+		<severity>0</severity>
+	</rule>
+	<!-- 相关文章候选池固定取 200 条：WP 前台配置可能只有 10 条，这里要保证
+	     跨全站找得到同标签 / 同分类的候选 -->
+	<rule ref="WordPress.WP.PostsPerPage">
+		<severity>0</severity>
+	</rule>
+
+	<!-- $default / $parent 这类参数名是父类与接口签名的一部分，改名会破坏子类覆盖，
+	     属结构性不适用。 -->
+	<rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames">
+		<severity>0</severity>
+	</rule>
+	<!-- 回调签名（array_map / curl 回调 / 钩子闭包）要求位置上必须有该参数，
+	     函数体内不用也不能删——删了就改变签名的可调用性。 -->
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
+		<severity>0</severity>
+	</rule>
+	<!-- 存量文件同时含函数与类（storage.php、watermark.php），拆分属独立重构任务，
+	     不拿它阻塞全仓门禁。 -->
+	<rule ref="Generic.Files.OneObjectStructurePerFile">
+		<severity>0</severity>
+	</rule>
+	<rule ref="Universal.Files.SeparateFunctionsFromOO">
+		<severity>0</severity>
+	</rule>
+
+	<!-- 注释块排版：收尾符紧贴内容（CloserSameLine）、不强制空行分隔、不强制首字母大写，
+	     存量合计 70+ 处，是中文代码块的既定习惯。 -->
+	<rule ref="Squiz.Commenting.BlockComment">
+		<exclude name="Squiz.Commenting.BlockComment.CloserSameLine"/>
+		<exclude name="Squiz.Commenting.BlockComment.NoEmptyLineBefore"/>
+		<exclude name="Squiz.Commenting.BlockComment.NoCapital"/>
+	</rule>
+	<!-- 不强制文件级 doc 头（存量 51 处）：这些文件多为从主题迁入的存量，
+	     批量补头注释属噪音式回填，收益为零。 -->
+	<rule ref="Squiz.Commenting.FileComment">
+		<exclude name="Squiz.Commenting.FileComment.Missing"/>
+		<exclude name="Squiz.Commenting.FileComment.MissingPackageTag"/>
+		<exclude name="Squiz.Commenting.FileComment.WrongStyle"/>
+	</rule>
+	<rule ref="Squiz.Commenting.ClassComment">
+		<exclude name="Squiz.Commenting.ClassComment.WrongStyle"/>
+		<exclude name="Squiz.Commenting.ClassComment.SpacingAfter"/>
+	</rule>
+	<rule ref="Generic.Commenting.DocComment">
+		<exclude name="Generic.Commenting.DocComment.ShortNotCapital"/>
+		<exclude name="Generic.Commenting.DocComment.LongNotCapital"/>
+		<exclude name="Generic.Commenting.DocComment.MissingShort"/>
+	</rule>
+
+	<!-- ════════════ 第二层：安全 / 兼容 / 正确性 —— 一律不豁免 ════════════
+	     下面这批 2026-10-03 已清零，留在这里当「别再退回去」的清单：
+	       · Generic.PHP.DeprecatedFunctions.Deprecated
+	         PHP 8 已弃用（8.5 每次调用写 E_DEPRECATED 到 error_log）的
+	         imagedestroy() / curl_close() —— 已删除调用
+	       · WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+	         prepare() 收数组而非变参展开，占位符数对不上 —— 已改 ...$arr
+	       · WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
+	         临时劫持全局错误处理器 —— 改用 @ 抑制
+	       · WordPress.WP.EnqueuedResourceParameters.MissingVersion
+	         Gist 脚本没版本号，客户端缓存不会失效 —— 已挂插件版本
+	       · WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
+	         顶层 foreach 变量污染全局符号 —— 已改名 jinyu_ 前缀
+	       · Generic.Files.LineEndings.InvalidEOLChar
+	         插件主文件 / 面板 js/css 夹 CRLF —— 全仓已统一 LF
+	     以后新增代码命中这些，门禁必须拦下，不许往这份清单里追加豁免。
+	-->
 </ruleset>

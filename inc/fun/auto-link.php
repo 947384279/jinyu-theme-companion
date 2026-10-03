@@ -244,9 +244,9 @@ if ( ! function_exists( 'jinyu_auto_link_content' ) ) {
 add_filter( 'the_content', 'jinyu_auto_link_content', 12 );
 
 // 内容变更时让关键词索引失效重建
-foreach ( [ 'save_post', 'deleted_post', 'trashed_post' ] as $hook ) {
+foreach ( [ 'save_post', 'deleted_post', 'trashed_post' ] as $jinyu_hook ) {
 	add_action(
-        $hook,
+        $jinyu_hook,
         function () {
 			delete_transient( 'jinyu_auto_link_map' );
 		},

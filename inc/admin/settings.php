@@ -131,6 +131,11 @@ function jinyu_companion_apply_saved_settings(): void {
 	$settings['speculation_mode']     = jinyu_companion_post_enum( 'speculation_mode', [ 'prefetch', 'prerender' ], 'prefetch' );
 	$settings['speculation_eagerness'] = jinyu_companion_post_enum( 'speculation_eagerness', [ 'conservative', 'moderate', 'eager' ], 'conservative' );
 
+	// 站点地图排除文章 ID：只保留正整数字段（逗号 / 换行 / 空格分隔），其余字符丢弃。
+	// 与页面 noindex 配套：noindex 只挡搜索结果展示，管不住 XML 站点地图，
+	// 低质页一样会躺在 sitemap.xml 里。留空表示不额外排除。
+	$settings['sitemap_exclude_ids'] = isset( $_POST['sitemap_exclude_ids'] ) ? sanitize_text_field( wp_unslash( $_POST['sitemap_exclude_ids'] ) ) : '';
+
 	// 验证码策略
 	$settings['captcha_policy'] = jinyu_companion_post_enum( 'captcha_policy', [ 'smart', 'always', 'off' ], 'smart' );
 
@@ -709,6 +714,10 @@ function jinyu_companion_settings_page_html(): void {
 										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( 'XML 站点地图', 'jinyu-theme-companion' ); ?></div>
 											<div class="jyc-fdesc"><?php echo esc_html__( '在内核站点地图之上补足收录规则：剔除附件与密码保护文章，<lastmod> 取文章最后修改时间。已装 Yoast / Rank Math 等 SEO 插件时自动让位。', 'jinyu-theme-companion' ); ?></div></div>
 									</div>
+									<label class="jyc-fl" style="margin-top:12px"><?php echo esc_html__( '站点地图排除文章 ID', 'jinyu-theme-companion' ); ?>
+										<input class="jyc-inp jyc-inp-mono" type="text" name="sitemap_exclude_ids" value="<?php echo esc_attr( jinyu_companion_get_option( 'sitemap_exclude_ids', '' ) ); ?>" placeholder="1018,964,1634">
+										<span class="jyc-muted" style="font-size:12px"><?php echo esc_html__( '指定文章不进 XML 站点地图（逗号 / 换行分隔）。与页面 noindex 配套：noindex 只挡搜索结果，管不住站点地图。非插件目录（如 mu-plugins）的代码读不到此处设置，可改挂过滤器 jinyu_sitemap_exclude_ids。', 'jinyu-theme-companion' ); ?></span>
+									</label>
 									<div class="jyc-frow">
 										<label class="jyc-switch"><input type="checkbox" name="seo_keywords_enable" <?php checked( jinyu_companion_is_checked( 'seo_keywords_enable', false ), true ); ?>><span class="jyc-track"></span></label>
 										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '输出 keywords 标签', 'jinyu-theme-companion' ); ?></div>

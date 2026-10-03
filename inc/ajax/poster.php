@@ -80,18 +80,14 @@ function jinyu_poster_generate() {
         $cover_data = is_wp_error( $resp ) ? '' : (string) wp_remote_retrieve_body( $resp );
         if ( $cover_data ) {
             // imagecreatefromstring 对损坏数据会发告警，此处仅抑制该调用的告警（结果已显式判断）
-            set_error_handler(
-                static function () {
-					return true;
-				}
-            );
-            $cover = imagecreatefromstring( $cover_data );
-            restore_error_handler();
+            // 用 @ 而不是 set_error_handler()：后者会临时劫持全局错误处理器，
+            // 一旦中间有异常路径就 restore 不回来；@ 只作用于这一次调用。
+            // imagecreatefromstring() 对损坏数据只发 warning 不抛异常，结果由下面的 if ( $cover ) 兜住。
+            $cover = @imagecreatefromstring( $cover_data );
             if ( $cover ) {
                 $cw = imagesx( $cover );
 				$ch = imagesy( $cover );
                 imagecopyresampled( $img, $cover, 50, 250, 0, 0, 650, 400, $cw, $ch );
-                imagedestroy( $cover );
             }
         }
     }
@@ -110,7 +106,6 @@ function jinyu_poster_generate() {
     $upload = wp_upload_dir();
     $file = $upload['basedir'] . '/jinyu-poster-' . $post_id . '.png';
     imagepng( $img, $file );
-    imagedestroy( $img );
 
     $url = str_replace( $upload['basedir'], $upload['baseurl'], $file );
     set_transient(

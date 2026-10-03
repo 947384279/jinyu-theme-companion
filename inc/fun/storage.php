@@ -112,7 +112,6 @@ function jinyu_storage_run_multi( $handles, $concurrency = 8 ) {
 					$code              = (int) curl_getinfo( $ch, CURLINFO_HTTP_CODE ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_getinfo -- 对象存储并行上传引擎
 					$results[ $item['index'] ] = ( $code >= 200 && $code < 300 );
 					curl_multi_remove_handle( $mh, $ch ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_remove_handle -- 对象存储并行上传引擎
-					curl_close( $ch ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_close -- 对象存储并行上传引擎
 					unset( $inflight[ $k ] );
 					$inflight = array_values( $inflight );
 					break;

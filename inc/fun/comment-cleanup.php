@@ -317,7 +317,7 @@ function jinyu_comment_cleanup_delete() {
 	// 仅作用于确为"已批准"的评论（与扫描口径一致），其余忽略
 	$ph            = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 	$approved_ids  = $wpdb->get_col(
-		$wpdb->prepare( "SELECT comment_ID FROM {$wpdb->comments} WHERE comment_ID IN ({$ph}) AND comment_approved = '1'", $ids )
+		$wpdb->prepare( "SELECT comment_ID FROM {$wpdb->comments} WHERE comment_ID IN ({$ph}) AND ...'1'", ...$ids )
 	);
 	if ( empty( $approved_ids ) ) {
 		wp_send_json_error( __( '未找到可删除的已批准评论。', 'jinyu-theme-companion' ) );
@@ -330,7 +330,7 @@ function jinyu_comment_cleanup_delete() {
 		$wpdb->query( "CREATE TABLE IF NOT EXISTS {$table} LIKE {$wpdb->comments}" );
 		$bph        = implode( ',', array_fill( 0, count( $approved_ids ), '%d' ) );
 		$backed_up = (int) $wpdb->query(
-			$wpdb->prepare( "INSERT INTO {$table} SELECT * FROM {$wpdb->comments} WHERE comment_ID IN ({$bph})", $approved_ids )
+			$wpdb->prepare( "INSERT INTO {$table} SELECT * FROM {$wpdb->comments} WHERE comment_ID IN ({$bph})", ...$approved_ids )
 		);
 	}
 
