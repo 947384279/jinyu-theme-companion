@@ -165,7 +165,7 @@ function jinyu_captcha_markup( string $scene ): string {
 
 /*
 ==========================================================================
-    图片输出端点：/wp-admin/admin-ajax.php?action=jinyu_captcha
+    图片输出端点（由 wp_ajax_jinyu_captcha 钩子提供；实际 URL 由上方 $base = admin_url(...) 动态生成，非静态硬编码）
     ========================================================================== */
 add_action( 'wp_ajax_jinyu_captcha', 'jinyu_captcha_output' );
 add_action( 'wp_ajax_nopriv_jinyu_captcha', 'jinyu_captcha_output' );

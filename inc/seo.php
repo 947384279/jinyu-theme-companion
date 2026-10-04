@@ -440,7 +440,7 @@ function jinyu_seo_meta() {
             echo '<meta property="og:type" content="website">' . PHP_EOL;
             echo '<meta property="og:url" content="' . esc_url( $wx_on ? add_query_arg( 'wx', '1', $arc_url ) : $arc_url ) . '">' . PHP_EOL;
             echo '<meta property="og:site_name" content="' . esc_attr( $site_name ) . '">' . PHP_EOL;
-            echo '<meta property="og:locale" content="' . str_replace( '_', '-', get_locale() ) . '">' . PHP_EOL; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（SVG/JSON-LD/缓存页/CSP nonce/内部构造 HTML），无需转义
+            echo '<meta property="og:locale" content="' . esc_attr( str_replace( '_', '-', get_locale() ) ) . '">' . PHP_EOL;
             if ( $arc_desc ) {
 				echo '<meta property="og:description" content="' . esc_attr( $arc_desc ) . '">' . PHP_EOL;
             }

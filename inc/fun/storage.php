@@ -888,7 +888,7 @@ function jinyu_storage_config( $input = null ) {
 			} elseif ( isset( $input[ $opt ] ) ) {
 				$val = $input[ $opt ];
 			}
-			$cfg[ $k ] = trim( (string) $val );
+			$cfg[ $k ] = sanitize_text_field( trim( (string) $val ) );
 		}
 		// 密码类字段若表单留空，表示沿用已保存值
 		foreach ( array( 'access_key', 'secret' ) as $k ) {

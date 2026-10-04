@@ -1138,10 +1138,10 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 .jyc-mod-flex .jyc-mod-title h1{margin:0}
 
 /* 指标条 */
-.jperf-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:36px;
+.jperf-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:24px;
 	background:var(--j-bg);border:1px solid var(--j-line);border-radius:var(--j-r);
 	box-shadow:0 1px 2px rgba(24,24,27,.04);overflow:hidden}
-.jperf-stat{padding:20px 22px;border-right:1px solid var(--j-line2)}
+.jperf-stat{padding:16px 18px;border-right:1px solid var(--j-line2)}
 .jperf-stat:last-child{border-right:none}
 .jperf-stat .jperf-k{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--j-muted);font-weight:600}
 .jperf-stat .jperf-v{font-size:27px;font-weight:600;letter-spacing:-.02em;margin-top:9px;font-variant-numeric:tabular-nums}
@@ -1150,13 +1150,13 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 
 /* eyebrow + 面板 */
 .jperf-eyebrow{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--j-muted);
-	font-weight:600;margin:0 0 14px}
+	font-weight:600;margin:0 0 11px}
 .jperf-eyebrow-mt{margin-top:0}
-.jperf-panels{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-bottom:38px}
+.jperf-panels{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:24px}
 @media(max-width:760px){.jperf-panels{grid-template-columns:1fr}}
 .jperf-panel{position:relative;overflow:hidden;background:var(--j-bg);border:1px solid var(--j-line);border-radius:16px;
-	box-shadow:0 1px 2px rgba(24,24,27,.04),inset 0 1px 0 rgba(255,255,255,.65);padding:22px}
-.jperf-panel-head{display:flex;align-items:center;gap:10px;margin-bottom:20px;position:relative}
+	box-shadow:0 1px 2px rgba(24,24,27,.04),inset 0 1px 0 rgba(255,255,255,.65);padding:18px}
+.jperf-panel-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;position:relative}
 .jperf-panel-ico{width:30px;height:30px;border-radius:9px;flex:none;display:grid;place-items:center;color:var(--j-accent);
 	background:var(--j-accent-soft)}
 .jperf-panel-head svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.8;fill:none}
@@ -1188,7 +1188,7 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 	transition:width 1.1s cubic-bezier(.22,1,.36,1)}
 
 /* 仪表区下方的补充数据栏（横向，不动上方网格布局） */
-.jperf-extra{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:18px;padding-top:14px;border-top:1px solid var(--j-line)}
+.jperf-extra{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:14px;padding-top:11px;border-top:1px solid var(--j-line)}
 .jperf-extra span{display:flex;align-items:baseline;gap:7px;min-width:0}
 .jperf-extra i{font-style:normal;font-size:11.5px;color:var(--j-muted);letter-spacing:.01em;white-space:nowrap}
 .jperf-extra b{font-size:13px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
@@ -1214,14 +1214,14 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 }
 
 /* 区块 + 开关列表 */
-.jperf-block{margin-bottom:38px}
-.jperf-block-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+.jperf-block{margin-bottom:24px}
+.jperf-block-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px}
 /* 底部操作卡片区（缓存管理 / 体验数据） */
-.jperf-grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-bottom:38px}
+.jperf-grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:24px}
 @media(max-width:900px){.jperf-grid2{grid-template-columns:1fr}}
 .jperf-card{background:var(--j-bg);border:1px solid var(--j-line);border-radius:var(--j-r);
-	box-shadow:0 1px 2px rgba(24,24,27,.04);padding:20px 22px}
-.jperf-card-head{display:flex;align-items:flex-start;gap:11px;margin-bottom:16px}
+	box-shadow:0 1px 2px rgba(24,24,27,.04);padding:16px 18px}
+.jperf-card-head{display:flex;align-items:flex-start;gap:11px;margin-bottom:13px}
 .jperf-card-ico{width:30px;height:30px;border-radius:9px;background:var(--j-accent-soft);
 	color:var(--j-accent);display:flex;align-items:center;justify-content:center;flex:none}
 .jperf-card-ico svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.8;fill:none}
@@ -1229,15 +1229,15 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 .jperf-card-tt p{font-size:11.5px;color:var(--j-muted);margin:3px 0 0;line-height:1.5}
 .jperf-block-head .jperf-hint{font-size:12px;color:var(--j-muted)}
 /* 开关区：分组双栏卡片 */
-.jgroup{margin-bottom:20px}
+.jgroup{margin-bottom:14px}
 .jgroup:last-child{margin-bottom:0}
-.jgroup-head{display:flex;align-items:baseline;gap:9px;margin:0 0 11px;padding-left:2px}
+.jgroup-head{display:flex;align-items:baseline;gap:9px;margin:0 0 8px;padding-left:2px}
 .jgroup-tt{font-size:13.5px;font-weight:650;letter-spacing:-.01em}
 .jgroup-n{font-size:11px;color:var(--j-muted)}
-.jgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:11px}
+.jgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px}
 /* 组内仅一张卡时占满整行，避免半宽孤卡右侧留空 */
 .jgrid > .jcard:only-child{grid-column:1 / -1}
-.jcard{display:flex;align-items:flex-start;gap:13px;padding:14px 15px;background:var(--j-bg);
+.jcard{display:flex;align-items:flex-start;gap:13px;padding:11px 13px;background:var(--j-bg);
 	border:1px solid var(--j-line);border-radius:12px;box-shadow:0 1px 2px rgba(24,24,27,.04);
 	transition:border-color .15s,box-shadow .15s,transform .15s}
 .jcard:hover{border-color:#dcdce2;box-shadow:0 6px 16px -10px rgba(24,24,27,.3);transform:translateY(-1px)}
@@ -1279,8 +1279,6 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 .jyc-app[data-theme="dark"] .jperf-btn:hover,
 .jyc-app[data-theme="dark"] .jcard:hover{border-color:#475878;box-shadow:0 6px 16px -10px rgba(0,0,0,.6)}
 .jyc-app[data-theme="dark"] .jperf-btn-danger:hover{border-color:#7f2c2c;background:#371d1d;box-shadow:0 6px 14px -8px rgba(220,38,38,.3)}
-.jyc-app[data-theme="dark"] .jperf-unsaved{color:#fbbf24;background:#33270f;border-color:#5c4a1a}
-.jyc-app[data-theme="dark"] .jperf-unsaved.saved{color:#4ade80;background:#0f2a1c;border-color:#1f5c38}
 .jyc-app[data-theme="dark"] .jperf-wv-badge{background:rgba(74,222,128,.14)}
 .jyc-app[data-theme="dark"] .jperf-wv-chip.rate-mid .jperf-wv-badge{background:rgba(251,191,36,.15)}
 .jyc-app[data-theme="dark"] .jperf-wv-chip.rate-poor .jperf-wv-badge{background:rgba(248,113,113,.15)}
@@ -1304,10 +1302,10 @@ textarea.jyc-inp{font-weight:400}
 /* 数值字段（整页缓存有效期） */
 
 /* 按钮 */
-.jperf-actions{display:flex;flex-wrap:wrap;gap:10px}
+.jperf-actions{display:flex;flex-wrap:wrap;gap:8px}
 .jperf-btn{border:1px solid var(--j-line);background:var(--j-bg);color:var(--j-ink);
-	font:inherit;font-size:13px;font-weight:500;border-radius:10px;padding:10px 16px;
-	cursor:pointer;display:inline-flex;align-items:center;gap:7px;
+	font:inherit;font-size:13px;font-weight:500;border-radius:10px;padding:8px 13px;
+	cursor:pointer;display:inline-flex;align-items:center;gap:6px;
 	transition:transform .15s,box-shadow .15s,border-color .15s,background .15s,color .15s}
 .jperf-btn:hover{border-color:#d8d8dd;background:#fafafb;transform:translateY(-1px);
 	box-shadow:0 6px 14px -8px rgba(24,24,27,.35)}
@@ -1324,9 +1322,31 @@ textarea.jyc-inp{font-weight:400}
 .jperf-btn-danger:hover{border-color:#f3b4b4;background:#fdf3f3;box-shadow:0 6px 14px -8px rgba(220,38,38,.4)}
 
 /* 结果 */
-.jperf-result{margin-top:14px;font-size:13px;line-height:1.8;display:none}
+.jperf-result{margin-top:10px;font-size:13px;line-height:1.8;display:none}
 .jperf-result.show{display:block;animation:rise .3s ease}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* 缓存预热区域：补齐 .jperf-field / .jperf-warmup 样式（此前缺失导致控件裸奔） */
+.jperf-warmup{display:flex;flex-direction:column;gap:12px;padding:14px;
+	background:var(--j-bg);border:1px solid var(--j-line);border-radius:var(--j-r)}
+.jperf-field{display:flex;flex-direction:column;gap:6px}
+.jperf-field > span{font-size:12.5px;font-weight:600;color:var(--j-ink);letter-spacing:-.01em}
+.jperf-field select,
+.jperf-field textarea{width:100%;margin:0;font:inherit;font-size:13px;color:var(--j-ink);
+	background:var(--j-bg);border:1px solid var(--j-line);border-radius:calc(var(--j-r) - 4px);
+	padding:9px 11px;transition:border-color .15s,box-shadow .15s,transform .15s}
+.jperf-field textarea{resize:vertical;line-height:1.55;min-height:88px}
+.jperf-field select{appearance:none;-webkit-appearance:none;cursor:pointer;font-weight:500;
+	background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+	background-repeat:no-repeat;background-position:right 11px center;padding-right:30px}
+.jperf-field select:hover,
+.jperf-field textarea:hover{border-color:#c6cede}
+.jperf-field select:focus,
+.jperf-field textarea:focus{outline:none;border-color:var(--j-accent);
+	box-shadow:0 0 0 3px var(--ring);transform:translateY(-1px)}
+.jperf-field select option{background:var(--j-bg);color:var(--j-ink);padding:10px 12px}
+.jyc-app[data-theme="dark"] .jperf-field select:hover,
+.jyc-app[data-theme="dark"] .jperf-field textarea:hover{border-color:#475878}
 
 /* 保存成功浮层：顶部居中胶囊，蓝底白字大字号，比内联结果区显眼（3.2s 自动消失） */
 #jperf-toast{position:fixed;top:48px;left:50%;z-index:99999;max-width:min(86vw,560px);
@@ -1337,12 +1357,55 @@ textarea.jyc-inp{font-weight:400}
 	transform:translate(-50%,-14px);transition:opacity .3s ease,transform .3s ease,visibility .3s}
 #jperf-toast.show{opacity:1;visibility:visible;transform:translate(-50%,0)}
 
-.jperf-btnrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
-	border-top:1px solid var(--j-line);margin-top:20px;padding-top:16px}
-.jperf-unsaved{display:inline-flex;align-items:center;font-size:12px;font-weight:600;color:#b45309;
-	background:#fffbeb;border:1px solid #fde68a;border-radius:999px;padding:3px 10px}
-.jperf-unsaved[hidden]{display:none}
-.jperf-unsaved.saved{color:#15803d;background:#f0fdf4;border-color:#bbf7d0}
+.jperf-btnrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+	border-top:1px solid var(--j-line);margin-top:14px;padding-top:12px}
+/* 悬浮保存：改动后出现，固定视口底部居中（含安全区），带撤销改动。
+ * 视觉/行为对齐全局 .jyc-dirtybar：呼吸点 + 幽灵撤销钮 + 主色保存钮。
+ * 浮条自身桥接 --j-*：JS 初始化时会把它搬到 .jyc-app 根级，逃出 .jyc-pane 入场动画
+ * transform 形成的 fixed 包含块（否则 position:fixed 相对 pane 定位、整条下坠数百 px，
+ * 全端复现，见 #jperf-tip-layer 注释）。脱离 .jperf-wrap 后仍需 token，故在此桥接。 */
+.jperf-floatsave{
+	--j-bg:var(--surface); --j-bg2:var(--surface-2, #fafbfc); --j-line:var(--line); --j-line2:var(--line-2);
+	--j-ink:var(--ink); --j-ink2:var(--ink-2); --j-muted:var(--ink-3); --j-faint:var(--line);
+	--j-accent:var(--brand); --j-accent-soft:var(--brand-soft); --j-ok:var(--ok); --j-r:14px;
+	--j-warn:var(--warn, #f59e0b);
+	position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom, 0px));
+	transform:translateX(-50%) translateY(12px);
+	z-index:40;display:flex;align-items:center;gap:14px;
+	padding:10px 10px 10px 18px;border-radius:999px;
+	background:var(--j-bg);border:1px solid var(--j-line);
+	box-shadow:0 14px 36px -14px rgba(24,24,27,.4);
+	opacity:0;pointer-events:none;
+	transition:opacity .22s ease,transform .28s cubic-bezier(.34,1.56,.64,1)}
+.jperf-floatsave.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.jperf-floatsave-dot{width:8px;height:8px;border-radius:50%;background:var(--j-warn);flex:none;
+	animation:jperfDot 1.6s ease-in-out infinite}
+@keyframes jperfDot{0%,100%{opacity:1}50%{opacity:.35}}
+.jperf-floatsave-txt{font-size:13px;font-weight:600;color:var(--j-ink);white-space:nowrap;
+	overflow:hidden;text-overflow:ellipsis}
+.jperf-floatsave-act{display:inline-flex;align-items:center;gap:8px;flex-shrink:0}
+.jperf-fsave-btn{font:inherit;font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;
+	border-radius:999px;padding:7px 16px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;
+	flex-shrink:0;transition:background .18s ease,filter .18s ease,color .18s ease,border-color .18s ease}
+.jperf-fsave-btn svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none;flex:none}
+.jperf-fsave-btn:disabled{opacity:.6;cursor:default}
+.jperf-fsave-ghost{background:var(--j-bg2, transparent);border-color:var(--j-line);color:var(--j-ink2)}
+.jperf-fsave-ghost:hover{color:var(--j-ink);border-color:var(--j-muted)}
+.jperf-fsave-primary{background:var(--j-accent);color:#fff;box-shadow:0 4px 12px rgba(28,96,243,.28)}
+.jperf-fsave-primary:hover{filter:brightness(.93)}
+.jyc-app[data-theme="dark"] .jperf-floatsave{box-shadow:0 14px 36px -12px rgba(0,0,0,.6)}
+.jyc-app[data-theme="dark"] .jperf-floatsave-dot{background:#fbbf24}
+.jyc-app[data-theme="dark"] .jperf-fsave-primary{color:#0b1220}
+@media (prefers-reduced-motion: reduce){
+	.jperf-floatsave-dot{animation:none}
+	.jperf-floatsave,.jperf-floatsave.show{transition:none;transform:translateX(-50%)}
+}
+/* 窄屏贴边：与全局 .jyc-dirtybar 行为一致，胶囊铺满、操作钮推到最右 */
+@media (max-width: 920px){
+	.jperf-floatsave{left:12px;right:12px;transform:translateY(12px);border-radius:18px;padding-left:16px}
+	.jperf-floatsave.show{transform:translateY(0)}
+	.jperf-floatsave-act{margin-left:auto}
+}
 @keyframes jperfIn{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
 @keyframes jperfPulse{0%{box-shadow:0 0 0 0 var(--j-dot-glow);transform:scale(1)}60%{box-shadow:0 0 0 9px transparent;transform:scale(1.15)}100%{box-shadow:0 0 0 0 transparent;transform:scale(1)}}
 .jperf-stat,.jperf-panel,.jperf-block,.jperf-wv-chip,.jperf-card{animation:jperfIn .55s cubic-bezier(.22,1,.36,1) both}

@@ -27,6 +27,14 @@ function jinyu_stats_install() {
  * Sec-Purpose: prefetch）与 AJAX / REST / cron 上下文，避免 PV 虚高。
  */
 function jinyu_stats_should_track() {
+    // 缓存预热请求（warm-up 爬取，带 X-Jinyu-Warmup 头）不算真实访问。
+    // 关键不只是 PV/UV 纯净：预热请求不带任何 Cookie，会被当作「新访客」种下
+    // jinyu_uv_* Cookie，而带 Set-Cookie 的响应 nginx fastcgi_cache 会拒绝缓存，
+    // 导致预热永远无法落盘（实测：预热跑完首页仍 MISS）。此处拦掉即同时解决两者。
+    if ( ! empty( $_SERVER['HTTP_X_JINYU_WARMUP'] ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 仅做存在性判断，不落库、不输出。
+        return false;
+    }
+
     if ( wp_doing_ajax() || wp_doing_cron() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
 		return false;
     }

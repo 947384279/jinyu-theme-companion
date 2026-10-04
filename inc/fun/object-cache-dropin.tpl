@@ -85,7 +85,7 @@ class Jinyu_Memcached_Object_Cache {
 
 		$salt = defined( 'JINYU_MEMCACHED_KEY_SALT' )
 			? JINYU_MEMCACHED_KEY_SALT
-			: ( defined( 'AUTH_KEY' ) ? AUTH_KEY : 'jinyu' );
+			: ( defined( 'AUTH_KEY' ) ? AUTH_KEY : 'jtc' );
 		$site = md5( ABSPATH . $salt );
 
 		$this->key_salt      = defined( 'WP_CACHE_KEY_SALT' ) ? WP_CACHE_KEY_SALT : '';
@@ -459,7 +459,7 @@ class Jinyu_Memcached_Object_Cache {
 		}
 		$salt              = defined( 'JINYU_MEMCACHED_KEY_SALT' )
 			? JINYU_MEMCACHED_KEY_SALT
-			: ( defined( 'AUTH_KEY' ) ? AUTH_KEY : 'jinyu' );
+			: ( defined( 'AUTH_KEY' ) ? AUTH_KEY : 'jtc' );
 		$site              = md5( ABSPATH . $salt );
 		$this->blog_prefix = $site . ':' . (int) $blog_id . ':';
 		// 切换站点后清空本地缓存，避免跨站键污染。

@@ -3,7 +3,7 @@
  * Plugin Name: Jinyu Theme Companion
  * Plugin URI:  https://www.qicaiyun.top/4698.html
  * Description: Functional layer for the Jinyu theme: SEO, structured data, social, related posts, shortcodes, cache and anti-spam. Works on any theme.
- * Version:     1.2.9
+ * Version:     1.2.10
  * Author:      金玉
  * Author URI:  https://www.qicaiyun.top
  * License:     GPL-2.0-or-later
@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 插件先于主题载入，抢先定义会让主题读到的版本号变成插件版本，造成版本漂移。
  * ------------------------------------------------------------------------ */
 if ( ! defined( 'JINYU_COMPANION_VER' ) ) {
-	define( 'JINYU_COMPANION_VER', '1.2.9' );
+	define( 'JINYU_COMPANION_VER', '1.2.10' );
 }
 
 /*
@@ -242,6 +242,8 @@ add_action(
 		// 性能优化中心（自主题 perf.php 迁入）：OPcache/Memcached 看板、
 		// 性能开关、缓存清理、一键优化。渲染挂在设置面板「性能中心」分区。
 		require_once __DIR__ . '/inc/fun/perf-center.php';
+		// 缓存预热：清缓存 / 升级后自动暖关键页（默认关闭，设置面板开启）。必须位于 perf-center 之后（依赖 jinyu_perf_get_options）。
+		require_once __DIR__ . '/inc/fun/warm-up.php';
 		require_once __DIR__ . '/inc/fun/stats.php';
 		require_once __DIR__ . '/inc/fun/email.php';
 		require_once __DIR__ . '/inc/ajax/poster.php';

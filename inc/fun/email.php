@@ -52,7 +52,14 @@ add_action(
 			// 只接受字符串：数组值透传进 SmtpConfig 会触发 PHP 8 的 array-to-string TypeError
 			// 键名 $map 的每一项都是本文件写死的字面量，非用户输入。
 			if ( isset( $_POST[ $post ] ) && is_string( $_POST[ $post ] ) && $_POST[ $post ] !== '' ) {
-				$form[ $key ] = wp_unslash( $_POST[ $post ] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- is_string 已守卫，键名来自本文件硬编码的 $map，随后经 Jinyu_SmtpConfig 逐字段 sanitize
+				$val = wp_unslash( $_POST[ $post ] );
+				if ( 'pwd' === $key ) {
+					$form[ $key ] = $val; // 密码不 sanitize，避免破坏合法特殊字符（如 + / = 等）
+				} elseif ( 'from' === $key ) {
+					$form[ $key ] = sanitize_email( $val );
+				} else {
+					$form[ $key ] = sanitize_text_field( $val );
+				}
 			}
 		}
 		$use_form = ! empty( $form['host'] );

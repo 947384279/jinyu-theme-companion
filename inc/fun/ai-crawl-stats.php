@@ -102,18 +102,18 @@ function jinyu_ai_crawl_count( string $crawler ): void {
 	$stats[ $crawler ]['last'] = gmdate( 'Y-m-d H:i' ) . ' UTC';
 
 	// 节流：60 秒窗口内只允许一次真实落盘，计数累加在缓存副本上。
-	$cache_stamp = wp_cache_get( 'jinyu_ai_crawl_flush_ts', 'jinyu' );
+	$cache_stamp = wp_cache_get( 'jinyu_ai_crawl_flush_ts', 'jinyu_tc' );
 	if ( false === $cache_stamp || ( time() - (int) $cache_stamp ) >= 60 ) {
 		update_option( JINYU_AI_CRAWL_STATS_OPT, $stats, false );
-		wp_cache_set( 'jinyu_ai_crawl_flush_ts', time(), 'jinyu', 120 );
+		wp_cache_set( 'jinyu_ai_crawl_flush_ts', time(), 'jinyu_tc', 120 );
 	} else {
 		// 未落盘的计数放进缓存副本，下次落盘时合并。
-		$pending = wp_cache_get( 'jinyu_ai_crawl_pending', 'jinyu' );
+		$pending = wp_cache_get( 'jinyu_ai_crawl_pending', 'jinyu_tc' );
 		if ( ! is_array( $pending ) ) {
 			$pending = array();
 		}
 		$pending[ $crawler ] = ( $pending[ $crawler ] ?? 0 ) + 1;
-		wp_cache_set( 'jinyu_ai_crawl_pending', $pending, 'jinyu', 300 );
+		wp_cache_set( 'jinyu_ai_crawl_pending', $pending, 'jinyu_tc', 300 );
 	}
 }
 
@@ -121,11 +121,11 @@ function jinyu_ai_crawl_count( string $crawler ): void {
  * 合并缓存中的未落盘计数（面板渲染前与 reset 前调用）。
  */
 function jinyu_ai_crawl_flush_pending(): array {
-	$pending = wp_cache_get( 'jinyu_ai_crawl_pending', 'jinyu' );
+	$pending = wp_cache_get( 'jinyu_ai_crawl_pending', 'jinyu_tc' );
 	if ( ! is_array( $pending ) || ! $pending ) {
 		return get_option( JINYU_AI_CRAWL_STATS_OPT, array() );
 	}
-	wp_cache_delete( 'jinyu_ai_crawl_pending', 'jinyu' );
+	wp_cache_delete( 'jinyu_ai_crawl_pending', 'jinyu_tc' );
 	$stats = get_option( JINYU_AI_CRAWL_STATS_OPT, array() );
 	if ( ! is_array( $stats ) ) {
 		$stats = array();
@@ -203,7 +203,7 @@ function jinyu_ai_crawl_ajax_reset(): void {
 		wp_send_json_error( __( '权限不足', 'jinyu-theme-companion' ) );
 	}
 	check_admin_referer( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
-	wp_cache_delete( 'jinyu_ai_crawl_pending', 'jinyu' );
+	wp_cache_delete( 'jinyu_ai_crawl_pending', 'jinyu_tc' );
 	delete_option( JINYU_AI_CRAWL_STATS_OPT );
 	wp_send_json_success( array( 'msg' => __( 'AI 爬虫统计已清零', 'jinyu-theme-companion' ) ) );
 }

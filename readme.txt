@@ -4,7 +4,7 @@ Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.2.9
+Stable tag: 1.2.10
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,9 @@ This plugin does not collect, store or transmit any personal data by default, an
 Administrators can disable any of the above outbound features at any time in the corresponding settings; once disabled, the related requests stop entirely.
 
 == Changelog ==
+
+= 1.2.10 =
+* 修复 WP.org 人工复审指出的输入消毒、输出转义、文本域缓存组命名与 Ajax 注释静态路径问题
 
 = 1.2.9 =
 * 后台设置面板：修复顶栏品牌区误套用 SEO 面板「爬虫品牌」药丸容器样式（背景+边框+圆角），改为无容器的纯 logo + 文字。
