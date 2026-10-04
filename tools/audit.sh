@@ -142,15 +142,19 @@ gate_architecture() {
 
 # ------------------------------------------------------------------ 口径 4/4 行尾
 gate_lineendings() {
-    local bad=0
-    while IFS= read -r f; do
-        [ -z "$f" ] && continue
-        say "[行尾] FAIL 文件含 CRLF（应统一 LF）：$f"
-        bad=1
-    done < <(grep -rlIU $'\r' --include='*.php' --include='*.js' --include='*.css' --include='*.txt' --include='*.tpl' . 2>/dev/null \
-        | grep -v '^\./\.git/' | grep -v '^\./\.workbuddy/' | grep -v '^\./预览与脚本/' | head -20)
-    return $bad
+	local bad=0 tmpf
+	tmpf="$(mktemp)"
+	grep -rlIU $'\r' --include='*.php' --include='*.js' --include='*.css' --include='*.txt' --include='*.tpl' . 2>/dev/null \
+		| grep -v '^\./\.git/' | grep -v '^\./\.workbuddy/' | grep -v '^\./预览与脚本/' | head -20 > "$tmpf"
+	while IFS= read -r f; do
+		[ -z "$f" ] && continue
+		say "[行尾] FAIL 文件含 CRLF（应统一 LF）：$f"
+		bad=1
+	done < "$tmpf"
+	rm -f "$tmpf"
+	return $bad
 }
+
 
 # ------------------------------------------------------------------ 主流程
 

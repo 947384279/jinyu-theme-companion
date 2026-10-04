@@ -4,7 +4,7 @@ Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.2.10
+Stable tag: 1.2.11
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,10 @@ This plugin does not collect, store or transmit any personal data by default, an
 Administrators can disable any of the above outbound features at any time in the corresponding settings; once disabled, the related requests stop entirely.
 
 == Changelog ==
+
+= 1.2.11 =
+* 代码规范：补回 SMTP 测试表单输入处遗漏的 phpcs 忽略注释（消毒逻辑本已存在）；性能中心新增 translators 注释，预热频率关联数组改为多行写法。
+* 修复：补全 1.2.10 构建中遗漏的性能中心频率下拉自定义控件样式（jyc-inp），此前该控件缺少对应 CSS。
 
 = 1.2.10 =
 * 修复 WP.org 人工复审指出的输入消毒、输出转义、文本域缓存组命名与 Ajax 注释静态路径问题

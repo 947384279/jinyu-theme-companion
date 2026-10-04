@@ -1347,6 +1347,12 @@ textarea.jyc-inp{font-weight:400}
 .jperf-field select option{background:var(--j-bg);color:var(--j-ink);padding:10px 12px}
 .jyc-app[data-theme="dark"] .jperf-field select:hover,
 .jyc-app[data-theme="dark"] .jperf-field textarea:hover{border-color:#475878}
+/* 预热频率下拉走自绘组件（admin.js 对 select.jyc-inp 增强，弹层可完全样式化），按钮对齐 jperf 输入控件质感 */
+.jperf-field .jyc-select-btn{font-size:13px;border-radius:calc(var(--j-r) - 4px);
+	padding:9px 11px;background:var(--j-bg);color:var(--j-ink)}
+.jperf-field .jyc-select-btn:hover{border-color:#c6cede}
+.jperf-field .jyc-select-btn:focus-visible{outline:none;border-color:var(--j-accent);box-shadow:0 0 0 3px var(--ring);transform:none}
+.jyc-app[data-theme="dark"] .jperf-field .jyc-select-btn:hover{border-color:#475878}
 
 /* 保存成功浮层：顶部居中胶囊，蓝底白字大字号，比内联结果区显眼（3.2s 自动消失） */
 #jperf-toast{position:fixed;top:48px;left:50%;z-index:99999;max-width:min(86vw,560px);

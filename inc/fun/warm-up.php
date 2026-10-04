@@ -214,7 +214,11 @@ if ( ! function_exists( 'jinyu_warmup_reschedule' ) ) {
 		if ( 'manual' === $interval ) {
 			return;
 		}
-		$map  = [ '15min' => 'jinyu_quarter_hour', 'hourly' => 'hourly', 'daily' => 'daily' ];
+		$map = [
+			'15min' => 'jinyu_quarter_hour',
+			'hourly' => 'hourly',
+			'daily'  => 'daily',
+		];
 		$hook = $map[ $interval ] ?? 'daily';
 		if ( ! wp_get_scheduled_event( 'jinyu_warmup_cron' ) ) {
 			wp_schedule_event( time() + 60, $hook, 'jinyu_warmup_cron' );

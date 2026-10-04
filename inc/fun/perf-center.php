@@ -2186,7 +2186,7 @@ function jinyu_perf_render_pane(): void {
 			<div class="jperf-warmup">
 				<label class="jperf-field">
 					<span><?php esc_html_e( '自动预热频率', 'jinyu-theme-companion' ); ?></span>
-					<select id="jinyu-warmup-interval">
+					<select id="jinyu-warmup-interval" class="jyc-inp">
 						<?php foreach ( jinyu_warmup_intervals() as $k => $label ) : ?>
 						<option value="<?php echo esc_attr( $k ); ?>"<?php selected( $k, $opts['warmup_interval'] ?? 'manual' ); ?>><?php echo esc_html( $label ); ?></option>
 						<?php endforeach; ?>
@@ -2200,7 +2200,7 @@ function jinyu_perf_render_pane(): void {
 					<button type="button" class="jperf-btn jperf-btn-hero" id="jinyu-warmup-run"><span><?php esc_html_e( '立即预热', 'jinyu-theme-companion' ); ?></span></button>
 				</div>
 				<?php $wu_last = get_option( 'jinyu_warmup_last' ); if ( is_array( $wu_last ) && ! empty( $wu_last['at'] ) ) : ?>
-				<p class="jperf-hint"><?php echo esc_html( sprintf( __( '上次：%1$s，成功 %2$d / %3$d，耗时 %4$s 秒', 'jinyu-theme-companion' ), wp_date( 'Y-m-d H:i', $wu_last['at'] ), $wu_last['ok'], $wu_last['total'], $wu_last['elapsed'] ) ); ?></p>
+				<p class="jperf-hint"><?php echo esc_html( sprintf( /* translators: %1$s 上次时间, %2$d 成功数, %3$d 总数, %4$s 耗时秒数 */ __( '上次：%1$s，成功 %2$d / %3$d，耗时 %4$s 秒', 'jinyu-theme-companion' ), wp_date( 'Y-m-d H:i', $wu_last['at'] ), $wu_last['ok'], $wu_last['total'], $wu_last['elapsed'] ) ); ?></p>
 				<?php endif; ?>
 				<div id="jinyu-warmup-result" class="jperf-result" aria-live="polite"></div>
 			</div>
