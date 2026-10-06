@@ -2496,6 +2496,7 @@ body.jyc-dark { background: #0a111c; }
  * （自身 1fr/340px 分栏），若 pane 仍是 grid，bento 只占第一格 →
  * 整体被压到半宽、右侧大片留白（2026-10-06 真机踩坑）。
  * 处理：pane 回归块级；.jyc-seo-bento 兜底 grid-column 跨满整行；
- * 宽度收在 1080px（沿用 .jyc-pane 的 margin-inline:auto 居中），贴合"紧凑、不宽大"的定稿观感。 */
-#pane-seo.jyc-shown { display: block; max-width: 1080px; }
+ * 宽度不再单独收在 1080px，改用 .jyc-pane 通用上限（min(100%,1760px)，margin-inline:auto 居中），
+ * 与其他面板一致——否则宽屏下主列/侧栏被压窄、右侧大片留白（2026-10-06 真机踩坑后的二次修正）。 */
+#pane-seo.jyc-shown { display: block; }
 .jyc-seo-bento { grid-column: 1 / -1; }
