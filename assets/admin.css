@@ -1932,9 +1932,11 @@ body.jyc-dark { background: #0a111c; }
 	.jyc-sl-grid, .jyc-sl-fields { grid-template-columns: 1fr; }
 }
 
-/* ===================== 图片体检：按钮即折叠开关（方案C 状态点+chevron） ===================== */
-/* 状态点语义：灰=未体检，橙闪=体检中，绿=健康，橙=有待处理项 */
-.jyc-fold-tog { gap: 8px; }
+/* ===================== 折叠卡：整行可点，卡片式开合（图片体检 / 内容诊断 / 全量补推） =====================
+ * 结构：.jyc-foldcard > (.jyc-fold-head 按钮 + .jyc-fold 结果区)。
+ * 头部一行三段——软色底图标 + 标题/副说明 + 状态点 + chevron；开合由 JS 切 .is-open / .jyc-fold-open。
+ * 状态点语义：灰=未执行，橙闪=执行中，绿=健康，橙=有待处理项。 */
+.jyc-fold-tog { gap: 10px; }
 .jyc-fold-tog .jyc-fold-dot {
   width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--ink-3);
   box-shadow: 0 0 0 3px rgba(138,148,166,.15);
@@ -1945,12 +1947,58 @@ body.jyc-dark { background: #0a111c; }
 .jyc-fold-tog.is-busy .jyc-fold-dot { background: #e67e22; box-shadow: 0 0 0 3px rgba(230,126,34,.18); }
 .jyc-fold-tog.is-busy .jyc-fold-dot { animation: jycDotPulse 1s ease-in-out infinite; }
 @keyframes jycDotPulse { 50% { box-shadow: 0 0 0 6px rgba(230,126,34,.06); } }
-.jyc-fold-tog .jyc-fold-ch { display: inline-flex; transition: transform .45s var(--spring); }
-.jyc-fold-tog.is-open .jyc-fold-ch { transform: rotate(-180deg); }
-/* 结果区高度过渡（grid-rows 技巧，收起时 0fr 隐藏） */
+.jyc-fold-tog .jyc-fold-ch { display: inline-flex; flex-shrink: 0; color: var(--ink-3);
+  transition: transform .34s var(--spring), color .2s var(--ease); }
+.jyc-fold-tog.is-open .jyc-fold-ch { transform: rotate(-180deg); color: var(--brand); }
+
+/* 卡片外壳 */
+.jyc-foldcard {
+  border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2);
+  overflow: hidden; transition: border-color .2s var(--ease), background .2s var(--ease), box-shadow .2s var(--ease);
+}
+.jyc-foldcard + .jyc-foldcard { margin-top: 10px; }
+.jyc-foldcard:hover { border-color: var(--line-2); }
+.jyc-foldcard:has(.jyc-fold-tog.is-open) { background: var(--surface); border-color: var(--line-2); box-shadow: var(--elev-1); }
+
+/* 头部按钮：整行可点；[图标] 标题/副说明 … [状态点] [chevron]。
+ * 首行与标题基线对齐（图标/状态点/chevron 用 -2/5/3px 微调），副说明在标题下方自然换行。 */
+.jyc-fold-head {
+  display: flex; align-items: flex-start; gap: 10px; width: 100%; box-sizing: border-box;
+  padding: 11px 12px; border: none; background: transparent; font-family: inherit; text-align: left;
+  cursor: pointer; transition: background .18s var(--ease);
+}
+.jyc-fold-head:hover { background: var(--surface-3); }
+.jyc-fold-head:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.jyc-fold-head:disabled { cursor: default; }
+.jyc-fold-ic {
+  width: 22px; height: 22px; flex-shrink: 0; box-sizing: border-box; padding: 4px; border-radius: 7px; margin-top: -2px;
+  background: var(--surface-3); border: 1px solid var(--line); color: var(--ink-3);
+  transition: background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease);
+}
+.jyc-fold-ic svg { width: 100%; height: 100%; display: block; }
+.jyc-fold-tog.is-open .jyc-fold-ic { background: var(--brand-soft); border-color: transparent; color: var(--brand); }
+.jyc-fold-tt { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.jyc-fold-txt { font-size: 13px; font-weight: 600; line-height: 1.4; color: var(--ink); }
+.jyc-fold-sub { font-size: 11.5px; line-height: 1.5; color: var(--ink-3); }
+.jyc-fold-head .jyc-fold-dot { margin-top: 5px; }
+.jyc-fold-head .jyc-fold-ch { margin-top: 3px; }
+
+/* 结果区：高度过渡（grid-rows 技巧，收起 0fr 隐藏）+ 展开后的分隔与内边距 */
 .jyc-fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .4s var(--ease); }
 .jyc-fold.jyc-fold-open { grid-template-rows: 1fr; }
 .jyc-fold > .jyc-fold-in { overflow: hidden; min-height: 0; }
+.jyc-foldcard .jyc-fold { background: var(--surface); }
+.jyc-fold-body { padding: 12px; border-top: 1px solid var(--line-2); }
+
+.jyc-app[data-theme="dark"] .jyc-foldcard { background: var(--surface-3); }
+.jyc-app[data-theme="dark"] .jyc-foldcard:has(.jyc-fold-tog.is-open) { background: var(--surface-2); }
+.jyc-app[data-theme="dark"] .jyc-fold-head:hover { background: var(--surface-2); }
+.jyc-app[data-theme="dark"] .jyc-fold-ic { background: var(--surface-2); }
+.jyc-app[data-theme="dark"] .jyc-foldcard .jyc-fold { background: var(--surface-2); }
+
+@media (max-width: 782px) {
+  .jyc-fold-head { padding: 10px; gap: 9px; }
+}
 
 /* ===================== 分享素材：选图 / 尺寸校验 / 卡片预览 ===================== */
 /* 有图/无图两种形态由容器上的 .has-img 切换（不用内联 display，避免与后台 CSS 打架）。 */
@@ -2118,49 +2166,84 @@ body.jyc-dark { background: #0a111c; }
 .jyc-export-full-mode { background: #fdecec; color: #d23f3f; }
 .jyc-export-full-mode:hover { filter: brightness(.97); }
 
-/* ===================== 爬虫放行清单（三大区域可折叠 · 按品牌分组的图标标签） =====================
- * 结构：<details> 区域卡片（默认收起，概览见 summary 的计数）→ 品牌行（品牌色圆标 + 品牌名）→ UA 等宽小标签。
- * 用原生 details 而非 JS 折叠：无脚本也能开合、可被键盘与读屏识别，且不随 admin.js 版本变化失效。
+/* ===================== 爬虫放行清单（可折叠区域卡 · 按品牌分组的 UA 标签） =====================
+ * 结构：<details class="jyc-csect"> 区域卡（原生 details，无脚本也能开合）→ 品牌行 → UA 标签。
+ * 交互：标题行 = 软色底 chevron 图标 + 区域名 + 右侧计数徽章；展开时图标旋转、内容平滑展开。
+ * 品牌行两行式（首行品牌胶囊 + 右侧到访统计，次行 UA 标签），窄侧栏下也不会挤压重叠。
  * 品牌色只作用于圆标底色，避免大面积品牌色破坏面板中性底色。 */
-.jyc-crawlers { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; max-width: 720px; }
-.jyc-csect { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); overflow: hidden; }
-.jyc-csect-h { display: flex; align-items: center; gap: 9px; padding: 11px 14px; cursor: pointer; list-style: none;
+
+/* 折叠动效：原生 <details> 平滑开合（现代浏览器渐进增强；不支持的浏览器退化为瞬时开合，功能不变） */
+.jyc-app { interpolate-size: allow-keywords; }
+.jyc-csect::details-content,
+.jyc-adv::details-content {
+  block-size: 0; overflow: hidden;
+  transition: block-size .34s var(--ease), content-visibility .34s var(--ease);
+  transition-behavior: allow-discrete;
+}
+.jyc-csect[open]::details-content,
+.jyc-adv[open]::details-content { block-size: auto; }
+
+.jyc-crawlers { display: flex; flex-direction: column; gap: 9px; margin-top: 4px; max-width: 720px; }
+
+.jyc-csect {
+  border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2);
+  overflow: hidden; transition: border-color .2s var(--ease), background .2s var(--ease), box-shadow .2s var(--ease);
+}
+.jyc-csect:hover { border-color: var(--line-2); }
+.jyc-csect[open] { background: var(--surface); border-color: var(--line-2); box-shadow: var(--elev-1); }
+
+.jyc-csect-h { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; list-style: none;
   font-size: 13px; font-weight: 600; color: var(--ink); user-select: none; transition: background .18s var(--ease); }
 .jyc-csect-h::-webkit-details-marker { display: none; }
 .jyc-csect-h:hover { background: var(--surface-3); }
 .jyc-csect-h:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
-.jyc-csect-ico { width: 14px; height: 14px; flex-shrink: 0; fill: none; stroke: var(--ink-3); stroke-width: 2.4;
-  stroke-linecap: round; stroke-linejoin: round; transition: transform .22s var(--ease); }
-.jyc-csect[open] .jyc-csect-ico { transform: rotate(90deg); stroke: var(--brand); }
-.jyc-csect-name { flex: 0 0 auto; }
-.jyc-csect-meta { margin-left: auto; font-size: 11.5px; font-weight: 500; color: var(--ink-3); white-space: nowrap; }
-.jyc-csect-b { padding: 0 14px 10px; border-top: 1px solid var(--line-2); }
-.jyc-cgroup { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line-2); }
+
+/* chevron 图标：软色底圆角小方块；收起→向右，展开→向下并转品牌色 */
+.jyc-csect-ico { width: 22px; height: 22px; flex-shrink: 0; box-sizing: border-box; padding: 4px; border-radius: 7px;
+  background: var(--surface-3); border: 1px solid var(--line);
+  fill: none; stroke: var(--ink-3); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round;
+  transition: transform .28s var(--spring), background .2s var(--ease), stroke .2s var(--ease), border-color .2s var(--ease); }
+.jyc-csect[open] .jyc-csect-ico { transform: rotate(90deg); stroke: var(--brand); background: var(--brand-soft); border-color: transparent; }
+
+.jyc-csect-name { flex: 1 1 auto; min-width: 0; }
+.jyc-csect-meta { flex: 0 0 auto; font-size: 11px; font-weight: 600; color: var(--ink-3); white-space: nowrap;
+  font-variant-numeric: tabular-nums; padding: 2px 9px; border-radius: 999px;
+  background: var(--surface-3); border: 1px solid var(--line);
+  transition: background .2s var(--ease), border-color .2s var(--ease); }
+.jyc-csect[open] .jyc-csect-meta { background: transparent; border-color: var(--line-2); }
+
+.jyc-csect-b { padding: 2px 12px 12px; border-top: 1px solid var(--line-2); }
+
+/* 品牌行：两行式——首行 品牌胶囊 + 右侧到访统计，次行 UA 标签 */
+.jyc-cgroup { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 9px 0;
+  border-top: 1px solid var(--line-2); }
 .jyc-csect-b .jyc-cgroup:first-child { border-top: none; }
-.jyc-aistat { margin-left: auto; white-space: nowrap; font-size: 12px; color: var(--ink-3); }
-.jyc-aistat--none { opacity: .7; }
-.jyc-btn-sm { padding: 5px 12px; font-size: 12.5px; border-radius: 9px; }
-.jyc-cgroup .jyc-brand { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; min-width: 152px; white-space: nowrap;
-  padding: 3px 12px 3px 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+.jyc-cgroup .jyc-brand { order: 1; display: inline-flex; align-items: center; gap: 7px; flex: 0 1 auto; min-width: 0; white-space: nowrap;
+  padding: 3px 11px 3px 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
   font-size: 12.5px; font-weight: 600; color: var(--ink); }
+.jyc-aistat { order: 2; margin-left: auto; white-space: nowrap; font-size: 11.5px; color: var(--ink-3); }
+.jyc-aistat--none { opacity: .7; }
+.jyc-ua-list { order: 3; flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
 .jyc-brand-ico { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); }
 .jyc-brand-ico text { font-family: var(--font); letter-spacing: -.02em; }
-.jyc-ua-list { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 auto; min-width: 0; padding-top: 3px; }
 .jyc-ua { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; line-height: 1.65;
   padding: 2px 8px; color: var(--ink-2); background: var(--surface-3); border: 1px solid var(--line); border-radius: 7px; }
+.jyc-btn-sm { padding: 5px 12px; font-size: 12.5px; border-radius: 9px; }
+
 .jyc-app[data-theme="dark"] .jyc-csect { background: var(--surface-3); }
+.jyc-app[data-theme="dark"] .jyc-csect[open] { background: var(--surface-2); }
 .jyc-app[data-theme="dark"] .jyc-csect-h:hover { background: var(--surface-2); }
+.jyc-app[data-theme="dark"] .jyc-csect-ico { background: var(--surface-2); }
+.jyc-app[data-theme="dark"] .jyc-csect-meta { background: var(--surface-2); }
 .jyc-app[data-theme="dark"] .jyc-cgroup .jyc-brand { background: var(--surface-2); }
 .jyc-app[data-theme="dark"] .jyc-ua { background: var(--surface); }
-/* 手机端：区域卡片贴边、品牌行转纵向；UA 标签缩小并加大行距，避免小字拥挤误触。 */
+
+/* 手机端：卡片贴边、UA 标签缩小，避免小字拥挤误触。 */
 @media (max-width: 782px) {
   .jyc-crawlers { gap: 8px; margin-top: 2px; }
-  .jyc-csect-h { padding: 12px; gap: 8px; font-size: 12.5px; }
-  .jyc-csect-meta { font-size: 11px; }
-  .jyc-csect-b { padding: 0 12px 8px; }
-  .jyc-cgroup { flex-direction: column; align-items: stretch; gap: 7px; padding: 9px 0; }
-  .jyc-cgroup .jyc-brand { min-width: 0; align-self: flex-start; font-size: 12px; padding-right: 11px; }
-  .jyc-ua-list { padding-top: 0; gap: 5px; }
+  .jyc-csect-h { padding: 11px; gap: 9px; font-size: 12.5px; }
+  .jyc-csect-meta { font-size: 10.5px; padding: 2px 8px; }
+  .jyc-csect-b { padding: 2px 11px 10px; }
   .jyc-ua { font-size: 11px; padding: 3px 7px; }
 }
 @media (max-width: 400px) {
