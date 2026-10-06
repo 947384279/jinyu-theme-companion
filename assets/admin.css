@@ -287,6 +287,7 @@
   background: var(--surface-3); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px;
 }
 .jyc-pop p { margin: 8px 0 0; color: var(--ink-3); }
+.jyc-pop > :first-child { margin-top: 0; }
 .jyc-panel-b { padding: 20px 22px; }
 .jyc-section-ico { width: 30px; height: 30px; border-radius: 9px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; flex-shrink: 0; }
 .jyc-section-ico svg { width: 16px; height: 16px; }

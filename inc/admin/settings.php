@@ -907,7 +907,7 @@ function jinyu_companion_settings_page_html(): void {
 							</div>
 
 <div class="jyc-panel jyc-panel--lite">
-								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span><?php echo esc_html__( '爬虫放行清单', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '只读 · 与站点根 robots.txt 保持一致', 'jinyu-theme-companion' ); ?></span></div>
+								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></span><?php echo esc_html__( '爬虫放行清单', 'jinyu-theme-companion' ); ?></h2><div class="jyc-ph-right"><button type="button" class="jyc-info-btn" data-pop="jyc-pop-robots" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><?php echo esc_html__( '说明', 'jinyu-theme-companion' ); ?></button><div class="jyc-pop" id="jyc-pop-robots" hidden role="tooltip"><p><?php echo esc_html__( '本清单只读，用于随时核对站点根目录的 robots.txt 与实际内容是否一致，插件侧不接管输出。', 'jinyu-theme-companion' ); ?></p><p><?php echo esc_html__( '本站的 robots.txt 由站点根目录的文件提供（而非插件生成）。注意两种部署的差别——根目录有静态 robots.txt 时，Web 服务器直接返回它、插件改不动；若站点由 WordPress 生成 robots.txt，规则同样不由本插件输出。', 'jinyu-theme-companion' ); ?></p><p><?php echo esc_html__( '迁移或重建站点时，请照此内容原样写回新的 robots.txt，否则 AI 与社交抓取会被拦截。', 'jinyu-theme-companion' ); ?></p></div></div></div>
 								<div class="jyc-panel-b">
 									<div class="jyc-frow">
 										<div class="jyc-grow">
@@ -980,13 +980,8 @@ function jinyu_companion_settings_page_html(): void {
 										</div>
 									</div>
 									<div class="jyc-frow">
-										<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '说明', 'jinyu-theme-companion' ); ?></div>
-											<div class="jyc-fdesc"><?php echo esc_html__( '本站的 robots.txt 由站点根目录的文件提供（而非插件生成），插件侧不接管输出。本清单仅供随时核对：若你调整过 robots.txt，请让这里与实际内容保持一致。注意两种部署的差别——根目录有静态 robots.txt 时，Web 服务器直接返回它、插件改不动；若你的站点由 WordPress 生成 robots.txt，规则同样不由本插件输出。迁移或重建站点时，请照此内容原样写回新的 robots.txt，否则 AI 与社交抓取会被拦截。', 'jinyu-theme-companion' ); ?></div></div>
-									</div>
-									<div class="jyc-frow">
 										<div class="jyc-grow">
-											<div class="jyc-fname"><?php echo esc_html__( 'AI 爬虫到访统计', 'jinyu-theme-companion' ); ?></div>
-											<div class="jyc-fdesc"><?php echo esc_html__( '按上方清单的 UA 识别并聚合计数（只记品牌、次数与最后到访时间，不记录 IP 与完整访问日志），明细显示在上方各品牌行内。清零后从下一次到访重新累计。', 'jinyu-theme-companion' ); ?></div>
+											<button type="button" class="jyc-info-btn" data-pop="jyc-pop-aistat" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><?php echo esc_html__( 'AI 爬虫到访统计', 'jinyu-theme-companion' ); ?></button><div class="jyc-pop" id="jyc-pop-aistat" hidden role="tooltip"><p><?php echo esc_html__( '按上方清单的 UA 识别并聚合计数——只记品牌、次数与最后到访时间，不记录 IP 与完整访问日志；明细显示在上方各品牌行内。清零后从下一次到访重新累计。', 'jinyu-theme-companion' ); ?></p></div>
 											<?php if ( $jinyu_ai_rows ) : ?>
 												<div id="jyc-aiCrawlStatBox" style="margin-top:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
 													<span style="font-size:13px">
