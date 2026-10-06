@@ -2732,12 +2732,12 @@ function jinyu_perf_render_pane(): void {
 }
 
 /**
- * 渲染「缓存预热」卡片（嵌入插件设置面板 pane-perf「前台加速」分区）。
- * 与整页缓存同区，作为其后处理：暖的是整页 / 对象缓存，逻辑上从属前台加速，
- * 而非性能中心的「服务器运行时看板 / 清理 / 一键优化」。开关 / 频率 / URL 存于
+ * 渲染「缓存预热」折叠段（嵌入整页缓存卡 jyc-panel--pc 内，压缩布局）。
+ * 暖的是整页 / 对象缓存，逻辑上从属整页缓存，折叠收纳节省纵向空间；
+ * 后台预热进行时由 JS 自动展开并轮询进度。开关 / 频率 / URL 存于
  * jinyu_perf_options_v2（与性能中心开关同一真源），经独立 AJAX 端点 jinyu_perf_warmup 落库与触发。
  */
-function jinyu_perf_render_warmup_card(): void {
+function jinyu_perf_render_warmup_section(): void {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		return;
 	}
@@ -2752,45 +2752,58 @@ function jinyu_perf_render_warmup_card(): void {
 		'warmed' => 0,
 		'running' => false,
 	);
-	$st_total = (int) ( $st['total'] ?? 0 );
+	$st_total  = (int) ( $st['total'] ?? 0 );
 	$st_warmed = (int) ( $st['warmed'] ?? 0 );
-	$st_pct   = $st_total > 0 ? (int) round( $st_warmed / $st_total * 100 ) : 0;
-	$nonce    = wp_create_nonce( 'jinyu_perf_center' );
+	$st_pct    = $st_total > 0 ? (int) round( $st_warmed / $st_total * 100 ) : 0;
+	$nonce     = wp_create_nonce( 'jinyu_perf_center' );
+
+	// 折叠头一行式状态摘要：预热中 > 有进度 > 已启用 > 默认关闭。
+	if ( ! empty( $st['running'] ) ) {
+		$wu_sub = __( '预热中…', 'jinyu-theme-companion' );
+	} elseif ( $st_total > 0 ) {
+		/* translators: 1: 已暖数, 2: 总数, 3: 覆盖率百分比 */
+		$wu_sub = sprintf( __( '已暖 %1$d / %2$d（%3$d%%）', 'jinyu-theme-companion' ), $st_warmed, $st_total, $st_pct );
+	} elseif ( $en ) {
+		$wu_sub = __( '已启用', 'jinyu-theme-companion' );
+	} else {
+		$wu_sub = __( '默认关闭', 'jinyu-theme-companion' );
+	}
 	?>
-	<div class="jyc-panel">
-		<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></span><?php echo esc_html__( '缓存预热', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '默认关闭', 'jinyu-theme-companion' ); ?></span></div>
-		<div class="jyc-panel-b">
+	<div class="jyc-collapse jyc-collapse--wu" id="jycWarmupBox">
+		<button type="button" class="jyc-collapse-head" aria-expanded="false" aria-controls="jycWarmupBody" onclick="window.jycCollapseToggle(this)">
+			<span class="jyc-collapse-title"><?php echo esc_html__( '缓存预热', 'jinyu-theme-companion' ); ?></span>
+			<span class="jyc-collapse-sub" id="jycWarmupSub"><?php echo esc_html( $wu_sub ); ?></span>
+			<svg class="jyc-collapse-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+		</button>
+		<div class="jyc-collapse-body" id="jycWarmupBody" hidden>
 			<div class="jyc-frow">
 				<label class="jyc-switch"><input type="checkbox" id="jinyu-warmup-enable" name="warmup_enable" <?php checked( $en ); ?>><span class="jyc-track"></span></label>
 				<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '启用缓存预热', 'jinyu-theme-companion' ); ?></div>
-					<div class="jyc-fdesc"><?php echo esc_html__( '清缓存 / 升级主题插件 / 定时任务后自动爬取首页、列表、分类、近期与热门文章暖缓存，把重建成本从首个真实访客转移到后台，访客始终命中热缓存。', 'jinyu-theme-companion' ); ?></div></div>
+					<div class="jyc-fdesc"><?php echo esc_html__( '清缓存 / 发文 / 定时任务后自动爬取首页、列表、分类与近期热门文章暖缓存，访客始终命中热缓存。', 'jinyu-theme-companion' ); ?></div></div>
+				<label class="jyc-fl jyc-wu-freq"><span class="jyc-fname-sm"><?php echo esc_html__( '频率', 'jinyu-theme-companion' ); ?></span>
+					<select class="jyc-inp" id="jinyu-warmup-interval" name="warmup_interval">
+						<?php foreach ( jinyu_warmup_intervals() as $k => $label ) : ?>
+						<option value="<?php echo esc_attr( $k ); ?>"<?php selected( $k, $interval ); ?>><?php echo esc_html( $label ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</label>
 			</div>
-			<div class="jyc-fsep"><?php echo esc_html__( '自动预热频率', 'jinyu-theme-companion' ); ?></div>
-			<label class="jyc-fl">
-				<span class="jyc-fname-sm"><?php echo esc_html__( '频率', 'jinyu-theme-companion' ); ?></span>
-				<select class="jyc-inp" id="jinyu-warmup-interval" name="warmup_interval">
-					<?php foreach ( jinyu_warmup_intervals() as $k => $label ) : ?>
-					<option value="<?php echo esc_attr( $k ); ?>"<?php selected( $k, $interval ); ?>><?php echo esc_html( $label ); ?></option>
-					<?php endforeach; ?>
-				</select>
-			</label>
-			<label class="jyc-fl">
-				<span class="jyc-fname-sm"><?php echo esc_html__( '额外预热 URL（每行一个）', 'jinyu-theme-companion' ); ?></span>
-				<textarea class="jyc-inp" id="jinyu-warmup-urls" name="warmup_urls" rows="4" placeholder="https://<?php echo esc_attr( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ); ?>/about/"><?php echo esc_textarea( $urls ); ?></textarea>
-				<span class="jyc-fnote"><?php echo esc_html__( '仅本域名或显式 http(s)，不外发第三方。', 'jinyu-theme-companion' ); ?></span>
-			</label>
-			<label class="jyc-fl">
-				<span class="jyc-fname-sm"><?php echo esc_html__( '最多暖 N 篇（0 = 全量，按修改时间倒序取前 N）', 'jinyu-theme-companion' ); ?></span>
-				<input class="jyc-inp" type="number" min="0" step="50" id="jinyu-warmup-max" name="warmup_max" value="<?php echo esc_attr( (string) $max ); ?>">
-			</label>
+			<div class="jyc-fpair">
+				<label class="jyc-fl">
+					<span class="jyc-fname-sm"><?php echo esc_html__( '额外预热 URL（每行一个）', 'jinyu-theme-companion' ); ?></span>
+					<textarea class="jyc-inp" id="jinyu-warmup-urls" name="warmup_urls" rows="3" placeholder="https://<?php echo esc_attr( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ); ?>/about/"><?php echo esc_textarea( $urls ); ?></textarea>
+					<span class="jyc-fnote"><?php echo esc_html__( '仅本域名或显式 http(s)，不外发第三方。', 'jinyu-theme-companion' ); ?></span>
+				</label>
+				<label class="jyc-fl">
+					<span class="jyc-fname-sm"><?php echo esc_html__( '最多暖 N 篇（0 = 全量，按修改时间倒序取前 N）', 'jinyu-theme-companion' ); ?></span>
+					<input class="jyc-inp" type="number" min="0" step="50" id="jinyu-warmup-max" name="warmup_max" value="<?php echo esc_attr( (string) $max ); ?>">
+					<span class="jyc-fnote"><?php echo esc_html__( '新发布 / 更新文章会优先即时预热；首页与核心分类每轮强制重暖（并发抓取，不阻塞访客）。', 'jinyu-theme-companion' ); ?></span>
+				</label>
+			</div>
 			<div class="jyc-test-row" style="margin-top:10px">
 				<button type="button" class="jyc-btn jyc-btn-soft" id="jinyu-warmup-run" data-loading="<?php echo esc_attr__( '预热中…', 'jinyu-theme-companion' ); ?>"><?php echo esc_html__( '立即预热', 'jinyu-theme-companion' ); ?></button>
-				<span class="jyc-fnote"><?php echo esc_html__( '点击即保存配置并立即预热。', 'jinyu-theme-companion' ); ?></span>
-			</div>
-			<span class="jyc-fnote" style="display:block;margin-top:6px"><?php echo esc_html__( '新发布 / 更新文章会优先即时预热；首页与核心分类每轮强制重暖（并发抓取，不阻塞访客）。', 'jinyu-theme-companion' ); ?></span>
-			<div class="jyc-test-row" style="margin-top:12px">
 				<button type="button" class="jyc-btn jyc-btn-soft" data-wuflush="warmed" data-loading="<?php echo esc_attr__( '清除中…', 'jinyu-theme-companion' ); ?>"><?php echo esc_html__( '清除预热数据', 'jinyu-theme-companion' ); ?></button>
-				<span class="jyc-fnote"><?php echo esc_html__( '仅删除预热队列各 URL 的整页缓存（不动 OPcache / Memcached / 全站其他页）；不自动重暖，需重暖请点「立即预热」。', 'jinyu-theme-companion' ); ?></span>
+				<span class="jyc-fnote"><?php echo esc_html__( '「立即预热」点击即保存配置并开始；「清除预热数据」仅删预热队列各 URL 的整页缓存，不动其他缓存、不自动重暖。', 'jinyu-theme-companion' ); ?></span>
 			</div>
 			<div id="jinyu-warmup-cache-result" class="jperf-result" aria-live="polite"></div>
 			<?php
@@ -2887,17 +2900,27 @@ function jinyu_perf_render_warmup_card(): void {
 			});
 		}
 		var wuPoll = null;
+		function wuOpen(){
+			var box = document.getElementById('jycWarmupBox');
+			var body = document.getElementById('jycWarmupBody');
+			if (box) { box.classList.add('is-open'); }
+			if (body) { body.hidden = false; }
+		}
 		function wuRender(st){
 			var prog = document.getElementById('jinyu-warmup-progress');
 			var bar = document.getElementById('jinyu-warmup-bar');
 			var txt = document.getElementById('jinyu-warmup-txt');
-			if (!prog || !bar || !txt) { return; }
+			var sub = document.getElementById('jycWarmupSub');
 			var total = parseInt(st.total || '0', 10);
 			var warmed = parseInt(st.warmed || '0', 10);
 			var pct = total > 0 ? Math.round(warmed / total * 100) : 0;
-			prog.style.display = (st.running || total > 0) ? 'block' : 'none';
-			bar.style.width = pct + '%';
-			txt.textContent = '<?php echo esc_js( __( '已暖 ', 'jinyu-theme-companion' ) ); ?>' + warmed + ' / ' + total + '（<?php echo esc_js( __( '覆盖率 ', 'jinyu-theme-companion' ) ); ?>' + pct + '%）' + (st.running ? ' · <?php echo esc_js( __( '预热中…', 'jinyu-theme-companion' ) ); ?>' : '');
+			var label = '<?php echo esc_js( __( '已暖 ', 'jinyu-theme-companion' ) ); ?>' + warmed + ' / ' + total + '（<?php echo esc_js( __( '覆盖率 ', 'jinyu-theme-companion' ) ); ?>' + pct + '%）' + (st.running ? ' · <?php echo esc_js( __( '预热中…', 'jinyu-theme-companion' ) ); ?>' : '');
+			if (prog && bar && txt) {
+				prog.style.display = (st.running || total > 0) ? 'block' : 'none';
+				bar.style.width = pct + '%';
+				txt.textContent = label;
+			}
+			if (sub && (st.running || total > 0)) { sub.textContent = label; }
 		}
 		function pollWarmup(){
 			post('jinyu_perf_warmup_status', {}).then(function(j){
@@ -2914,7 +2937,7 @@ function jinyu_perf_render_warmup_card(): void {
 				}
 			}).catch(function(){ stopWarmupPoll(); });
 		}
-		function startWarmupPoll(){ stopWarmupPoll(); pollWarmup(); }
+		function startWarmupPoll(){ wuOpen(); stopWarmupPoll(); pollWarmup(); }
 		function stopWarmupPoll(){ if (wuPoll) { clearTimeout(wuPoll); wuPoll = null; } }
 		function syncWarmupBtn(){
 			var en = document.getElementById('jinyu-warmup-enable');

@@ -127,6 +127,7 @@ Administrators can disable any of the above outbound features at any time in the
 * 悬浮保存：「放弃更改」现完整回滚自绘控件（缓存 TTL 滑杆、验证码分段、水印九宫格）与预览（分享图、预览卡标题、水印画布）；修复保存请求往返期间的编辑被误标为已保存的竞态。
 * 触屏：修复移动端「使用说明」气泡与侧栏提示泡要点两次 / 闪现驻留的问题（hover 类事件仅在鼠标指针下生效，触屏统一单击切换）。
 * WP.org Plugin Check 全量清零（0 ERROR / 0 WARNING）：I18n translators 注释与占位符排序、GEO 内联脚本输出转义、edge-stats 文件句柄，全量告警逐一甄别批注。
+* 性能中心：「缓存预热」卡片改为折叠段并入「整页缓存」卡——修复预热设置常驻撑高前台加速分区的问题；折叠头带一行式状态摘要（预热中 / 已暖进度 / 已启用），后台预热进行时自动展开轮询；顺带清理一处重复的 panel 开标签。
 * 附带：新增语言包模板 languages/jinyu-theme-companion.pot；shortcodes.min.js / shortcodes-gb.min.js 更名为 shortcodes.js / shortcodes-gb.js（内容本为未压缩源码，旧名易误导）。
 
 = 1.2.11 =

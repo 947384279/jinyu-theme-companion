@@ -514,15 +514,15 @@ if (nav) {
 	};
 	window.jycToggleCacheMode();
 
-	/* ---------------- 整页缓存：边缘配置片段折叠 ---------------- */
-	/* 默认收起，展开时才占高度，避免常驻片段撑高「整页缓存」卡片。 */
-	window.jycEdgeSnippetToggle = function (btn) {
-		var box = document.getElementById('jycEdgeSnippet');
-		var body = document.getElementById('jycEdgeSnippetBody');
+	/* ---------------- 通用折叠段（边缘配置片段 / 缓存预热等） ---------------- */
+	/* 默认收起，展开时才占高度；box 取按钮最近的 .jyc-collapse，body 由 aria-controls 指定。 */
+	window.jycCollapseToggle = function (btn) {
+		var box = btn ? btn.closest('.jyc-collapse') : null;
+		var body = document.getElementById(btn ? btn.getAttribute('aria-controls') || '' : '');
 		if (!box || !body) { return; }
 		var open = box.classList.toggle('is-open');
 		body.hidden = !open;
-		if (btn) { btn.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+		btn.setAttribute('aria-expanded', open ? 'true' : 'false');
 	};
 
 	/* ---------------- 整页缓存：配置片段标签页（Nginx / Apache） ---------------- */

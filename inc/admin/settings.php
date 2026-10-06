@@ -1102,7 +1102,6 @@ function jinyu_companion_settings_page_html(): void {
 							<div class="jyc-panel">
 								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg></span><?php echo esc_html__( '全量补推', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '提交存量已发布内容', 'jinyu-theme-companion' ); ?></span></div>
 								<div class="jyc-panel-b">
-									<div class="jyc-panel-b">
 									<div class="jyc-foldcard">
 										<button class="jyc-fold-head jyc-fold-tog" type="button" id="jyc-bulkPush" data-loading="<?php echo esc_attr__( '推送中…', 'jinyu-theme-companion' ); ?>" aria-expanded="false" onclick="window.jycBulkPush(this)"><span class="jyc-fold-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg></span><span class="jyc-fold-tt"><span class="jyc-fold-txt"><?php echo esc_html__( '提交全部已发布文章', 'jinyu-theme-companion' ); ?></span><span class="jyc-fold-sub"><?php echo esc_html__( '把历史文章/页面批量提交给已启用的 IndexNow 与百度，弥补仅发布时推送的收录盲区。', 'jinyu-theme-companion' ); ?></span></span><span class="jyc-fold-dot" aria-hidden="true"></span><span class="jyc-fold-ch" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></button>
 										<div id="jyc-bulkPushResult" class="jyc-fold" aria-live="polite"><div class="jyc-fold-in"><div id="jyc-bulkPushInner" class="jyc-fold-body"></div></div></div>
@@ -1391,7 +1390,7 @@ function jinyu_companion_settings_page_html(): void {
 		);
 		?>
 		<div class="jyc-collapse" id="jycEdgeSnippet">
-			<button type="button" class="jyc-collapse-head" aria-expanded="false" aria-controls="jycEdgeSnippetBody" onclick="window.jycEdgeSnippetToggle(this)">
+			<button type="button" class="jyc-collapse-head" aria-expanded="false" aria-controls="jycEdgeSnippetBody" onclick="window.jycCollapseToggle(this)">
 				<span class="jyc-collapse-title"><?php echo esc_html__( '边缘模式配置', 'jinyu-theme-companion' ); ?></span>
 				<span class="jyc-collapse-sub"><?php echo esc_html__( '查看并复制 Nginx / Apache 部署片段', 'jinyu-theme-companion' ); ?></span>
 				<svg class="jyc-collapse-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
@@ -1413,6 +1412,7 @@ function jinyu_companion_settings_page_html(): void {
 			</div>
 		</div>
 	</div>
+	<?php jinyu_perf_render_warmup_section(); ?>
 	</div>
 </div>
 						</section>
