@@ -2489,3 +2489,13 @@ body.jyc-dark { background: #0a111c; }
   .jyc-seo-bento .jyc-panel-b { padding: 14px 13px; }
   .jyc-tog { padding: 8px 0; }
 }
+
+/* ===================== 修正：SEO 面板外层 2 列网格 =====================
+ * 背景：旧规则（@media min-width:1280）把 #pane-seo.jyc-shown 设为 2 列 grid，
+ * 让每张 .jyc-panel 各占一格。现 SEO 已整体包进单个 .jyc-seo-bento
+ * （自身 1fr/340px 分栏），若 pane 仍是 grid，bento 只占第一格 →
+ * 整体被压到半宽、右侧大片留白（2026-10-06 真机踩坑）。
+ * 处理：pane 回归块级；.jyc-seo-bento 兜底 grid-column 跨满整行；
+ * 宽度收在 1080px（沿用 .jyc-pane 的 margin-inline:auto 居中），贴合"紧凑、不宽大"的定稿观感。 */
+#pane-seo.jyc-shown { display: block; max-width: 1080px; }
+.jyc-seo-bento { grid-column: 1 / -1; }
