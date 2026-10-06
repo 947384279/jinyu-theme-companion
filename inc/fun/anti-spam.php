@@ -26,6 +26,7 @@ function jinyu_anti_spam( $approved, $commentdata ) {
     }
 
     // 蜜罐：隐藏字段被填写 = 机器人提交（提交端读 $_POST，wp-comments-post.php 场景恒可用）
+    // phpcs:ignore WordPress.Security.NonceVerification -- WP 原生评论提交无 nonce（核心设计），蜜罐字段仅判空
     if ( ! empty( $_POST['jinyu_hp'] ) ) {
 		return 'spam';
     }

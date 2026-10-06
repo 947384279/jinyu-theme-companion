@@ -181,6 +181,13 @@ function jinyu_perf_toggle_meta(): array {
 			'desc'  => __( '实时小工具会同步请求 whois.pconline.com.cn 查询访客 IP 归属地（超时上限 3 秒）。该外链一旦变慢，会拖慢每一个带实时小工具的页面。开启后请求被本地直接拒绝，归属地显示为空，其余实时数据不受影响。', 'jinyu-theme-companion' ),
 
 		],
+		'hide_wp_footer'        => [
+			'label' => __( '移除 WordPress 后台页脚文案', 'jinyu-theme-companion' ),
+
+			'group' => 'admin',
+			'desc'  => __( '开启后隐藏后台底部的「感谢使用 WordPress 进行创作。」与 WordPress 版本号。仅后台可见，不影响前台访客。', 'jinyu-theme-companion' ),
+
+		],
 		'disable_xmlrpc'         => [
 			'label' => __( '禁用 XML-RPC 接口', 'jinyu-theme-companion' ),
 
@@ -192,7 +199,7 @@ function jinyu_perf_toggle_meta(): array {
 			'label' => __( '清理 wp_head 冗余输出', 'jinyu-theme-companion' ),
 
 			'group' => 'front',
-			'desc'  => __( '移除 wp_head 注入的冗余标签：RSD 链接、wlwmanifest、WordPress 版本号（generator）、短链接、REST API 发现、相邻文章 rel。仅减少页面 <head> 噪音与一处外部发现链接，不影响任何功能。', 'jinyu-theme-companion' ),
+			'desc'  => __( '移除 wp_head 中的 wlwmanifest（Windows Live Writer）链接，少一处可被探测的痕迹，不影响任何功能。', 'jinyu-theme-companion' ),
 
 		],
 		'disable_pingback'       => [
@@ -206,7 +213,7 @@ function jinyu_perf_toggle_meta(): array {
 			'label' => __( '屏蔽 WordPress.org 外部 API 请求（推荐）', 'jinyu-theme-companion' ),
 
 			'group' => 'security',
-			'desc'  => __( '拦截所有发往 *.wordpress.org 的 HTTP 请求（含 api / downloads / translate）。后台每次更新检查、翻译包拉取、主题/插件版本探测都会同步请求 wp.org，国内网络波动时可拖慢后台数秒甚至超时。拦截后这些检查立即失败并跳过，后台明显变快。仅影响 WP 官方源的查询，站点自身接口（CDN / ajax 等）与国内头像源（Cravatar 等）完全不受影响；代价：后台不再提示「WordPress 有新版本」，需自行关注升级。', 'jinyu-theme-companion' ),
+			'desc'  => __( '仅拦截发往 *.wordpress.org 的「插件详情 / 插件安装弹窗 / 主题详情 / 主题安装弹窗」等请求（路径 /plugins/、/themes/），打开这些弹窗不再卡数秒。核心版本探测、更新检查、语言包与升级包下载整条链路照常放行，后台「有新版本」提示与一键升级不受影响。仅拦 WP 官方源，站点自身接口（CDN / ajax 等）与国内头像源（Cravatar 等）完全不受影响。', 'jinyu-theme-companion' ),
 
 		],
 		'hide_admin_bar_front'   => [
@@ -248,14 +255,7 @@ function jinyu_perf_toggle_meta(): array {
 			'label' => __( '评论懒加载（加载更多）', 'jinyu-theme-companion' ),
 
 			'group' => 'front',
-			'desc'  => __( '评论数多的文章，首屏只渲染第一页评论，底部出现「加载更多评论」按钮，点击后通过 admin-ajax 增量拉取后续评论页并追加（完美复用主题评论回调与嵌套结构，锚点/SEO 不受影响）。长文评论区 DOM 量大幅下降。依赖 WP 原生评论分页（page_comments 需开启），关闭后恢复一次性输出全部评论。默认关，按需开启。', 'jinyu-theme-companion' ),
-
-		],
-		'warmup_enable'         => [
-			'label' => __( '缓存预热（部署后自动暖缓存）', 'jinyu-theme-companion' ),
-
-			'group' => 'cache',
-			'desc'  => __( '开启后，清缓存 / 升级主题插件 / 定时任务会自动爬取首页、列表、分类、近期与热门文章，把整页缓存与对象缓存的「重建成本」从首个真实访客身上转移到后台预热请求，使访客始终命中热缓存（首页冷态 80+ SQL 降到个位数）。默认关闭，需在下方「缓存预热」卡片设置频率与附加 URL；仅预热本站关键页，不外发第三方。', 'jinyu-theme-companion' ),
+			'desc'  => __( '评论数多的文章，首屏只渲染第一页评论，底部出现「加载更多评论」按钮，点击后通过 admin-ajax 增量拉取后续评论并追加（复用主题评论回调与嵌套结构，锚点/SEO 不受影响）。长文评论区 DOM 量大幅下降。关闭开关即恢复原生评论分页。默认关，按需开启。', 'jinyu-theme-companion' ),
 
 		],
 	];
@@ -386,13 +386,19 @@ function jinyu_perf_apply(): void {
         );
 	}
 
+	// 6.5) 移除 WP 后台页脚文案：清空 admin_footer_text 与 update_footer（高优先级覆盖核心默认文案）。
+	// 仅影响后台页脚渲染，不影响前台访客；与「后台减负」分组语义一致。
+	if ( ! empty( $o['hide_wp_footer'] ) ) {
+		add_filter( 'admin_footer_text', '__return_empty_string', 99 );
+		add_filter( 'update_footer', '__return_empty_string', 99 );
+	}
+
 	// 7) 禁用 XML-RPC：直接关闭远程调用接口（含 pingback 攻击面）。
 	if ( ! empty( $o['disable_xmlrpc'] ) ) {
 		add_filter( 'xmlrpc_enabled', '__return_false' );
 	}
 
-	// 8) 清理 wp_head 冗余输出：移除 RSD / wlwmanifest / 版本号 / 短链接 /
-	// REST API 发现 / 相邻文章 rel。仅减 <head> 噪音，不影响功能。
+	// 8) 清理 wp_head：移除 wlwmanifest（Windows Live Writer）链接，少一处可被探测痕迹，不影响功能。
 	if ( ! empty( $o['clean_wp_head'] ) ) {
 		remove_action( 'wp_head', 'wlwmanifest_link' );
 	}
@@ -638,22 +644,25 @@ function jinyu_perf_apply(): void {
 function jinyu_perf_status(): array {
 	global $wpdb;
 
-	$autoload = (int) $wpdb->get_var( // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
+	$autoload = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		// WP 6.6+ autoload 列为 on/off/auto/auto-on/auto-off，须用兼容 IN 列表（复用 db-optimize 的 helper），
 		// 写死 'yes' 会把「Autoload 体积」指标统计成 0。
 		'SELECT SUM(LENGTH(option_value)) FROM ' . $wpdb->options . ' WHERE '
 		. ( function_exists( 'jinyu_autoload_sql_in' ) ? jinyu_autoload_sql_in() : "autoload IN ('yes','on','auto','auto-on')" ) // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	);
 
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 面板实时诊断需最新数据，优化动作本身不可缓存
 	$transient_total = (int) $wpdb->get_var(
 		"SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE '_transient_%' OR option_name LIKE '_site_transient_%'"
 	);
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 面板实时诊断需最新数据，优化动作本身不可缓存
 	$transient_expired = (int) $wpdb->get_var(
 		"SELECT COUNT(*) FROM {$wpdb->options}
 		 WHERE (option_name LIKE '_transient_timeout_%' OR option_name LIKE '_site_transient_timeout_%')
 		 AND option_value < UNIX_TIMESTAMP()"
 	);
 
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 面板实时诊断需最新数据，优化动作本身不可缓存
 	$overhead = (float) $wpdb->get_var(
 		'SELECT COALESCE(SUM(Data_free),0) FROM information_schema.TABLES
 		 WHERE TABLE_SCHEMA = DATABASE() AND Data_free > 0'
@@ -994,7 +1003,7 @@ function jinyu_perf_clean_transients(): int {
 			WHERE (option_name LIKE '_transient_timeout_%' OR option_name LIKE '_site_transient_timeout_%')
 			AND option_value < UNIX_TIMESTAMP()";
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- 维护类批量操作，无法用 API 替代
-	$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+	$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB, WordPress.DB.PreparedSQL.NotPrepared
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	return (int) $wpdb->rows_affected;
 }
@@ -1009,6 +1018,7 @@ function jinyu_perf_clean_transients(): int {
  */
 function jinyu_perf_optimize_tables(): array {
 	global $wpdb;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 面板实时诊断需最新数据，优化动作本身不可缓存
 	$tables = $wpdb->get_results(
 		'SELECT TABLE_NAME AS t, Data_free AS f FROM information_schema.TABLES
 		 WHERE TABLE_SCHEMA = DATABASE() AND Data_free > 0 ORDER BY Data_free DESC'
@@ -1467,6 +1477,61 @@ function jinyu_perf_flush_caches(): array {
 	return $res;
 }
 
+/**
+ * 组合刷新（同 jinyu_perf_flush_caches）但**不触发自动重暖**。
+ * 供「缓存预热」卡内「清除全部缓存」按钮使用：只清缓存、不重暖，
+ * 重暖由用户显式点「立即预热」或下一周期自行发生。
+ *
+ * @return string[] 每条结果的人类可读消息
+ */
+/**
+ * 清除「预热产生的缓存」：仅精确删除预热队列中各 URL 的整页缓存（及边缘缓存），
+ * 不动 OPcache / Memcached / 全站其他页。并重置预热簿记，让卡片立即显示「未暖」。
+ * 与 jinyu_perf_flush_caches()（全站三层全清）区别：范围仅限预热 URL，且不自动重暖。
+ *
+ * @return string[] 每条结果的人类可读消息
+ */
+function jinyu_perf_flush_warmed_cache(): array {
+	$items = function_exists( 'jinyu_warmup_get_urls' ) ? jinyu_warmup_get_urls() : array();
+	$count = 0;
+	foreach ( $items as $item ) {
+		$u = is_array( $item ) ? ( $item['url'] ?? '' ) : (string) $item;
+		if ( ! $u ) {
+			continue;
+		}
+		if ( function_exists( 'jinyu_page_cache_delete_uri' ) ) {
+			jinyu_page_cache_delete_uri( $u );
+		}
+		if ( function_exists( 'jinyu_edge_purge_url' ) ) {
+			jinyu_edge_purge_url( $u );
+		}
+		++$count;
+	}
+	// 同步重置预热簿记：让卡片立即回到「未暖」，下一次预热不再被 is_hot() 跳过、全量重暖。
+	delete_option( 'jinyu_warmup_warmed_at' );
+	if ( function_exists( 'jinyu_warmup_state_set' ) ) {
+		jinyu_warmup_state_set(
+			array(
+				'position' => 0,
+				'total'    => 0,
+				'warmed'   => 0,
+				'running'  => false,
+				'last_run' => 0,
+				'done_at'  => 0,
+			)
+		);
+	}
+	$res = array();
+	if ( $count > 0 ) {
+		/* translators: %d: 被清除整页缓存的预热 URL 数量 */
+		$res[] = sprintf( __( '已清除 %d 个预热 URL 的整页缓存', 'jinyu-theme-companion' ), $count );
+	} else {
+		$res[] = __( '当前没有可清除的预热缓存', 'jinyu-theme-companion' );
+	}
+	$res[] = __( '预热簿记已重置（标记未暖）', 'jinyu-theme-companion' );
+	return $res;
+}
+
 /* ───────────────────────── 工具 ───────────────────────── */
 
 /** 字节数转人类可读（KB/MB/GB），全站看板统一入口。 */
@@ -1499,6 +1564,21 @@ function jinyu_perf_human_uptime( int $s ): string {
  *
  * @return string HTML 片段
  */
+/** 缓存操作按钮（清 OPcache / Memcached / 整页 / 全部）：嵌进对应状态面板，统一 data-flush 由事件委托处理。 */
+function jinyu_perf_flush_btn_html( string $target, string $label, string $cls = '' ): string {
+	$icon = array(
+		'opcache'  => '<path d="M12 2a10 10 0 109 6M12 6v6l4 2"/>',
+		'memcached' => '<path d="M4 7h16M4 12h16M4 17h10"/>',
+		'page'     => '<path d="M4 4h16v16H4zM4 9h16"/>',
+		'all'      => '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',
+	);
+	$path = $icon[ $target ] ?? $icon['all'];
+	// title/aria-label：窄屏只显示图标时（文字 span 被隐藏），仍能通过悬停/读屏得知按钮用途。
+	return '<button type="button" class="jperf-btn ' . $cls . '" data-flush="' . esc_attr( $target ) . '" title="' . esc_attr( $label ) . '" aria-label="' . esc_attr( $label ) . '">'
+		. '<svg viewBox="0 0 24 24">' . $path . '</svg>'
+		. '<span>' . esc_html( $label ) . '</span></button>';
+}
+
 function jinyu_perf_render_status_html(): string {
 	$s = jinyu_perf_status_snapshot();
 	$o = jinyu_perf_opcache_stats();
@@ -1580,10 +1660,12 @@ function jinyu_perf_render_status_html(): string {
 	$html .= '<p class="jperf-eyebrow jperf-eyebrow-mt">' . esc_html__( '运行时监控', 'jinyu-theme-companion' ) . '</p>';
 	$html .= '<div class="jperf-panels">';
 
-	// OPcache 面板
+	// OPcache 面板：清除按钮进标题行，紧贴右侧「PHP x.y」版本标签的左边。
 	$html .= '<div class="jperf-panel"><div class="jperf-panel-head">'
 		. '<span class="jperf-panel-ico"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg></span>'
-		. '<h3>' . esc_html__( 'OPcache 字节码缓存', 'jinyu-theme-companion' ) . '</h3><span class="jperf-tag">PHP ' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '</span></div>';
+		. '<h3>' . esc_html__( 'OPcache 字节码缓存', 'jinyu-theme-companion' ) . '</h3>'
+		. '<span class="jperf-panel-act">' . jinyu_perf_flush_btn_html( 'opcache', __( '清除 OPcache', 'jinyu-theme-companion' ) ) . '</span>'
+		. '<span class="jperf-tag">PHP ' . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . '</span></div>';
 	$html .= '<div class="jperf-gauge">';
 	$html .= $ring( $op_hit, 'var(--j-accent)', __( '命中率', 'jinyu-theme-companion' ) );
 	$html .= '<div class="jperf-kv">';
@@ -1605,15 +1687,19 @@ function jinyu_perf_render_status_html(): string {
 		$extra .= '<span><i>' . esc_html__( 'OOM 重启', 'jinyu-theme-companion' ) . '</i><b>' . esc_html( number_format_i18n( $o['oom_restarts'] ) ) . '</b></span>';
 		$extra .= '<span><i>' . esc_html__( '上次重置', 'jinyu-theme-companion' ) . '</i><b>' . esc_html( $o['last_restart'] > 0 ? sprintf( /* translators: %s: 相对时间 */ __( '%s前', 'jinyu-theme-companion' ), human_time_diff( $o['last_restart'], time() ) ) : __( '从未', 'jinyu-theme-companion' ) ) . '</b></span>';
 		$extra .= '</div>';
-		$html .= '</div></div>' . $extra . '</div>'; // 依次闭合 .jperf-kv、.jperf-gauge，数据栏在仪表行之后、面板之内
+		$html .= '</div></div>' . $extra;
+		$html .= '</div>'; // 闭合 .jperf-panel（清除按钮在标题行，不再占卡片底部）
 	} else {
-		$html .= '</div></div></div>'; // 依次闭合 .jperf-kv、.jperf-gauge、.jperf-panel
+		$html .= '</div></div>';
+		$html .= '</div>'; // 依次闭合 .jperf-gauge、.jperf-panel
 	}
 
 	// Memcached 面板
 	$html .= '<div class="jperf-panel"><div class="jperf-panel-head">'
 		. '<span class="jperf-panel-ico"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span>'
-		. '<h3>' . esc_html__( 'Memcached 对象缓存', 'jinyu-theme-companion' ) . '</h3><span class="jperf-tag">' . esc_html( $mtag ) . '</span></div>';
+		. '<h3>' . esc_html__( 'Memcached 对象缓存', 'jinyu-theme-companion' ) . '</h3>'
+		. '<span class="jperf-panel-act">' . jinyu_perf_flush_btn_html( 'memcached', __( '清除 Memcached', 'jinyu-theme-companion' ) ) . '</span>'
+		. '<span class="jperf-tag">' . esc_html( $mtag ) . '</span></div>';
 	$html .= '<div class="jperf-gauge">';
 	$html .= $ring( $mc_hit, 'var(--j-accent)', __( '命中率', 'jinyu-theme-companion' ) );
 	$html .= '<div class="jperf-kv">';
@@ -1638,6 +1724,12 @@ function jinyu_perf_render_status_html(): string {
 	$wv  = jinyu_perf_web_vitals_stats();
 	$wvm = jinyu_perf_wv_meta();
 	$wv_score = ( null !== $wv ) ? jinyu_perf_wv_score( $wv, $wvm ) : null;
+	// 体验数据操作按钮：默认挂在「最慢路径」标题行最右端（与数据同卡同视区）；
+	// 若该卡不存在（无样本 / 无路径聚合），退回板块底部，保证入口始终可用。
+	$wv_reset_btn    = '<button type="button" class="jperf-btn jperf-btn-danger" id="jperf-reset-wv">'
+		. '<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>'
+		. '<span>' . esc_html__( '清空体验数据', 'jinyu-theme-companion' ) . '</span></button>';
+	$wv_reset_placed = false;
 	$html .= '<p class="jperf-eyebrow jperf-eyebrow-mt">' . esc_html__( '真实用户体验（近 7 天）', 'jinyu-theme-companion' ) . '</p>';
 	$html .= '<div class="jperf-wv">';
 	if ( null === $wv ) {
@@ -1754,9 +1846,12 @@ function jinyu_perf_render_status_html(): string {
 		$html .= '<div class="jperf-wv-legend"><span class="lg good">' . esc_html__( '良好', 'jinyu-theme-companion' ) . '</span><span class="lg mid">' . esc_html__( '需优化', 'jinyu-theme-companion' ) . '</span>'
 			. '<span class="lg poor">' . esc_html__( '较差', 'jinyu-theme-companion' ) . '</span><span class="lg-note">' . esc_html__( '除综合评分外，数值越低越好', 'jinyu-theme-companion' ) . '</span></div>';
 		if ( ! empty( $wv['slowest'] ) && is_array( $wv['slowest'] ) ) {
+			$wv_reset_placed = true;
 			$html .= '<div class="jperf-slow">'
 				. '<div class="jperf-slow-head"><span class="jperf-slow-t">' . esc_html__( '最慢路径（按 LCP 最差）', 'jinyu-theme-companion' ) . '</span>'
-				. '<span class="jperf-slow-hint">' . esc_html__( '各路径真实访客的首屏最慢渲染时长', 'jinyu-theme-companion' ) . '</span></div>'
+				. '<span class="jperf-slow-hint">' . esc_html__( '各路径真实访客的首屏最慢渲染时长', 'jinyu-theme-companion' ) . '</span>'
+				. '<span class="jperf-slow-act">' . $wv_reset_btn . '</span></div>'
+				. '<div id="jperf-wv-result" class="jperf-result" aria-live="polite"></div>'
 				. '<div class="jperf-slow-list">';
 			$rank = 0;
 			foreach ( $wv['slowest'] as $srow ) {
@@ -1780,6 +1875,14 @@ function jinyu_perf_render_status_html(): string {
 			}
 			$html .= '</div></div>';
 		}
+	}
+	// 体验数据操作：有「最慢路径」卡时按钮已挂在该卡标题行右上角，此处不再重复；
+	// 无该卡（无样本 / 无路径聚合）时退回板块底部的操作条。
+	if ( ! $wv_reset_placed ) {
+		$html .= '<div class="jperf-wv-foot"><span class="jperf-foot-label">' . esc_html__( '数据管理', 'jinyu-theme-companion' ) . '</span>';
+		$html .= $wv_reset_btn;
+		$html .= '<div id="jperf-wv-result" class="jperf-result" aria-live="polite"></div>';
+		$html .= '</div>';
 	}
 	$html .= '</div>';
 
@@ -1810,7 +1913,9 @@ function jinyu_perf_ajax_optimize(): void {
 	$before = jinyu_perf_status();
 
 	// 前端以 JSON 字符串提交开关集合，逐 key 白名单式写回（不在清单里的键直接丢弃）
+	// phpcs:ignore WordPress.Security.NonceVerification -- nonce 已由 jinyu_perf_guard()（内部走 companion_guard）校验
 	if ( isset( $_POST['options'] ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification -- nonce 已由 jinyu_perf_guard()（内部走 companion_guard）校验
 		$posted = json_decode( sanitize_text_field( wp_unslash( $_POST['options'] ) ), true );
 		if ( is_array( $posted ) ) {
 			$opts    = jinyu_perf_get_options();
@@ -1867,6 +1972,7 @@ add_action( 'wp_ajax_jinyu_perf_flush', 'jinyu_perf_ajax_flush' );
 function jinyu_perf_ajax_flush(): void {
 	jinyu_perf_guard();
 
+	// phpcs:ignore WordPress.Security.NonceVerification -- nonce 已由 jinyu_perf_guard()（内部走 companion_guard）校验
 	$target = isset( $_POST['target'] ) ? sanitize_key( (string) $_POST['target'] ) : 'all';
 	switch ( $target ) {
 		case 'opcache':
@@ -1877,6 +1983,9 @@ function jinyu_perf_ajax_flush(): void {
 			break;
 		case 'page':
 			$msg = jinyu_perf_flush_page_cache() ?: __( '本站未启用整页缓存插件，无需清理', 'jinyu-theme-companion' );
+			break;
+		case 'warmed':
+			$msg = implode( __( '；', 'jinyu-theme-companion' ), array_filter( jinyu_perf_flush_warmed_cache(), 'strlen' ) );
 			break;
 		default:
 			$msg = implode( __( '；', 'jinyu-theme-companion' ), array_filter( jinyu_perf_flush_caches(), 'strlen' ) );
@@ -1889,21 +1998,15 @@ function jinyu_perf_ajax_flush(): void {
 function jinyu_perf_ajax_save(): void {
 	jinyu_perf_guard();
 
+	// phpcs:ignore WordPress.Security.NonceVerification -- nonce 已由 jinyu_perf_guard()（内部走 companion_guard）校验
 	if ( isset( $_POST['options'] ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification -- nonce 已由 jinyu_perf_guard()（内部走 companion_guard）校验
 		$posted = json_decode( sanitize_text_field( wp_unslash( $_POST['options'] ) ), true );
 		if ( is_array( $posted ) ) {
 			$opts    = jinyu_perf_get_options();
 			$allowed = array_keys( jinyu_perf_toggle_meta() );
 			foreach ( $allowed as $k ) {
 				$opts[ $k ] = ! empty( $posted[ $k ] ) ? 1 : 0;
-			}
-			// 缓存预热配置并入主保存：频率 + 额外 URL（频率校验落在允许集合内）
-			if ( isset( $posted['warmup_interval'] ) ) {
-				$int = sanitize_key( (string) $posted['warmup_interval'] );
-				$opts['warmup_interval'] = array_key_exists( $int, jinyu_warmup_intervals() ) ? $int : 'manual';
-			}
-			if ( isset( $posted['warmup_urls'] ) ) {
-				$opts['warmup_urls'] = sanitize_textarea_field( wp_unslash( $posted['warmup_urls'] ) );
 			}
 			update_option( 'jinyu_perf_options_v2', $opts, false );
 			jinyu_perf_get_options( true );
@@ -1942,6 +2045,7 @@ add_action( 'wp_ajax_jinyu_perf_upgrade_cache', 'jinyu_perf_ajax_upgrade_cache' 
 /** 部署 / 回滚对象缓存 drop-in：deploy=1 部署，deploy=0 移除。 */
 function jinyu_perf_ajax_deploy_cache(): void {
 	jinyu_perf_guard();
+	// phpcs:ignore WordPress.Security.NonceVerification -- nonce 已由 jinyu_perf_guard()（内部走 companion_guard）校验
 	$deploy = ! empty( $_POST['deploy'] ) ? (int) $_POST['deploy'] : 0;
 	$res    = 1 === $deploy ? jinyu_perf_deploy_object_cache() : jinyu_perf_remove_object_cache();
 	if ( ! empty( $res['ok'] ) ) {
@@ -1957,6 +2061,7 @@ function jinyu_perf_ajax_upgrade_cache(): void {
 	if ( ! file_exists( $target ) || jinyu_perf_object_cache_is_jinyu( $target ) ) {
 		wp_send_json_error( [ 'msg' => __( '没有可替换的外部 object-cache.php', 'jinyu-theme-companion' ) ] );
 	}
+	// phpcs:ignore WordPress.Security.NonceVerification -- nonce 已由 jinyu_perf_guard()（内部走 companion_guard）校验
 	$backup = ! empty( $_POST['backup'] );
 	$res    = jinyu_perf_deploy_object_cache( true, $backup );
 	if ( ! empty( $res['ok'] ) ) {
@@ -1980,7 +2085,9 @@ function jinyu_perf_ajax_status(): void {
  * 仅校验来源文章与开关，不做权限限制（公开评论本就可读）。
  */
 function jinyu_perf_ajax_load_comments() {
+	// phpcs:ignore WordPress.Security.NonceVerification -- 公开评论增量端点（游客可用），仅按文章状态过滤，无 nonce 属设计
 	$post_id = absint( wp_unslash( $_GET['post_id'] ?? 0 ) );
+	// phpcs:ignore WordPress.Security.NonceVerification -- 公开评论增量端点（游客可用），仅按文章状态过滤，无 nonce 属设计
 	$page    = max( 1, absint( wp_unslash( $_GET['page'] ?? 1 ) ) );
 	$post    = get_post( $post_id );
 	// 仅公开文章的评论可被匿名增量拉取：私有/草稿/待审文章即使评论开放也不经此端点外泄。
@@ -2070,11 +2177,13 @@ function jinyu_perf_render_headside(): void {
 	$oc_on = wp_using_ext_object_cache() || ( $mc && ! empty( $mc['reachable'] ) );
 	?>
 	<div class="jperf-headside">
-		<span class="jperf-pill"><span class="jperf-dot <?php echo $oc_on ? 'ok' : 'off'; ?>"></span><?php echo $oc_on ? esc_html__( '对象缓存运行中', 'jinyu-theme-companion' ) : esc_html__( '对象缓存未启用', 'jinyu-theme-companion' ); ?></span>
-		<button type="button" class="jperf-refresh-mini" id="jperf-refresh" title="<?php esc_attr_e( '刷新看板', 'jinyu-theme-companion' ); ?>" aria-label="<?php esc_attr_e( '刷新看板', 'jinyu-theme-companion' ); ?>">
-			<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-3-6.7M21 4v5h-5"/></svg>
-		</button>
-		<span class="jperf-ts" id="jperf-refreshed-at" hidden></span>
+		<span class="jperf-pill"><span class="jperf-dot <?php echo $oc_on ? 'ok' : 'off'; ?>"></span><span class="jperf-pill-txt"><?php echo $oc_on ? esc_html__( '对象缓存运行中', 'jinyu-theme-companion' ) : esc_html__( '对象缓存未启用', 'jinyu-theme-companion' ); ?></span></span>
+		<?php
+		// 清除整页 / 全部缓存：全局操作，挂在页面标题行右上角（与状态胶囊同行）。
+		echo jinyu_perf_flush_btn_html( 'page', __( '清除整页缓存', 'jinyu-theme-companion' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 函数内已 esc_html 文本、esc_attr 属性
+		echo jinyu_perf_flush_btn_html( 'all', __( '清除全部缓存', 'jinyu-theme-companion' ), 'jperf-btn-hero' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 同上
+		?>
+		<div id="jperf-cache-result" class="jperf-result" aria-live="polite"></div>
 	</div>
 	<?php
 }
@@ -2154,9 +2263,6 @@ function jinyu_perf_render_pane(): void {
 				<?php endforeach; ?>
 			</div>
 			<div class="jperf-btnrow">
-				<button type="button" id="jperf-save" class="jperf-btn jperf-btn-primary">
-					<svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h6M8 13h8M8 17h5"/></svg><span><?php esc_html_e( '保存设置', 'jinyu-theme-companion' ); ?></span>
-				</button>
 				<button type="button" id="jperf-rec" class="jperf-btn">
 					<svg viewBox="0 0 24 24"><path d="M4 21v-6M4 11V3M12 21v-9M12 8V3M20 21v-4M20 13V3M1 15h6M9 8h6M17 13h6"/></svg><span><?php esc_html_e( '一键打开推荐开关', 'jinyu-theme-companion' ); ?></span>
 				</button>
@@ -2164,7 +2270,7 @@ function jinyu_perf_render_pane(): void {
 					<svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg><span><?php esc_html_e( '一键应用推荐优化', 'jinyu-theme-companion' ); ?></span>
 				</button>
 			</div>
-			<p class="jperf-hint" style="margin-top:10px"><?php esc_html_e( '「保存设置」同时保存优化开关与缓存预热配置；改动任意一项后，底部会出现悬浮「保存设置」按钮。「一键打开推荐开关」仅切换界面状态不直接保存；「推荐优化」= 保存 + 清理过期 transient + 优化碎片表 + 重置 OPcache 与 Memcached。', 'jinyu-theme-companion' ); ?></p>
+			<p class="jperf-hint" style="margin-top:10px"><?php esc_html_e( '「保存设置」保存以上优化开关；改动任意一项后，底部会出现悬浮「保存设置」按钮。「一键打开推荐开关」仅切换界面状态不直接保存；「推荐优化」= 保存 + 清理过期 transient + 优化碎片表 + 重置 OPcache 与 Memcached。缓存预热已移至「前台加速」分区，配置与触发在那里独立进行。', 'jinyu-theme-companion' ); ?></p>
 			<div id="jperf-result" class="jperf-result" aria-live="polite"></div>
 			<div id="jperf-floatsave" class="jperf-floatsave" role="status" aria-hidden="true">
 				<span class="jperf-floatsave-dot" aria-hidden="true"></span>
@@ -2177,77 +2283,6 @@ function jinyu_perf_render_pane(): void {
 				</span>
 			</div>
 		</section>
-
-		<section class="jperf-block">
-			<div class="jperf-block-head">
-				<p class="jperf-eyebrow"><?php esc_html_e( '缓存预热', 'jinyu-theme-companion' ); ?></p>
-				<span class="jperf-hint"><?php esc_html_e( '部署 / 升级 / 清缓存后自动暖关键页，访客始终命中热缓存。总开关在上方「优化开关」中开启。', 'jinyu-theme-companion' ); ?></span>
-			</div>
-			<div class="jperf-warmup">
-				<label class="jperf-field">
-					<span><?php esc_html_e( '自动预热频率', 'jinyu-theme-companion' ); ?></span>
-					<select id="jinyu-warmup-interval" class="jyc-inp">
-						<?php foreach ( jinyu_warmup_intervals() as $k => $label ) : ?>
-						<option value="<?php echo esc_attr( $k ); ?>"<?php selected( $k, $opts['warmup_interval'] ?? 'manual' ); ?>><?php echo esc_html( $label ); ?></option>
-						<?php endforeach; ?>
-					</select>
-				</label>
-				<label class="jperf-field">
-					<span><?php esc_html_e( '额外预热 URL（每行一个）', 'jinyu-theme-companion' ); ?></span>
-					<textarea id="jinyu-warmup-urls" rows="4" placeholder="https://<?php echo esc_attr( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ); ?>/about/"><?php echo esc_textarea( $opts['warmup_urls'] ?? '' ); ?></textarea>
-				</label>
-				<div class="jperf-actions">
-					<button type="button" class="jperf-btn jperf-btn-hero" id="jinyu-warmup-run"><span><?php esc_html_e( '立即预热', 'jinyu-theme-companion' ); ?></span></button>
-				</div>
-				<?php $wu_last = get_option( 'jinyu_warmup_last' ); if ( is_array( $wu_last ) && ! empty( $wu_last['at'] ) ) : ?>
-				<p class="jperf-hint"><?php echo esc_html( sprintf( /* translators: %1$s 上次时间, %2$d 成功数, %3$d 总数, %4$s 耗时秒数 */ __( '上次：%1$s，成功 %2$d / %3$d，耗时 %4$s 秒', 'jinyu-theme-companion' ), wp_date( 'Y-m-d H:i', $wu_last['at'] ), $wu_last['ok'], $wu_last['total'], $wu_last['elapsed'] ) ); ?></p>
-				<?php endif; ?>
-				<div id="jinyu-warmup-result" class="jperf-result" aria-live="polite"></div>
-			</div>
-		</section>
-
-		<div class="jperf-grid2">
-			<section class="jperf-card">
-				<div class="jperf-card-head">
-					<span class="jperf-card-ico"><svg viewBox="0 0 24 24"><path d="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></span>
-					<div class="jperf-card-tt">
-						<h3><?php esc_html_e( '缓存管理', 'jinyu-theme-companion' ); ?></h3>
-						<p><?php esc_html_e( '部署代码后建议「清除全部缓存」；各层缓存互相独立，可按需单清。', 'jinyu-theme-companion' ); ?></p>
-					</div>
-				</div>
-				<div class="jperf-actions">
-					<button type="button" class="jperf-btn" data-flush="opcache">
-						<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 109 6M12 6v6l4 2"/></svg><span><?php esc_html_e( '清除 OPcache', 'jinyu-theme-companion' ); ?></span>
-					</button>
-					<button type="button" class="jperf-btn" data-flush="memcached">
-						<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg><span><?php esc_html_e( '清除 Memcached', 'jinyu-theme-companion' ); ?></span>
-					</button>
-					<button type="button" class="jperf-btn" data-flush="page">
-						<svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 9h16"/></svg><span><?php esc_html_e( '清除整页缓存', 'jinyu-theme-companion' ); ?></span>
-					</button>
-					<button type="button" class="jperf-btn jperf-btn-hero" data-flush="all">
-						<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg><span><?php esc_html_e( '清除全部缓存', 'jinyu-theme-companion' ); ?></span>
-					</button>
-				</div>
-				<div id="jperf-cache-result" class="jperf-result" aria-live="polite"></div>
-			</section>
-
-			<section class="jperf-card">
-				<div class="jperf-card-head">
-					<span class="jperf-card-ico"><svg viewBox="0 0 24 24"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg></span>
-					<div class="jperf-card-tt">
-						<h3><?php esc_html_e( '体验数据', 'jinyu-theme-companion' ); ?></h3>
-						<p><?php esc_html_e( '真实用户体验聚合（近 7 天滚动），清空后随新访客浏览重新累积。', 'jinyu-theme-companion' ); ?></p>
-					</div>
-				</div>
-				<div class="jperf-actions">
-					<button type="button" class="jperf-btn jperf-btn-danger" id="jperf-reset-wv">
-						<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg><span><?php esc_html_e( '清空体验数据', 'jinyu-theme-companion' ); ?></span>
-					</button>
-				</div>
-				<div id="jperf-wv-result" class="jperf-result" aria-live="polite"></div>
-			</section>
-		</div>
 
 
 	</div>
@@ -2338,22 +2373,6 @@ function jinyu_perf_render_pane(): void {
 			if (e.target.closest('.jperf-result.show')) { collapseResults(); }
 		});
 
-		/** 保存成功浮层：顶部居中胶囊（大字号+强调底色+投影），比内联结果区显眼。 */
-		var toastEl = null, toastTimer = null;
-		function jperfToast(msg){
-			if (!toastEl || !toastEl.isConnected) {
-				toastEl = document.createElement('div');
-				toastEl.id = 'jperf-toast';
-				toastEl.setAttribute('role', 'status');
-				(document.querySelector('.jperf-app') || document.body).appendChild(toastEl);
-			}
-			toastEl.textContent = msg;
-			void toastEl.offsetWidth; // 强制重排，重触发入场过渡
-			toastEl.classList.add('show');
-			if (toastTimer) { clearTimeout(toastTimer); }
-			toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 3200);
-		}
-
 		function showErr(id, msg){
 			var box = document.getElementById(id);
 			box.innerHTML = '';
@@ -2393,14 +2412,8 @@ function jinyu_perf_render_pane(): void {
 		document.querySelectorAll('#jperf-toggles .jperf-sw').forEach(function(sw){
 			snapToggles.push({ el: sw, on: sw.classList.contains('on') });
 		});
-		var snapInterval = (document.getElementById('jinyu-warmup-interval') || {}).value || '';
-		var snapUrls = (document.getElementById('jinyu-warmup-urls') || {}).value || '';
 		function refreshSnapshot(){
 			snapToggles.forEach(function(t){ t.on = t.el.classList.contains('on'); });
-			var wi = document.getElementById('jinyu-warmup-interval');
-			var wu = document.getElementById('jinyu-warmup-urls');
-			if (wi) { snapInterval = wi.value; }
-			if (wu) { snapUrls = wu.value; }
 		}
 		var undo = document.getElementById('jperf-undo');
 		if (undo) {
@@ -2409,12 +2422,8 @@ function jinyu_perf_render_pane(): void {
 					t.el.classList.toggle('on', t.on);
 					t.el.setAttribute('aria-checked', t.on ? 'true' : 'false');
 				});
-				var wi = document.getElementById('jinyu-warmup-interval');
-				var wu = document.getElementById('jinyu-warmup-urls');
-				if (wi) { wi.value = snapInterval; }
-				if (wu) { wu.value = snapUrls; }
 				clearUnsaved();
-				jperfToast('<?php echo esc_js( __( '已撤销改动，恢复到上次保存的状态', 'jinyu-theme-companion' ) ); ?>');
+				window.jycToast('<?php echo esc_js( __( '已撤销改动，恢复到上次保存的状态', 'jinyu-theme-companion' ) ); ?>');
 			});
 		}
 
@@ -2570,9 +2579,19 @@ function jinyu_perf_render_pane(): void {
 						lines.push('<?php echo esc_js( __( '开关已保存，下一次请求起生效。', 'jinyu-theme-companion' ) ); ?>');
 						showResult('jperf-result', lines);
 						refreshStatus();
+						syncWpFooter();
+						window.jycToast('<?php echo esc_js( __( '推荐优化已应用', 'jinyu-theme-companion' ) ); ?>');
 					})
 					.catch(function(e){ run.disabled = false; lbl.textContent = old; showErr('jperf-result', e); });
 			});
+		}
+
+		// 保存后即时同步 WP 后台页脚显隐，免去手动刷新（服务端 filter 仅在整页加载时生效）。
+		function syncWpFooter() {
+			var sw = document.querySelector('#jperf-toggles .jperf-sw[data-key="hide_wp_footer"]');
+			var footer = document.getElementById('wpfooter');
+			if (!footer) { return; }
+			footer.style.display = (sw && sw.classList.contains('on')) ? 'none' : '';
 		}
 
 		// 统一保存：优化开关 + 缓存预热配置一并落库（不跑清理/优化）。固定按钮与悬浮按钮共用。
@@ -2582,10 +2601,6 @@ function jinyu_perf_render_pane(): void {
 			document.querySelectorAll('#jperf-toggles .jperf-sw').forEach(function(sw){
 				opts[sw.dataset.key] = sw.classList.contains('on') ? 1 : 0;
 			});
-			var wi = document.getElementById('jinyu-warmup-interval');
-			var wu = document.getElementById('jinyu-warmup-urls');
-			if (wi) { opts.warmup_interval = wi.value; }
-			if (wu) { opts.warmup_urls = wu.value; }
 			btn.disabled = true;
 			var lbl = btn.querySelector('span'), old = lbl ? lbl.textContent : '';
 			if (lbl) { lbl.textContent = '<?php echo esc_js( __( '保存中…', 'jinyu-theme-companion' ) ); ?>'; }
@@ -2594,10 +2609,11 @@ function jinyu_perf_render_pane(): void {
 					btn.disabled = false; if (lbl) { lbl.textContent = old; }
 					if (!j.success) { showErr('jperf-result', j.data && j.data.msg ? j.data.msg : '<?php echo esc_js( __( '未知错误', 'jinyu-theme-companion' ) ); ?>'); return; }
 					showResult('jperf-result', [j.data.msg]);
-					jperfToast(j.data.msg); // 顶部居中显眼浮层（3.2s 自动消失）
+					window.jycToast(j.data.msg); // 复用全局统一保存成功浮层
 					refreshSnapshot(); // 撤销基线更新为本次落库状态
 					clearUnsaved();
 					refreshStatus();
+					syncWpFooter();
 				})
 				.catch(function(e){ btn.disabled = false; if (lbl) { lbl.textContent = old; } showErr('jperf-result', e); });
 		}
@@ -2606,22 +2622,45 @@ function jinyu_perf_render_pane(): void {
 		var saveFloat = document.getElementById('jperf-save-float');
 		if (saveFloat) { saveFloat.addEventListener('click', function(){ saveAll(saveFloat); }); }
 
-		// 缓存管理独立按钮
-		document.querySelectorAll('.jperf-btn[data-flush]').forEach(function(b){
-			b.addEventListener('click', function(){
-				b.disabled = true;
-				var lbl = b.querySelector('span');
-				var old = lbl.textContent;
-				lbl.textContent = '<?php echo esc_js( __( '清除中…', 'jinyu-theme-companion' ) ); ?>';
-				post('jinyu_perf_flush', {target: b.getAttribute('data-flush')})
-					.then(function(j){
-						b.disabled = false; lbl.textContent = old;
-						if (!j.success) { showErr('jperf-cache-result', j.data && j.data.msg ? j.data.msg : '<?php echo esc_js( __( '未知错误', 'jinyu-theme-companion' ) ); ?>'); return; }
-						showResult('jperf-cache-result', [j.data.msg]);
-						refreshStatus();
-					})
-					.catch(function(e){ b.disabled = false; lbl.textContent = old; showErr('jperf-cache-result', e); });
-			});
+		// 缓存清理：事件委托（按钮在状态看板内，refreshStatus 重渲染后委托仍有效）
+		function handleFlush(b){
+			b.disabled = true;
+			var lbl = b.querySelector('span');
+			var old = lbl ? lbl.textContent : '';
+			if (lbl) { lbl.textContent = '<?php echo esc_js( __( '清除中…', 'jinyu-theme-companion' ) ); ?>'; }
+			post('jinyu_perf_flush', {target: b.getAttribute('data-flush')})
+				.then(function(j){
+					b.disabled = false; if (lbl) { lbl.textContent = old; }
+					if (!j.success) { showErr('jperf-cache-result', j.data && j.data.msg ? j.data.msg : '<?php echo esc_js( __( '未知错误', 'jinyu-theme-companion' ) ); ?>'); return; }
+					showResult('jperf-cache-result', [j.data.msg]);
+					refreshStatus();
+				})
+				.catch(function(e){ b.disabled = false; if (lbl) { lbl.textContent = old; } showErr('jperf-cache-result', e); });
+		}
+		// 清空真实用户体验聚合：事件委托（同上，避免重渲染后失效）
+		function handleResetWv(b){
+			if (!window.confirm('<?php echo esc_js( __( '确定清空真实用户体验聚合数据？此操作不可撤销。', 'jinyu-theme-companion' ) ); ?>')) { return; }
+			b.disabled = true;
+			var lbl = b.querySelector('span');
+			var old = lbl ? lbl.textContent : '';
+			if (lbl) { lbl.textContent = '<?php echo esc_js( __( '清空中…', 'jinyu-theme-companion' ) ); ?>'; }
+			post('jinyu_perf_reset_wv')
+				.then(function(j){
+					b.disabled = false; if (lbl) { lbl.textContent = old; }
+					if (!j.success) { showErr('jperf-wv-result', j.data && j.data.msg ? j.data.msg : '<?php echo esc_js( __( '未知错误', 'jinyu-theme-companion' ) ); ?>'); return; }
+					showResult('jperf-wv-result', [j.data.msg]);
+					refreshStatus();
+				})
+				.catch(function(e){ b.disabled = false; if (lbl) { lbl.textContent = old; } showErr('jperf-wv-result', e); });
+		}
+
+		// 缓存清理 / 清空体验数据：委托到 document —— 按钮已分别移到页面标题行右上角与状态看板内，
+		// 两处不在同一个容器里，且看板会被 refreshStatus 整块重渲染，委托到 document 最稳妥。
+		document.addEventListener('click', function(e){
+			var fb = e.target.closest('.jperf-btn[data-flush]');
+			if (fb) { handleFlush(fb); return; }
+			var rb = e.target.closest('#jperf-reset-wv');
+			if (rb) { handleResetWv(rb); return; }
 		});
 
 		// 对象缓存 drop-in 部署 / 回滚（事件委托：状态看板刷新后仍有效）
@@ -2679,62 +2718,238 @@ function jinyu_perf_render_pane(): void {
 			});
 		}
 
-		// 清空真实用户体验聚合
-		var rwv = document.getElementById('jperf-reset-wv');
-		if (rwv) {
-			rwv.addEventListener('click', function(){
-				if (!window.confirm('<?php echo esc_js( __( '确定清空真实用户体验聚合数据？此操作不可撤销。', 'jinyu-theme-companion' ) ); ?>')) { return; }
-				rwv.disabled = true;
-				var lbl = rwv.querySelector('span');
-				var old = lbl.textContent;
-				lbl.textContent = '<?php echo esc_js( __( '清空中…', 'jinyu-theme-companion' ) ); ?>';
-				post('jinyu_perf_reset_wv')
-					.then(function(j){
-						rwv.disabled = false; lbl.textContent = old;
-						if (!j.success) { showErr('jperf-wv-result', j.data && j.data.msg ? j.data.msg : '<?php echo esc_js( __( '未知错误', 'jinyu-theme-companion' ) ); ?>'); return; }
-						showResult('jperf-wv-result', [j.data.msg]);
-						refreshStatus();
-					})
-					.catch(function(e){ rwv.disabled = false; lbl.textContent = old; showErr('jperf-wv-result', e); });
-			});
-		}
-
 		// 手动刷新看板
 		var rf = document.getElementById('jperf-refresh');
 		if (rf) {
 			rf.addEventListener('click', function(){ rf.disabled = true; refreshStatus().then(function(){ rf.disabled = false; }).catch(function(){ rf.disabled = false; }); });
 		}
 
-		// 缓存预热：「立即预热」直接按当前输入的频率 / URL 触发（并落库该次配置）；配置保存已并入主「保存设置」
-		var wuRun = document.getElementById('jinyu-warmup-run');
-		if (wuRun) {
-			wuRun.addEventListener('click', function(){
-				wuRun.disabled = true;
-				var lbl = wuRun.querySelector('span'); var old = lbl ? lbl.textContent : '';
-				lbl.textContent = '<?php echo esc_js( __( '预热中…', 'jinyu-theme-companion' ) ); ?>';
-				post('jinyu_perf_warmup', { interval: document.getElementById('jinyu-warmup-interval').value, urls: document.getElementById('jinyu-warmup-urls').value, run: 1 })
-					.then(function(j){
-						wuRun.disabled = false; lbl.textContent = old;
-						if (!j.success) { showErr('jinyu-warmup-result', j.data && j.data.msg ? j.data.msg : '<?php echo esc_js( __( '未知错误', 'jinyu-theme-companion' ) ); ?>'); return; }
-						var r = j.data.result, lines = [];
-						if (r) {
-							lines.push('<?php echo esc_js( __( '成功 ', 'jinyu-theme-companion' ) ); ?>' + r.ok + ' / ' + r.total + '<?php echo esc_js( __( '，失败 ', 'jinyu-theme-companion' ) ); ?>' + r.fail + '<?php echo esc_js( __( '，耗时 ', 'jinyu-theme-companion' ) ); ?>' + r.elapsed + 's');
-							if (r.failed && r.failed.length) { lines.push(r.failed.join('；')); }
-						} else { lines.push(j.data.msg); }
-						showResult('jinyu-warmup-result', lines);
-					})
-					.catch(function(e){ wuRun.disabled = false; lbl.textContent = old; showErr('jinyu-warmup-result', e); });
-			});
-		}
-
-		// 预热配置改动同步提示悬浮保存
-		['jinyu-warmup-interval','jinyu-warmup-urls'].forEach(function(id){
-			var el = document.getElementById(id);
-			if (el) { el.addEventListener('input', markUnsaved); el.addEventListener('change', markUnsaved); }
-		});
-
 		// 首次绘制
 		animateBoards();
+	})();
+	<?php
+	wp_print_inline_script_tag( (string) ob_get_clean() );
+}
+
+/**
+ * 渲染「缓存预热」卡片（嵌入插件设置面板 pane-perf「前台加速」分区）。
+ * 与整页缓存同区，作为其后处理：暖的是整页 / 对象缓存，逻辑上从属前台加速，
+ * 而非性能中心的「服务器运行时看板 / 清理 / 一键优化」。开关 / 频率 / URL 存于
+ * jinyu_perf_options_v2（与性能中心开关同一真源），经独立 AJAX 端点 jinyu_perf_warmup 落库与触发。
+ */
+function jinyu_perf_render_warmup_card(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	$opts     = function_exists( 'jinyu_perf_get_options' ) ? jinyu_perf_get_options() : array();
+	$en       = ! empty( $opts['warmup_enable'] ) ? 1 : 0;
+	$interval = $opts['warmup_interval'] ?? 'manual';
+	$urls     = $opts['warmup_urls'] ?? '';
+	$max      = (int) ( $opts['warmup_max'] ?? 300 );
+	$st       = function_exists( 'jinyu_warmup_state_get' ) ? jinyu_warmup_state_get() : array(
+		'position' => 0,
+		'total' => 0,
+		'warmed' => 0,
+		'running' => false,
+	);
+	$st_total = (int) ( $st['total'] ?? 0 );
+	$st_warmed = (int) ( $st['warmed'] ?? 0 );
+	$st_pct   = $st_total > 0 ? (int) round( $st_warmed / $st_total * 100 ) : 0;
+	$nonce    = wp_create_nonce( 'jinyu_perf_center' );
+	?>
+	<div class="jyc-panel">
+		<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></span><?php echo esc_html__( '缓存预热', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '默认关闭', 'jinyu-theme-companion' ); ?></span></div>
+		<div class="jyc-panel-b">
+			<div class="jyc-frow">
+				<label class="jyc-switch"><input type="checkbox" id="jinyu-warmup-enable" name="warmup_enable" <?php checked( $en ); ?>><span class="jyc-track"></span></label>
+				<div class="jyc-grow"><div class="jyc-fname"><?php echo esc_html__( '启用缓存预热', 'jinyu-theme-companion' ); ?></div>
+					<div class="jyc-fdesc"><?php echo esc_html__( '清缓存 / 升级主题插件 / 定时任务后自动爬取首页、列表、分类、近期与热门文章暖缓存，把重建成本从首个真实访客转移到后台，访客始终命中热缓存。', 'jinyu-theme-companion' ); ?></div></div>
+			</div>
+			<div class="jyc-fsep"><?php echo esc_html__( '自动预热频率', 'jinyu-theme-companion' ); ?></div>
+			<label class="jyc-fl">
+				<span class="jyc-fname-sm"><?php echo esc_html__( '频率', 'jinyu-theme-companion' ); ?></span>
+				<select class="jyc-inp" id="jinyu-warmup-interval" name="warmup_interval">
+					<?php foreach ( jinyu_warmup_intervals() as $k => $label ) : ?>
+					<option value="<?php echo esc_attr( $k ); ?>"<?php selected( $k, $interval ); ?>><?php echo esc_html( $label ); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</label>
+			<label class="jyc-fl">
+				<span class="jyc-fname-sm"><?php echo esc_html__( '额外预热 URL（每行一个）', 'jinyu-theme-companion' ); ?></span>
+				<textarea class="jyc-inp" id="jinyu-warmup-urls" name="warmup_urls" rows="4" placeholder="https://<?php echo esc_attr( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ); ?>/about/"><?php echo esc_textarea( $urls ); ?></textarea>
+				<span class="jyc-fnote"><?php echo esc_html__( '仅本域名或显式 http(s)，不外发第三方。', 'jinyu-theme-companion' ); ?></span>
+			</label>
+			<label class="jyc-fl">
+				<span class="jyc-fname-sm"><?php echo esc_html__( '最多暖 N 篇（0 = 全量，按修改时间倒序取前 N）', 'jinyu-theme-companion' ); ?></span>
+				<input class="jyc-inp" type="number" min="0" step="50" id="jinyu-warmup-max" name="warmup_max" value="<?php echo esc_attr( (string) $max ); ?>">
+			</label>
+			<div class="jyc-test-row" style="margin-top:10px">
+				<button type="button" class="jyc-btn jyc-btn-soft" id="jinyu-warmup-run" data-loading="<?php echo esc_attr__( '预热中…', 'jinyu-theme-companion' ); ?>"><?php echo esc_html__( '立即预热', 'jinyu-theme-companion' ); ?></button>
+				<span class="jyc-fnote"><?php echo esc_html__( '点击即保存配置并立即预热。', 'jinyu-theme-companion' ); ?></span>
+			</div>
+			<span class="jyc-fnote" style="display:block;margin-top:6px"><?php echo esc_html__( '新发布 / 更新文章会优先即时预热；首页与核心分类每轮强制重暖（并发抓取，不阻塞访客）。', 'jinyu-theme-companion' ); ?></span>
+			<div class="jyc-test-row" style="margin-top:12px">
+				<button type="button" class="jyc-btn jyc-btn-soft" data-wuflush="warmed" data-loading="<?php echo esc_attr__( '清除中…', 'jinyu-theme-companion' ); ?>"><?php echo esc_html__( '清除预热数据', 'jinyu-theme-companion' ); ?></button>
+				<span class="jyc-fnote"><?php echo esc_html__( '仅删除预热队列各 URL 的整页缓存（不动 OPcache / Memcached / 全站其他页）；不自动重暖，需重暖请点「立即预热」。', 'jinyu-theme-companion' ); ?></span>
+			</div>
+			<div id="jinyu-warmup-cache-result" class="jperf-result" aria-live="polite"></div>
+			<?php
+			$wu_last = get_option( 'jinyu_warmup_last' );
+			if ( is_array( $wu_last ) && ! empty( $wu_last['at'] ) ) :
+				?>
+				<p class="jyc-muted" style="font-size:12px;margin-top:10px"><?php echo esc_html( sprintf( /* translators: %1$s 上次时间, %2$d 成功数, %3$d 总数, %4$s 耗时秒数 */ __( '上次：%1$s，成功 %2$d / %3$d，耗时 %4$s 秒', 'jinyu-theme-companion' ), wp_date( 'Y-m-d H:i', $wu_last['at'] ), $wu_last['ok'], $wu_last['total'], $wu_last['elapsed'] ) ); ?></p>
+				<?php
+			endif;
+			?>
+			<div id="jinyu-warmup-progress" style="margin-top:12px;display:<?php echo ( $st['running'] || $st_total > 0 ) ? 'block' : 'none'; ?>">
+				<div style="height:8px;background:var(--line-2,#eceef2);border-radius:6px;overflow:hidden">
+					<span id="jinyu-warmup-bar" style="display:block;height:100%;width:<?php echo esc_attr( (string) $st_pct ); ?>%;background:linear-gradient(90deg,#1746c4,#3b82f6);transition:width .4s ease"></span>
+				</div>
+				<div class="jyc-muted" id="jinyu-warmup-txt" style="font-size:12px;margin-top:6px">
+                <?php
+					/* translators: %1$d 已暖数, %2$d 总数, %3$d 覆盖率百分比 */
+					echo esc_html( sprintf( __( '已暖 %1$d / 共 %2$d（覆盖率 %3$d%%）', 'jinyu-theme-companion' ), $st_warmed, $st_total, $st_pct ) );
+					echo $st['running'] ? ' · ' . esc_html__( '预热中…', 'jinyu-theme-companion' ) : '';
+				?>
+                </div>
+			</div>
+			<div id="jinyu-warmup-result" class="jperf-result" aria-live="polite"></div>
+		</div>
+	</div>
+	<?php
+	ob_start();
+	?>
+	(function(){
+		var NONCE = <?php echo wp_json_encode( $nonce ); ?>;
+		function post(action, extra){
+			var fd = new FormData();
+			fd.append('action', action);
+			fd.append('nonce', NONCE);
+			if (extra) { for (var k in extra) { if (Object.prototype.hasOwnProperty.call(extra, k)) { fd.append(k, extra[k]); } } }
+			return fetch(ajaxurl, {method:'POST', body: fd, credentials:'same-origin'}).then(function(r){ return r.json(); });
+		}
+		function showResult(id, lines){
+			var box = document.getElementById(id);
+			if (!box) { return; }
+			box.innerHTML = '';
+			box.classList.add('show');
+			lines.forEach(function(t){
+				var d = document.createElement('div');
+				d.className = 'item';
+				var i = document.createElementNS('http://www.w3.org/2000/svg','svg');
+				i.setAttribute('viewBox','0 0 24 24');
+				var p = document.createElementNS('http://www.w3.org/2000/svg','path');
+				p.setAttribute('d','M20 6L9 17l-5-5');
+				i.appendChild(p);
+				d.appendChild(i);
+				var span = document.createElement('span');
+				span.textContent = t;
+				d.appendChild(span);
+				box.appendChild(d);
+			});
+		}
+		function showErr(id, msg){
+			var box = document.getElementById(id);
+			if (!box) { return; }
+			box.innerHTML = '';
+			box.classList.add('show');
+			var d = document.createElement('div');
+			d.className = 'item';
+			d.textContent = '<?php echo esc_js( __( '失败：', 'jinyu-theme-companion' ) ); ?>' + msg;
+			box.appendChild(d);
+		}
+		function runWarmup(){
+			var en = document.getElementById('jinyu-warmup-enable');
+			if (!en || !en.checked) { return; }
+			var wi = document.getElementById('jinyu-warmup-interval');
+			var wu = document.getElementById('jinyu-warmup-urls');
+			var mx = document.getElementById('jinyu-warmup-max');
+			var btn = document.getElementById('jinyu-warmup-run');
+			if (btn) { btn.disabled = true; }
+			var old = btn ? btn.textContent : '';
+			if (btn) { btn.textContent = '<?php echo esc_js( __( '处理中…', 'jinyu-theme-companion' ) ); ?>'; }
+			post('jinyu_perf_warmup', {
+				enable: en && en.checked ? 1 : 0,
+				interval: wi ? wi.value : 'manual',
+				urls: wu ? wu.value : '',
+				max: mx ? mx.value : 300,
+				run: 1
+			}).then(function(j){
+				if (btn) { btn.disabled = false; btn.textContent = old; }
+				if (!j.success) { showErr('jinyu-warmup-result', j.data && j.data.msg ? j.data.msg : '<?php echo esc_js( __( '未知错误', 'jinyu-theme-companion' ) ); ?>'); return; }
+				var r = j.data && j.data.result ? j.data.result : null;
+				if (r) { wuRender({total:r.total, warmed:r.ok, running:!r.done}); }
+				// 手动点击只暖首批（时间预算内），其余交 cron 续跑；轮询进度直到 running=false。
+				startWarmupPoll();
+			}).catch(function(e){
+				if (btn) { btn.disabled = false; btn.textContent = old; }
+				showErr('jinyu-warmup-result', e);
+			});
+		}
+		var wuPoll = null;
+		function wuRender(st){
+			var prog = document.getElementById('jinyu-warmup-progress');
+			var bar = document.getElementById('jinyu-warmup-bar');
+			var txt = document.getElementById('jinyu-warmup-txt');
+			if (!prog || !bar || !txt) { return; }
+			var total = parseInt(st.total || '0', 10);
+			var warmed = parseInt(st.warmed || '0', 10);
+			var pct = total > 0 ? Math.round(warmed / total * 100) : 0;
+			prog.style.display = (st.running || total > 0) ? 'block' : 'none';
+			bar.style.width = pct + '%';
+			txt.textContent = '<?php echo esc_js( __( '已暖 ', 'jinyu-theme-companion' ) ); ?>' + warmed + ' / ' + total + '（<?php echo esc_js( __( '覆盖率 ', 'jinyu-theme-companion' ) ); ?>' + pct + '%）' + (st.running ? ' · <?php echo esc_js( __( '预热中…', 'jinyu-theme-companion' ) ); ?>' : '');
+		}
+		function pollWarmup(){
+			post('jinyu_perf_warmup_status', {}).then(function(j){
+				if (!j.success) { stopWarmupPoll(); return; }
+				wuRender(j.data.state || {});
+				if (j.data.state && j.data.state.running) {
+					wuPoll = setTimeout(pollWarmup, 2500);
+				} else {
+					stopWarmupPoll();
+					var r = j.data.last || {};
+					if (r.total) {
+						showResult('jinyu-warmup-result', ['<?php echo esc_js( __( '成功 ', 'jinyu-theme-companion' ) ); ?>' + r.ok + ' / ' + r.total + '<?php echo esc_js( __( '，失败 ', 'jinyu-theme-companion' ) ); ?>' + r.fail + '<?php echo esc_js( __( '，耗时 ', 'jinyu-theme-companion' ) ); ?>' + r.elapsed + 's' + (r.done ? '' : '（后台续跑中）')]);
+					}
+				}
+			}).catch(function(){ stopWarmupPoll(); });
+		}
+		function startWarmupPoll(){ stopWarmupPoll(); pollWarmup(); }
+		function stopWarmupPoll(){ if (wuPoll) { clearTimeout(wuPoll); wuPoll = null; } }
+		function syncWarmupBtn(){
+			var en = document.getElementById('jinyu-warmup-enable');
+			var btn = document.getElementById('jinyu-warmup-run');
+			if (en && btn) { btn.disabled = !en.checked; }
+		}
+		var wuEn = document.getElementById('jinyu-warmup-enable');
+		if (wuEn) { wuEn.addEventListener('change', syncWarmupBtn); }
+		syncWarmupBtn();
+		var wuRun = document.getElementById('jinyu-warmup-run');
+		if (wuRun) { wuRun.addEventListener('click', runWarmup); }
+		// 面板加载时若后台正在预热（cron 续跑 / 改文章触发），自动开始轮询，打开面板即可看到实时进度。
+		if ( <?php echo wp_json_encode( ! empty( $st['running'] ) ); ?> ) {
+			startWarmupPoll();
+		}
+		// 「缓存预热」卡内「清除预热数据」：仅精确删预热队列各 URL 的整页缓存，不动其他缓存（data-wuflush 避开 perf-center 全局委托）。
+		document.querySelectorAll('[data-wuflush]').forEach(function(b){
+			b.addEventListener('click', function(){
+				var t = b.getAttribute('data-wuflush');
+				var old = b.textContent;
+				b.disabled = true;
+				b.textContent = '<?php echo esc_js( __( '清除中…', 'jinyu-theme-companion' ) ); ?>';
+				post('jinyu_perf_flush', {target: t}).then(function(j){
+					b.disabled = false;
+					b.textContent = old;
+					if (!j.success) { showErr('jinyu-warmup-cache-result', j.data && j.data.msg ? j.data.msg : '<?php echo esc_js( __( '未知错误', 'jinyu-theme-companion' ) ); ?>'); return; }
+					showResult('jinyu-warmup-cache-result', [ j.data && j.data.msg ? j.data.msg : '<?php echo esc_js( __( '已清除', 'jinyu-theme-companion' ) ); ?>' ]);
+					if ( typeof wuRender === 'function' ) { wuRender( { total: 0, warmed: 0, running: false } ); }
+				}).catch(function(e){
+					b.disabled = false;
+					b.textContent = old;
+					showErr('jinyu-warmup-cache-result', e);
+				});
+			});
+		});
 	})();
 	<?php
 	wp_print_inline_script_tag( (string) ob_get_clean() );

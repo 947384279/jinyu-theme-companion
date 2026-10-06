@@ -59,7 +59,9 @@ function jinyu_tax_seo_save( int $term_id ): void {
 	if ( ! current_user_can( 'manage_categories' ) ) {
 		return;
 	}
+	// phpcs:ignore WordPress.Security.NonceVerification -- nonce 由 WP 核心 edit-tags.php 在 term 保存前统一校验，本钩子在其后执行
 	if ( isset( $_POST['jinyu_seo_cat_keywords'] ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification -- nonce 由 WP 核心 edit-tags.php 在 term 保存前统一校验，本钩子在其后执行
 		$val = sanitize_text_field( wp_unslash( $_POST['jinyu_seo_cat_keywords'] ) );
 		if ( '' === $val ) {
 			delete_term_meta( $term_id, 'jinyu_seo_cat_keywords' );
@@ -67,7 +69,9 @@ function jinyu_tax_seo_save( int $term_id ): void {
 			update_term_meta( $term_id, 'jinyu_seo_cat_keywords', $val );
 		}
 	}
+	// phpcs:ignore WordPress.Security.NonceVerification -- nonce 由 WP 核心 edit-tags.php 在 term 保存前统一校验，本钩子在其后执行
 	if ( isset( $_POST['jinyu_seo_cat_desc'] ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification -- nonce 由 WP 核心 edit-tags.php 在 term 保存前统一校验，本钩子在其后执行
 		$val = sanitize_text_field( wp_unslash( $_POST['jinyu_seo_cat_desc'] ) );
 		if ( '' === $val ) {
 			delete_term_meta( $term_id, 'jinyu_seo_cat_desc' );

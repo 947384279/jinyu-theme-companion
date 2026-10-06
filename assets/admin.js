@@ -9,6 +9,10 @@
 	var app = document.querySelector('.jyc-app');
 	if (!app) { return; }
 
+	/* 初始还原折叠态时关闭侧栏相关过渡，避免硬刷出现「先展开再折叠」的入场动画；
+	   折叠类由下方 localStorage 还原加上，js 在下一帧移除本类，之后用户手动切换才正常动画。 */
+	app.classList.add('jyc-no-anim');
+
 	/* ---------------- 顶部分区导航 ---------------- */
 	var navItems = document.querySelectorAll('#jyc-nav .jyc-nav-item');
 	var panes = {
@@ -232,6 +236,110 @@ if (nav) {
 		if (saved) { applyTheme(saved === 'dark'); }
 	} catch (e) {}
 
+	/* ---------------- 侧栏折叠 / 展开 ----------------
+	 * 点击 #jyc-railToggle 切换 .jyc-rail-collapsed（视觉收窄到图标列，仅 ≥880px 左栏模式生效）；
+	 * 同步 aria-expanded，并用 localStorage 记忆偏好，刷新后仍保持。 */
+	var railTog = document.getElementById('jyc-railToggle');
+	function applyRail(collapsed) {
+		app.classList.toggle('jyc-rail-collapsed', collapsed);
+		if (railTog) { railTog.setAttribute('aria-expanded', String(!collapsed)); }
+		try { localStorage.setItem('jinyu_rail', collapsed ? '1' : '0'); } catch (e) {}
+		jycHideTip();
+	}
+	if (railTog) {
+		railTog.addEventListener('click', function () {
+			applyRail(!app.classList.contains('jyc-rail-collapsed'));
+		});
+	}
+	try {
+		var railSaved = localStorage.getItem('jinyu_rail');
+		if (railSaved) { applyRail(railSaved === '1'); }
+	} catch (e) {}
+	/* 过渡抑制类已随初始折叠类生效；下一帧（样式提交后）移除，恢复手动切换动画。 */
+	requestAnimationFrame(function () {
+		requestAnimationFrame(function () { app.classList.remove('jyc-no-anim'); });
+	});
+
+	/* ---------------- 侧栏 hover 提示泡（统一样式） ---------------- */
+	/* 两类来源：
+	 * ① .jyc-nav-item——仅折叠态触发（展开态标签已内联），文案取内层 <span>；
+	 * ② 底栏 [title] 按钮（折叠键/主题键/保存键）——任何时候都触发，替代原生 title
+	 *    系统气泡以统一观感；hover 期间临时摘除 title 防止双气泡，移出即还原。
+	 * 气泡挂 body、fixed 定位，不被 .jyc-topnav 的 overflow:hidden + contain:paint 裁切。 */
+	var navTip = document.createElement('div');
+	navTip.className = 'jyc-nav-tip';
+	navTip.setAttribute('role', 'tooltip');
+	document.body.appendChild(navTip);
+	var tipCur = null, tipSavedTitle = null;
+	function jycShowTip(el) {
+		var label;
+		if (el.classList.contains('jyc-nav-item')) {
+			if (!app.classList.contains('jyc-rail-collapsed')) { return; }
+			var span = el.querySelector('span');
+			label = span ? span.textContent.trim() : '';
+		} else {
+			label = (el.getAttribute('title') || '').trim();
+		}
+		if (!label) { return; }
+		if (el.hasAttribute('title')) { tipSavedTitle = el.getAttribute('title'); el.removeAttribute('title'); }
+		tipCur = el;
+		var r = el.getBoundingClientRect();
+		navTip.textContent = label;
+		navTip.style.top = (r.top + r.height / 2) + 'px';
+		navTip.style.left = (r.right + 12) + 'px';
+		navTip.classList.add('jyc-show');
+	}
+	function jycHideTip() {
+		navTip.classList.remove('jyc-show');
+		if (tipCur && tipSavedTitle !== null) { tipCur.setAttribute('title', tipSavedTitle); }
+		tipSavedTitle = null; tipCur = null;
+	}
+	/* 触屏判定（共享）：触屏 tap 会先模拟 mouseover / mouseenter / focus 再 click，
+	 * 悬浮类交互若不过滤，会把「悬停显示」和「点按切换」拧在一起（说明气泡要点两次的根因）。
+	 * 约定：悬浮类事件只对 pointerType==='mouse' 生效；触屏统一走 click 语义。
+	 * jycLastPointerDown 供 focus 类事件区分「键盘 Tab」与「触屏 tap」（tap 后 500ms 内不算键盘）。 */
+	var jycLastPointerDown = 0;
+	document.addEventListener('pointerdown', function () { jycLastPointerDown = Date.now(); }, true);
+	function jycByMouse(e) { return !e || !e.pointerType || 'mouse' === e.pointerType; }
+
+	var topnavEl = document.getElementById('jyc-topnav');
+	if (topnavEl) {
+		if (typeof window.PointerEvent === 'function') {
+			topnavEl.addEventListener('pointerover', function (e) {
+				if (!jycByMouse(e)) { return; }
+				var el = e.target.closest ? e.target.closest('.jyc-nav-item, [title]') : null;
+				if (!el || !topnavEl.contains(el)) { return; }
+				if (el === tipCur && navTip.classList.contains('jyc-show')) { return; }
+				jycShowTip(el);
+			});
+			topnavEl.addEventListener('pointerout', function (e) {
+				if (!jycByMouse(e)) { return; }
+				if (!tipCur) { return; }
+				if (e.relatedTarget && tipCur.contains(e.relatedTarget)) { return; }
+				jycHideTip();
+			});
+		} else {
+			topnavEl.addEventListener('mouseover', function (e) {
+				var el = e.target.closest ? e.target.closest('.jyc-nav-item, [title]') : null;
+				if (!el || !topnavEl.contains(el)) { return; }
+				if (el === tipCur && navTip.classList.contains('jyc-show')) { return; }
+				jycShowTip(el);
+			});
+			topnavEl.addEventListener('mouseout', function (e) {
+				if (!tipCur) { return; }
+				if (e.relatedTarget && tipCur.contains(e.relatedTarget)) { return; }
+				jycHideTip();
+			});
+		}
+		topnavEl.addEventListener('focusin', function (e) {
+			if (Date.now() - jycLastPointerDown < 500) { return; } // 触屏 tap 引发的 focus，非键盘导航
+			var el = e.target.closest ? e.target.closest('.jyc-nav-item, [title]') : null;
+			if (el) { jycShowTip(el); }
+		});
+		topnavEl.addEventListener('focusout', jycHideTip);
+	}
+	window.addEventListener('scroll', jycHideTip, true);
+
 	/* ---------------- 「使用说明」悬浮气泡 ----------------
 	 * 约定：按钮 .jyc-info-btn[data-pop="气泡ID"] + 气泡 <div class="jyc-pop" id="..." hidden>，多卡片可复用。
 	 * 气泡挂到 .jyc-app 下 position:fixed（脱离 overflow:hidden 裁剪容器）；selOrigin() 补偿包含块偏移。
@@ -278,12 +386,25 @@ if (nav) {
 			clearTimeout(hideT);
 			hideT = setTimeout(hideNow, 180);
 		}
-		btn.addEventListener('mouseenter', show);
-		btn.addEventListener('mouseleave', hideSoon);
-		btn.addEventListener('focus', show);
+		/* 触屏双坑（实测「说明按钮要点两次」的根因）：
+		 * ① 触屏 tap 会先模拟 mouseenter 再触发 click —— 第 1 次点 = enter(show) + click(此时已开 → hideNow)，
+		 *    开关互斥抵消；第 2 次点不再有 enter，只剩 click 才真正打开。
+		 * ② 安卓 tap 也会先 focus 再 click，focus → show 与 click → hideNow 同理互斥。
+		 * 对策见上方共享约定：hover 只认 pointerType==='mouse'（无 PointerEvent 才回退 mouseenter），
+		 * focus 过滤触屏 tap；触屏统一走 click 切换 + 点空白收起。 */
+		if (typeof window.PointerEvent === 'function') {
+			btn.addEventListener('pointerenter', function (e) { if (jycByMouse(e)) { show(); } });
+			btn.addEventListener('pointerleave', function (e) { if (jycByMouse(e)) { hideSoon(); } });
+			pop.addEventListener('pointerenter', function (e) { if (jycByMouse(e)) { clearTimeout(hideT); } });
+			pop.addEventListener('pointerleave', function (e) { if (jycByMouse(e)) { hideSoon(); } });
+		} else {
+			btn.addEventListener('mouseenter', show);
+			btn.addEventListener('mouseleave', hideSoon);
+			pop.addEventListener('mouseenter', function () { clearTimeout(hideT); });
+			pop.addEventListener('mouseleave', hideSoon);
+		}
+		btn.addEventListener('focus', function () { if (Date.now() - jycLastPointerDown > 500) { show(); } });
 		btn.addEventListener('blur', hideNow);
-		pop.addEventListener('mouseenter', function () { clearTimeout(hideT); });
-		pop.addEventListener('mouseleave', hideSoon);
 		btn.addEventListener('click', function (e) {
 			e.stopPropagation();
 			if (pop.hidden) { show(); } else { hideNow(); }
@@ -325,6 +446,11 @@ if (nav) {
 	if (seg) {
 		var capInput = seg.parentElement.querySelector('input[name="captcha_policy"]');
 		var segBtns = seg.querySelectorAll('button');
+		/* 值 → 高亮同步：独立成函数供「放弃更改」复用（discard 回填隐藏域后派发 change 走到这里） */
+		function syncSeg() {
+			if (!capInput) { return; }
+			segBtns.forEach(function (x) { x.classList.toggle('jyc-active', x.getAttribute('data-v') === capInput.value); });
+		}
 		segBtns.forEach(function (b) {
 			b.addEventListener('click', function () {
 				segBtns.forEach(function (x) { x.classList.remove('jyc-active'); });
@@ -333,27 +459,48 @@ if (nav) {
 				computeOverview();
 			});
 		});
+		if (capInput) { capInput.addEventListener('change', function () { syncSeg(); computeOverview(); }); }
 	}
 
-	/* ---------------- TTL 滑杆：人类可读 ---------------- */
-	var range = document.getElementById('jyc-ttlRange');
-	var valEl = document.getElementById('jyc-ttlVal');
-	var secEl = document.getElementById('jyc-ttlSec');
+	/* ---------------- 缓存有效期：预设胶囊 + 滑杆 ---------------- */
+	var ttlHidden  = document.getElementById('jyc-ttlHidden');
+	var ttlValEl   = document.getElementById('jyc-ttlVal');
+	var ttlSecEl   = document.getElementById('jyc-ttlSec');
+	var ttlRange   = document.getElementById('jyc-ttlRange');
+	var ttlPresets = document.getElementById('jyc-ttlPresets');
+	var TTL_MIN = 60, TTL_MAX = 2592000;
 	function humanTtl(s) {
 		s = +s;
 		if (s < 3600) { return Math.round(s / 60) + ' 分钟'; }
 		if (s < 86400) { return (s / 3600).toFixed(s % 3600 ? 1 : 0) + ' 小时'; }
 		return (s / 86400).toFixed(1) + ' 天';
 	}
-	function updateTtl() {
-		if (!range) { return; }
-		var s = +range.value;
-		var p = (s - 60) / (86400 - 60) * 100;
-		range.style.setProperty('--p', p + '%');
-		if (valEl) { valEl.textContent = humanTtl(s); }
-		if (secEl) { secEl.textContent = s + ' 秒'; }
+	function setTtl(s) {
+		s = Math.round(+s);
+		if (!isFinite(s) || s < TTL_MIN) { s = TTL_MIN; }
+		if (s > TTL_MAX) { s = TTL_MAX; }
+		if (ttlHidden) { ttlHidden.value = s; }
+		if (ttlRange) {
+			if (+ttlRange.value !== s) { ttlRange.value = s; }
+			ttlRange.style.setProperty('--p', (s - TTL_MIN) / (TTL_MAX - TTL_MIN) * 100 + '%');
+		}
+		if (ttlValEl) { ttlValEl.textContent = humanTtl(s); }
+		if (ttlSecEl) { ttlSecEl.textContent = s + ' 秒'; }
+		if (ttlPresets) {
+			ttlPresets.querySelectorAll('.jyc-ttl-chip').forEach(function (c) {
+				c.classList.toggle('is-active', +c.dataset.sec === s);
+			});
+		}
 	}
-	if (range) { range.addEventListener('input', updateTtl); updateTtl(); }
+	if (ttlPresets) {
+		ttlPresets.querySelectorAll('.jyc-ttl-chip').forEach(function (c) {
+			c.addEventListener('click', function () { setTtl(+c.dataset.sec); });
+		});
+	}
+	if (ttlRange) { ttlRange.addEventListener('input', function () { setTtl(+ttlRange.value); }); }
+	if (ttlHidden) { setTtl(+ttlHidden.value); }
+	/* 放弃更改：discard 回填隐藏域后派发 change → 滑杆 / 文案 / 预设胶囊跟着回滚 */
+	if (ttlHidden) { ttlHidden.addEventListener('change', function () { setTtl(+ttlHidden.value); }); }
 
 	/* ---------------- 整页缓存：模式切换显隐边缘配置 ---------------- */
 	/* 选中态由原生 :checked + 相邻兄弟 CSS 驱动，无需 JS 打类；此处只管边缘配置的显隐。 */
@@ -536,76 +683,54 @@ if (nav) {
 		}
 	];
 
-	function computeOverview() {
-		var checks = document.getElementById('jyc-checks');
-		var meter = document.getElementById('jyc-meter');
+		function computeOverview() {
+		var checks = document.getElementById('jyc-pillwall');
+		var grpRow = document.getElementById('jyc-grpRow');
 		if (checks) { checks.innerHTML = ''; }
-		if (meter) { meter.innerHTML = ''; }
+		if (grpRow) { grpRow.innerHTML = ''; }
 
 		var total = 0, on = 0;
-		var flat = [];
+		var arrowSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
 		featureGroups.forEach(function (g) {
 			var gOn = 0;
+			var pills = [];
 			g.items.forEach(function (it) {
 				var el = document.querySelector('input[name="' + it[0] + '"]');
 				var isOn = !!(el && el.checked);
 				if (isOn) { gOn++; on++; }
 				total++;
-				flat.push(isOn);
+				var pill = document.createElement('span');
+				pill.className = 'jyc-stat-pill ' + (isOn ? 'on' : 'off');
+				pill.setAttribute('data-goto', it[2]);
+				pill.setAttribute('role', 'button');
+				pill.setAttribute('tabindex', '0');
+				pill.title = '点击跳转至“' + it[1] + '”设置';
+				pill.innerHTML = '<span class="dot"></span>';
+				pill.appendChild(document.createTextNode(it[1]));
+				var ar = document.createElement('span');
+				ar.className = 'arrow';
+				ar.innerHTML = arrowSvg;
+				ar.setAttribute('aria-hidden', 'true');
+				pill.appendChild(ar);
+				pills.push(pill);
 			});
-			if (!checks) { return; }
-			var group = document.createElement('div');
-			group.className = 'jyc-group';
-			group.setAttribute('data-category', g.key);
-			var head = document.createElement('div');
-			head.className = 'jyc-group-h';
-			head.innerHTML = '<span>' + g.label + '</span><span class="jyc-group-cnt">' + gOn + '/' + g.items.length + '</span>';
-			var list = document.createElement('ul');
-			g.items.forEach(function (it) {
-				var el = document.querySelector('input[name="' + it[0] + '"]');
-				var isOn = !!(el && el.checked);
-				var li = document.createElement('li');
-				li.className = 'jyc-check' + (isOn ? ' jyc-on' : '');
-				li.setAttribute('data-goto', it[2]);
-				li.setAttribute('role', 'button');
-				li.setAttribute('tabindex', '0');
-				li.title = '点击跳转至“' + it[1] + '”设置';
-				var icon = document.createElement('span');
-				icon.className = 'jyc-check-icon';
-				icon.innerHTML = isOn
-					? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
-					: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
-				var lbl = document.createElement('span');
-				lbl.className = 'jyc-check-label';
-				lbl.textContent = it[1];
-				var arrow = document.createElement('span');
-				arrow.className = 'jyc-check-arrow';
-				arrow.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
-				arrow.setAttribute('aria-hidden', 'true');
-				li.appendChild(icon);
-				li.appendChild(lbl);
-				li.appendChild(arrow);
-			list.appendChild(li);
-			});
-			group.appendChild(head);
-			group.appendChild(list);
-		checks.appendChild(group);
+			if (grpRow) {
+				var pctG = g.items.length ? Math.round(gOn / g.items.length * 100) : 0;
+				var grp = document.createElement('div');
+				grp.className = 'jyc-grp';
+				grp.innerHTML = '<div class="jyc-grp-top"><span class="jyc-grp-name">' + g.label
+					+ '</span><span class="jyc-grp-cnt">' + gOn + '/' + g.items.length + '</span></div>'
+					+ '<div class="jyc-grp-bar"><div class="jyc-grp-fill" style="width:' + pctG + '%"></div></div>';
+				grpRow.appendChild(grp);
+			}
+			pills.forEach(function (p) { if (checks) { checks.appendChild(p); } });
 		});
-		/* 分段进度计：每格一项功能 */
-		if (meter) {
-			flat.forEach(function (isOn, i) {
-				var seg = document.createElement('span');
-				seg.className = 'jyc-seg' + (isOn ? ' jyc-on' : '');
-				seg.style.transitionDelay = (i * 28) + 'ms';
-			meter.appendChild(seg);
-		});
-		}
 		var pct = total ? Math.round(on / total * 100) : 0;
 		var set = function (id, v) { var e = document.getElementById(id); if (e) { e.textContent = v; } };
 		set('jyc-bentoPct', pct + '%');
 		set('jyc-pc-on', on);
 		set('jyc-pc-total', total);
-		set('jyc-pct', '启用率 ' + pct + '%');
+		set('jyc-pct', on + '/' + total + ' · 启用率 ' + pct + '%');
 		set('jyc-hsOn', on);
 		set('jyc-hsFields', document.querySelectorAll('.jyc-pane input, .jyc-pane select, .jyc-pane textarea').length);
 		var seoEl = document.querySelector('input[name="seo_open"]');
@@ -624,17 +749,21 @@ if (nav) {
 	});
 	computeOverview();
 
-	/* 功能明细项点击跳转 */
+		/* 功能明细项点击跳转（药丸墙 + 原分组项） */
 	(function () {
-		var checks = document.getElementById('jyc-checks');
-		if (!checks) { return; }
-		checks.addEventListener('click', function (e) {
-			var item = e.target.closest('.jyc-check');
-			if (item) { gotoPane(item.getAttribute('data-goto')); }
+		var box = document.getElementById('jyc-pillwall');
+		if (!box) { return; }
+		box.addEventListener('click', function (e) {
+			var item = e.target.closest('.jyc-stat-pill, .jyc-check');
+			if (item) {
+				var g = item.getAttribute('data-goto');
+				if (g) { gotoPane(g); }
+			}
 		});
-		checks.addEventListener('keydown', function (e) {
-			var item = e.target.closest('.jyc-check');
-			if (item && (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar')) {
+		box.addEventListener('keydown', function (e) {
+			if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') { return; }
+			var item = e.target.closest('.jyc-stat-pill, .jyc-check');
+			if (item && item.getAttribute('data-goto')) {
 				e.preventDefault();
 				gotoPane(item.getAttribute('data-goto'));
 			}
@@ -2036,6 +2165,16 @@ if (nav) {
 				wmDraw();
 			});
 		});
+		/* 放弃更改：discard 回填隐藏域后派发 change → 九宫格高亮与预览跟着回滚 */
+		wmPosInput.addEventListener('change', function () {
+			var v = String(parseInt(wmPosInput.value, 10) || 9);
+			wmGrid.querySelectorAll('.jyc-wm-cell').forEach(function (o) {
+				var on = o.getAttribute('data-pos') === v;
+				o.classList.toggle('jyc-on', on);
+				o.setAttribute('aria-checked', on ? 'true' : 'false');
+			});
+			wmDraw();
+		});
 	}
 	if (wmPane) {
 		wmPane.querySelectorAll('[name="img_wm_text"], [name="img_wm_size"], [name="img_wm_margin"], [name="img_wm_opacity"]').forEach(function (el) {
@@ -2285,19 +2424,24 @@ if (nav) {
 		var saved = snap;
 
 		/* 字段 → 分区索引：从 DOM 位置反查，避免手写「95 个字段 → 12 个分区」的映射表（必然漂移）。
-		 * 只为快照里真实存在且能定位到 .jyc-pane 的字段建索引。 */
+		 * 必须遍历真实控件而非快照键 —— 初始未勾选的复选框在 FormData 里缺席，按快照建索引
+		 * 会让这些开关首次勾选时分区角标永不点亮（浮条计数正常、导航不标色）。
+		 * 保存成功后必须重建：角标基准必须始终跟随「上次保存」的快照，否则保存 / 放弃后
+		 * 仍在与页面初始值比对，橙色高亮永不熄灭（实测踩坑）。 */
 		var groups = {};
-		(function () {
-			var base = JSON.parse(snap);
-			Object.keys(base).forEach(function (k) {
-				var el = form.querySelector('[name="' + k + '"]');
-				if (!el || !el.closest) { return; }
+		function rebuildGroups() {
+			var base = JSON.parse(saved);
+			groups = {};
+			form.querySelectorAll('input, select, textarea').forEach(function (el) {
+				var k = el.getAttribute('name');
+				if (!k || SKIP.test(k)) { return; }
 				var pane = el.closest('.jyc-pane');
 				if (!pane || !pane.id) { return; }
 				if (!groups[pane.id]) { groups[pane.id] = {}; }
-				groups[pane.id][k] = base[k];
+				groups[pane.id][k] = Object.prototype.hasOwnProperty.call(base, k) ? base[k] : '';
 			});
-		}());
+		}
+		rebuildGroups();
 
 		function refresh() {
 			if (restoring) { return; }
@@ -2363,8 +2507,14 @@ if (nav) {
 				var after = el.type === 'checkbox' ? el.checked : el.value;
 				if (String(before) !== String(after)) { changed.push(el); }
 			});
-			// 让自定义控件的可见部分跟着回滚（隐藏域已回填，这里补派发一次 change 触发其 UI 同步）
-			changed.forEach(function (el) { if (el.type !== 'hidden') { el.dispatchEvent(new Event('change', { bubbles: true })); } });
+			// 让自定义控件的可见部分跟着回滚：对所有回填过的元素（含隐藏域）change + input 双派发 ——
+			// change 供「值 → UI 同步」挂在隐藏域上的九宫格 / 验证码分段 / TTL 滑杆；
+			// input 供只监听 input 的预览类（分享图 renderImage、预览卡标题、水印 canvas）。
+			// 漏掉任何一类，放弃后视觉都会停在用户改过的位置（实测踩坑）。
+			changed.forEach(function (el) {
+				el.dispatchEvent(new Event('change', { bubbles: true }));
+				el.dispatchEvent(new Event('input', { bubbles: true }));
+			});
 			restoring = false;
 			markDirty();
 			jycToast('已放弃未保存的更改');
@@ -2374,6 +2524,9 @@ if (nav) {
 			if (saving) { return; }
 			saving = true;
 			var fd = new FormData(form);
+			// 锁定「本次请求真正提交的值」：响应期间的后续编辑不算已保存，否则会被
+			// 静默标成干净、浮条熄灭，刷新后这些改动凭空丢失（保存竞态，实测踩坑）。
+			var posted = JSON.stringify(collect());
 			fd.append('action', 'jinyu_companion_save');
 			// 专属标志位：区分「测试连接 / 优化数据库」等同表单提交的 admin-ajax 请求
 			fd.append('jinyu_companion_ajax', '1');
@@ -2399,10 +2552,11 @@ if (nav) {
 					idle();
 					if (!res) { fallback('保存失败，已回退为整页提交'); return; }
 					if (!res.success) { jycToast(res.msg || '保存失败', 3200); return; }
-					saved = JSON.stringify(collect());
+					saved = posted;
 					rebuildBaseline();
+					rebuildGroups();
 					snap = saved;
-					markDirty();
+					markDirty();   // 保存期间又改过字段的话，这里会重新点亮浮条并保留角标
 					jycToast(res.msg || '设置已保存', 2400);
 				})
 				.catch(function () { fallback('保存失败，已回退为整页提交'); });
@@ -2436,6 +2590,180 @@ if (nav) {
 			e.preventDefault();
 			saveNow();
 		});
+	}());
+
+	/* ---------------- 整页缓存状态卡：刷新 / 单 URL 查询 / 分组清除 ---------------- */
+	(function () {
+		var statBox = document.getElementById('jycCacheStat');
+		if (!statBox) { return; }
+
+		function jycCacheBytes(n) {
+			n = +n; var u = ['B', 'KB', 'MB', 'GB']; var i = 0;
+			while (n >= 1024 && i < u.length - 1) { n = n / 1024; i++; }
+			return (i === 0 ? n : n.toFixed(1)) + ' ' + u[i];
+		}
+		function jycCacheAgo(t) {
+			t = +t; var d = Math.floor((Date.now() / 1000) - t);
+			if (d < 60) { return '刚刚'; }
+			if (d < 3600) { return Math.floor(d / 60) + ' 分钟前'; }
+			if (d < 86400) { return Math.floor(d / 3600) + ' 小时前'; }
+			return Math.floor(d / 86400) + ' 天前';
+		}
+		function jycCacheTtlLabel(s) {
+			s = +s;
+			if (s >= 86400) { return (s / 86400).toFixed(s % 86400 ? 1 : 0) + ' 天'; }
+			if (s >= 3600) { return (s / 3600).toFixed(s % 3600 ? 1 : 0) + ' 小时'; }
+			return Math.round(s / 60) + ' 分钟';
+		}
+		function jycCacheHumanSec(s) {
+			s = +s;
+			if (s < 60) { return s + ' 秒'; }
+			if (s < 3600) { return Math.floor(s / 60) + ' 分钟'; }
+			if (s < 86400) { return (s / 3600).toFixed(1) + ' 小时'; }
+			return (s / 86400).toFixed(1) + ' 天';
+		}
+		function jycCacheSet(id, v) {
+			var el = document.getElementById(id);
+			if (el) { el.textContent = v; }
+		}
+		function jycCacheFill(s) {
+			if (!s) { return; }
+			// 边缘模式：缓存文件 / 占用空间由服务器持有、插件读不到，恒显示「—」；
+			// 命中率则来自服务器统计日志（$upstream_cache_status），有值就显示真值。
+			var edge = s.reason === 'edge';
+			jycCacheSet('jycCsHit', (s.hit_rate === null || s.hit_rate === undefined) ? '—' : s.hit_rate + '%');
+			jycCacheSet('jycCsFiles', edge ? '—' : (s.files || 0).toLocaleString());
+			jycCacheSet('jycCsBytes', edge ? '—' : (s.bytes ? jycCacheBytes(s.bytes) : '0 B'));
+			jycCacheSet('jycCsFlush', (s.last_flush > 0) ? jycCacheAgo(s.last_flush) : '从未');
+			jycCacheSet('jycCsCustom', (s.custom_count || 0).toLocaleString());
+			jycCacheSet('jycCsTtl', jycCacheTtlLabel(s.ttl_default || 3600));
+			jycCacheFillSrc(s.hit_source);
+		}
+		// 命中率来源标签：server=服务器日志（边缘模式），plugin=插件自采（简单模式）。
+		function jycCacheFillSrc(src) {
+			var el = document.querySelector('#jycCacheStat .jyc-cs-tag');
+			if (!el) { return; }
+			if (src === 'server') { el.textContent = '服务器日志'; el.style.display = ''; }
+			else if (src === 'plugin') { el.textContent = '插件自采'; el.style.display = ''; }
+			else { el.style.display = 'none'; }
+		}
+
+		function jycCachePost(action, extra, btn, loadingTxt) {
+			var form = document.getElementById('jyc-form');
+			if (!form) { return Promise.reject(); }
+			var fd = new FormData(form);
+			fd.append('action', action);
+			if (extra) {
+				for (var k in extra) {
+					if (Object.prototype.hasOwnProperty.call(extra, k)) { fd.append(k, extra[k]); }
+				}
+			}
+			var aurl = (typeof ajaxurl !== 'undefined') ? ajaxurl : '';
+			var oldTxt = '', had = false;
+			if (btn) { oldTxt = btn.textContent; btn.disabled = true; btn.textContent = loadingTxt || '处理中…'; had = true; }
+			return fetch(aurl, { method: 'POST', body: fd, credentials: 'same-origin' })
+				.then(function (r) { return r.json(); })
+				.then(function (res) {
+					if (had && btn) { btn.disabled = false; btn.textContent = oldTxt; }
+					return res;
+				})
+				.catch(function () {
+					if (had && btn) { btn.disabled = false; btn.textContent = oldTxt; }
+					jycToast('请求失败，请重试');
+					return null;
+				});
+		}
+
+		function jycCacheClear(scope, url, btn, txt) {
+			jycCachePost('jinyu_page_cache_clear', url ? { scope: scope, url: url } : { scope: scope }, btn, txt)
+				.then(function (res) {
+					if (res && res.success) {
+						jycCacheFill(res.data && res.data.status ? res.data.status : null);
+						jycToast('已清除缓存');
+					} else { jycToast('清除失败，请重试'); }
+				});
+		}
+
+		var refreshBtn = document.getElementById('jycCacheRefresh');
+		if (refreshBtn) {
+			refreshBtn.addEventListener('click', function () {
+				jycCachePost('jinyu_page_cache_stat', { force: 1 }, refreshBtn, '刷新中…')
+					.then(function (res) {
+						if (res && res.success) { jycCacheFill(res.data); jycToast('已刷新'); }
+						else { jycToast('刷新失败'); }
+					});
+			});
+		}
+
+		// 重置命中统计：只把统计偏移推进到日志末尾，不影响缓存本身。
+		var resetBtn = document.getElementById('jycCacheReset');
+		if (resetBtn) {
+			resetBtn.addEventListener('click', function () {
+				if (!window.confirm('重置命中率统计？将从此刻之后的新请求重新累计（不影响缓存本身，也不会删除缓存文件）。')) { return; }
+				jycCachePost('jinyu_page_cache_reset_stats', { force: 1 }, resetBtn, '重置中…')
+					.then(function (res) {
+						if (res && res.success) { jycCacheFill(res.data); jycToast('已重置统计'); }
+						else { jycToast('重置失败，请重试'); }
+					});
+			});
+		}
+
+		var lookupBtn = document.getElementById('jycCacheLookup');
+		var lookupInput = document.getElementById('jycCacheUrl');
+		var luBox = document.getElementById('jycCacheLuResult');
+		if (lookupBtn) {
+			lookupBtn.addEventListener('click', function () {
+				var url = lookupInput ? lookupInput.value.trim() : '';
+				if (!url) { jycToast('请输入要查询的 URL'); return; }
+				jycCachePost('jinyu_page_cache_lookup', { url: url }, lookupBtn, '查询中…')
+					.then(function (res) {
+						if (!res) { return; }
+						if (!res.success) {
+							luBox.hidden = false;
+							luBox.innerHTML = '<span class="jyc-lu-warn">' + (jycMsg(res, '查询失败') || '查询失败') + '</span>';
+							return;
+						}
+						var d = res.data;
+						if (d && d.blind) {
+							luBox.hidden = false;
+							luBox.innerHTML = '<span class="jyc-lu-warn">边缘缓存（Apache）布局不透明，无法按 URL 查询，请改用「清全站」刷新</span>';
+							return;
+						}
+						if (!d || !d.found) {
+							luBox.hidden = false;
+							luBox.innerHTML = '<span class="jyc-lu-warn">未缓存：该 URL 当前无缓存文件</span>';
+							return;
+						}
+						var age = d.written ? jycCacheAgo(d.written) : '—';
+						var remain = d.remaining > 0 ? jycCacheHumanSec(d.remaining) : '0';
+						var cls = d.expired ? 'jyc-lu-expired' : 'jyc-lu-ok';
+						var tag = (d.expired ? '已过期' : '有效') + (d.mode === 'edge' ? '（边缘缓存）' : '');
+						luBox.hidden = false;
+						luBox.innerHTML = '<span class="' + cls + '">' + tag + '</span> · 写入 ' + age +
+							' · 时长 ' + jycCacheTtlLabel(d.ttl) + ' · 剩余 ' + remain;
+					});
+			});
+		}
+
+		var clearHome = document.getElementById('jycCacheClearHome');
+		var clearAll = document.getElementById('jycCacheClearAll');
+		var clearUrlBtn = document.getElementById('jycCacheClearUrlBtn');
+		var clearUrlInput = document.getElementById('jycCacheClearUrl');
+		if (clearHome) { clearHome.addEventListener('click', function () { jycCacheClear('home', '', this, '清首页中…'); }); }
+		if (clearAll) {
+			clearAll.addEventListener('click', function () {
+				if (window.confirm('确定清全站缓存？清空后访客再次访问会重新生成缓存（瞬时略慢）。')) {
+					jycCacheClear('all', '', this, '清全站中…');
+				}
+			});
+		}
+		if (clearUrlBtn) {
+			clearUrlBtn.addEventListener('click', function () {
+				var u = clearUrlInput ? clearUrlInput.value.trim() : '';
+				if (!u) { jycToast('请输入要清除的 URL'); return; }
+				jycCacheClear('url', u, this, '清除中…');
+			});
+		}
 	}());
 
 })();

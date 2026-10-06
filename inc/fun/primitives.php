@@ -196,9 +196,11 @@ function jinyu_companion_inline_script_tag( string $js ): string {
  * @return string|array
  */
 function jinyu_companion_post_enum( string $field, array $allowed, $default = '' ) {
+	// phpcs:ignore WordPress.Security.NonceVerification -- 通用读参助手，调用方端点入口已验 nonce
 	if ( ! isset( $_POST[ $field ] ) ) {
 		return $default;
 	}
+	// phpcs:ignore WordPress.Security.NonceVerification -- 通用读参助手，调用方端点入口已验 nonce
 	$raw = sanitize_key( wp_unslash( $_POST[ $field ] ) );
 	return in_array( $raw, $allowed, true ) ? $raw : $default;
 }

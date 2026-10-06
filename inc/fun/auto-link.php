@@ -48,6 +48,7 @@ if ( ! function_exists( 'jinyu_auto_link_map' ) ) {
 
 		// 一条 SQL 只取两列：不加载文章对象、不预热术语/自定义字段缓存。
 		// 排序对齐 get_posts 默认（按日期倒序），保证标题重复时仍是「较新的一篇」入选。
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 批量内链替换前的候选统计，管理端低频操作
 		$rows = $wpdb->get_results(
 			"SELECT ID, post_title FROM {$wpdb->posts} WHERE post_type = 'post' AND post_status = 'publish' ORDER BY post_date DESC, ID DESC"
 		);

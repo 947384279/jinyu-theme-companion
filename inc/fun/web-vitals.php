@@ -116,6 +116,7 @@ function jinyu_ajax_web_vitals() {
 		wp_send_json_error( 'rate_limited' );
 	}
 
+	// phpcs:ignore WordPress.Security.NonceVerification -- 公开匿名上报端点（nopriv），无 nonce 属设计，rate_limit 防滥用
 	$raw = isset( $_POST['data'] ) ? sanitize_text_field( wp_unslash( $_POST['data'] ) ) : '';
 	$data = json_decode( $raw, true );
 	if ( ! is_array( $data ) ) {

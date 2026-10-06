@@ -80,6 +80,7 @@ function jinyu_series_ids( int $term_id ): array {
 			'post_status'    => 'publish',
 			'fields'         => 'ids',
 			'no_found_rows'  => true,
+			// phpcs:ignore WordPress.DB.SlowDBQuery -- 自定义系列 taxonomy 精确筛选；查询带 fields=ids + no_found_rows，量级可控
 			'tax_query'      => [
 				[
 					'taxonomy' => 'jinyu_series',
@@ -93,37 +94,6 @@ function jinyu_series_ids( int $term_id ): array {
     $ids = array_map( 'intval', (array) $q->posts );
     jinyu_companion_cache_set( $key, $ids, HOUR_IN_SECONDS );
     return $ids;
-}
-
-/**
- * 当前文章在所属系列中的位置（列表卡片徽章用）。
- * 只做 1 次 term 查询 + 共享的 ID 列表缓存，不额外查库内容。
- *
- * @return array{term:WP_Term,index:int,total:int}|false
- */
-function jinyu_series_badge( int $post_id = 0 ) {
-    $post_id = $post_id ?: (int) get_the_ID();
-    if ( ! $post_id ) {
-		return false;
-    }
-
-    $terms = get_the_terms( $post_id, 'jinyu_series' );
-    if ( empty( $terms ) || is_wp_error( $terms ) ) {
-		return false;
-    }
-
-    $term = $terms[0];
-    $ids  = jinyu_series_ids( (int) $term->term_id );
-    $idx  = array_search( $post_id, $ids, true );
-    if ( false === $idx ) {
-		return false;
-    }
-
-    return [
-		'term' => $term,
-		'index' => $idx,
-		'total' => count( $ids ),
-	];
 }
 
 /**

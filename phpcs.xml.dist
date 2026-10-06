@@ -179,6 +179,12 @@
 	<rule ref="WordPress.WP.AlternativeFunctions.file_system_operations_unlink_file">
 		<severity>0</severity>
 	</rule>
+	<!-- 边缘命中率统计（edge-stats.php）要用原生 fopen/fseek/fgets 增量读取服务器访问日志，
+	     并在超限时就地 ftruncate —— WP_Filesystem 没有 seek / 截断语义（fopen 已逐处 ignore 写明）。
+	     fclose 是同一闭环的收尾动作，逐处复读同一理由没有意义，故整条收口。 -->
+	<rule ref="WordPress.WP.AlternativeFunctions.file_system_operations_fclose">
+		<severity>0</severity>
+	</rule>
 	<!-- 慢查询告警：命中点都是清理路径（uninstall.php）与相关文章候选池（related.php，
 	     已带 no_found_rows + fields=>ids + 200 上限），一次性执行不进前台循环。 -->
 	<rule ref="WordPress.DB.SlowDBQuery">

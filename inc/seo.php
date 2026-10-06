@@ -219,6 +219,7 @@ add_action( 'wp_head', 'jinyu_seo_meta', 1 );
 function jinyu_seo_meta() {
     // 微信分享缓存绕过：带 ?wx=1 分享时，让 canonical/og:url 也带上该参数，
     // 使微信按"新 URL"重新抓取生成卡片（默认域名已被微信缓存成无卡片，普通参数会被归一化回首页地址）。
+    // phpcs:ignore WordPress.Security.NonceVerification -- 仅 isset 判存在性（前台分享缓存绕过参数），不读值
     $wx_on = isset( $_GET['wx'] );
 
     // 规范链接（canonical）：消除分页归档 / 搜索 ?s= / 追踪参数等造成的重复内容，
@@ -573,28 +574,34 @@ function jinyu_seo_diag() {
     $pub = "post_status = 'publish' AND post_type = 'post'";
 
     // 1) 标题过短（< 15 字，CHAR_LENGTH 按字符计，中文不误判） // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 面板只读统计查询（post_status 白名单内插，非用户输入）
     $short_title_total = (int) $wpdb->get_var(
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 面板只读统计查询（post_status 白名单内插，非用户输入）
         "SELECT COUNT(*) FROM {$wpdb->posts} WHERE {$pub} AND CHAR_LENGTH(post_title) < 15"
     ); // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
-    $short_title = $wpdb->get_results( // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter -- 动态 DB 参数，来源可信（自有表/配置）
+    /* phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 面板只读统计；状态条件为白名单内插（非用户输入），多行 SQL 整句豁免 */
+    $short_title = $wpdb->get_results(
         "SELECT ID, post_title, CHAR_LENGTH(post_title) AS len
          FROM {$wpdb->posts}
          WHERE {$pub} AND CHAR_LENGTH(post_title) < 15
          ORDER BY ID DESC LIMIT 20"
     );
+    // phpcs:enable
 
     // 2) 摘要过短（< 60 字）且无自定义描述：前台 meta description 会用这个短摘要
     $no_custom = "NOT EXISTS (SELECT 1 FROM {$wpdb->postmeta} pm
                  WHERE pm.post_id = {$wpdb->posts}.ID
                    AND pm.meta_key = 'jinyu_seo_desc' AND pm.meta_value != '')";
     $cond = "{$pub} AND post_excerpt != '' AND CHAR_LENGTH(post_excerpt) < 60 AND {$no_custom}"; // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
-    $short_desc_total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE {$cond}" ); // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
-    $short_desc = $wpdb->get_results( // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter -- 动态 DB 参数，来源可信（自有表/配置）
+    $short_desc_total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE {$cond}" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB, PluginCheck.Security.DirectDB.UnescapedDBParameter
+    /* phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 面板只读统计；$cond 由固定子句拼装（非用户输入），多行 SQL 整句豁免 */
+    $short_desc = $wpdb->get_results(
         "SELECT ID, post_title, CHAR_LENGTH(post_excerpt) AS len
          FROM {$wpdb->posts}
          WHERE {$cond}
          ORDER BY ID DESC LIMIT 20"
     );
+    // phpcs:enable
 
     $map = static function ( array $rows ): array {
         $out = [];

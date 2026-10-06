@@ -65,7 +65,7 @@ function jinyu_companion_apply_saved_settings(): void {
 	}
 
 	// 布尔开关：勾选存 '1'，未勾存 '0'
-	foreach ( [ 'seo_open', 'seo_content_h1_fix', 'twitter_card_enable', 'og_article_meta', 'llms_enable', 'auto_link_enable', 'indexnow_enable', 'close_comments_old', 'page_cache_enable', 'speculation_enable', 'img_alt_enable', 'img_dim_enable', 'ld_json_enable', 'no_category_enable', 'sitemap_enable', 'seo_keywords_enable', 'storage_auto_upload', 'storage_delete_local', 'storage_sync_extra', 'comment_notify_reply', 'comment_notify_blocked', 'comment_notify_approved', 'comment_freq_enable', 'wechat_share_enable', 'wechat_share_debug' ] as $k ) {
+	foreach ( [ 'seo_open', 'seo_content_h1_fix', 'twitter_card_enable', 'og_article_meta', 'llms_enable', 'auto_link_enable', 'indexnow_enable', 'close_comments_old', 'page_cache_enable', 'speculation_enable', 'img_alt_enable', 'img_dim_enable', 'ld_json_enable', 'no_category_enable', 'sitemap_enable', 'seo_keywords_enable', 'thin_archive_noindex_enable', 'geo_signals_enable', 'storage_auto_upload', 'storage_delete_local', 'storage_sync_extra', 'comment_notify_reply', 'comment_notify_author', 'comment_notify_blocked', 'comment_notify_approved', 'comment_freq_enable', 'wechat_share_enable', 'wechat_share_debug' ] as $k ) {
 		$settings[ $k ] = isset( $_POST[ $k ] ) ? '1' : '0';
 	}
 
@@ -135,6 +135,12 @@ function jinyu_companion_apply_saved_settings(): void {
 	// 与页面 noindex 配套：noindex 只挡搜索结果展示，管不住 XML 站点地图，
 	// 低质页一样会躺在 sitemap.xml 里。留空表示不额外排除。
 	$settings['sitemap_exclude_ids'] = isset( $_POST['sitemap_exclude_ids'] ) ? sanitize_text_field( wp_unslash( $_POST['sitemap_exclude_ids'] ) ) : '';
+
+	// 瘦归档例外分类 ID：逗号 / 换行 / 空格分隔正整数（读取侧自行拆分，存纯文本即可）。
+	$settings['thin_archive_keep_term_ids'] = isset( $_POST['thin_archive_keep_term_ids'] ) ? sanitize_text_field( wp_unslash( $_POST['thin_archive_keep_term_ids'] ) ) : '';
+	// GEO Speakable：CSS 选择器白名单文本 + 段落最小长度（读取侧 (int) + max(0) 兜底）。
+	$settings['geo_speakable_selector']    = isset( $_POST['geo_speakable_selector'] ) ? sanitize_text_field( wp_unslash( $_POST['geo_speakable_selector'] ) ) : '';
+	$settings['geo_speakable_min_length']  = isset( $_POST['geo_speakable_min_length'] ) ? max( 0, (int) wp_unslash( $_POST['geo_speakable_min_length'] ) ) : 400;
 
 	// 验证码策略
 	$settings['captcha_policy'] = jinyu_companion_post_enum( 'captcha_policy', [ 'smart', 'always', 'off' ], 'smart' );
@@ -495,9 +501,16 @@ function jinyu_companion_settings_page_html(): void {
 			<input type="hidden" name="jinyu_active_pane" id="jyc-activePane" value="<?php echo esc_attr( $active_pane ); ?>">
 
 			<div class="jyc-app" data-theme="light">
+			<?php
+			// 首屏前同步还原折叠态：footer 的 admin.js 在 WP 后台会被 load-scripts 合并、延迟到
+			// DOMContentLoaded 之后才执行，来不及抢在首屏绘制前加类，硬刷会先显示展开态再折叠。
+			// 这里在解析期（元素刚生成）同步补类，配合 admin.css 的 .jyc-no-anim 关闭过渡，
+			// 既无展开态闪现、也无入场动画；admin.js 加载后会在下一帧移除 no-anim 恢复手动切换动画。
+			?>
+			<script>var jA=document.querySelector('.jyc-app');if(jA&&localStorage.getItem('jinyu_rail')==='1'){jA.classList.add('jyc-rail-collapsed','jyc-no-anim');requestAnimationFrame(function(){requestAnimationFrame(function(){jA.classList.remove('jyc-no-anim');});});}</script>
 				<!-- ===================== TOP NAV ===================== -->
 				<div class="jyc-main">
-					<header class="jyc-topnav">
+					<header class="jyc-topnav" id="jyc-topnav">
 						<div class="jyc-brand">
 							<div class="jyc-brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="18" r="11" stroke="#FFFFFF" stroke-width="4"/><circle cx="25.8" cy="10.2" r="3.4" fill="#F5B942"/></svg></div>
 							<div class="jyc-brand-txt"><b>金玉 · 增强控制台</b><span>配套插件设置</span></div>
@@ -557,6 +570,9 @@ function jinyu_companion_settings_page_html(): void {
 							<button type="button" class="jyc-nav-edge jyc-nav-edge-right" aria-label="<?php echo esc_attr__( '向右滚动', 'jinyu-theme-companion' ); ?>"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
 						</div>
 						<div class="jyc-top-actions">
+							<button type="button" class="jyc-rail-toggle" id="jyc-railToggle" aria-expanded="true" aria-controls="jyc-topnav" title="<?php echo esc_attr__( '收起 / 展开侧栏', 'jinyu-theme-companion' ); ?>">
+								<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+							</button>
 							<button class="jyc-theme-tog" id="jyc-themeTog" type="button" title="<?php echo esc_attr__( '切换深色 / 浅色', 'jinyu-theme-companion' ); ?>">
 								<svg id="jyc-themeIco" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
 							</button>
@@ -1112,7 +1128,82 @@ function jinyu_companion_settings_page_html(): void {
 							<div class="jyc-mod-head"><h1><?php echo esc_html__( '前台加速', 'jinyu-theme-companion' ); ?></h1>
 								<div class="jyc-sub"><?php echo esc_html__( '配置整页缓存、预取加速与数据库维护。服务器缓存（OPcache / Memcached）看板与清理请前往「性能中心」。', 'jinyu-theme-companion' ); ?></div></div>
 
+
 <div class="jyc-perf-right">
+	<?php
+	$jpc = function_exists( 'jinyu_page_cache_status' ) ? jinyu_page_cache_status() : null;
+	$ttl_label = '';
+	if ( ! empty( $jpc ) ) {
+		$td = (int) ( $jpc['ttl_default'] ?? 3600 );
+		$ttl_label = $td >= 86400 ? round( $td / 86400, 1 ) . ' ' . __( '天', 'jinyu-theme-companion' ) : round( $td / 3600, 1 ) . ' ' . __( '小时', 'jinyu-theme-companion' );
+	}
+	// 边缘模式下命中率 / 缓存文件 / 占用空间由 Web 服务器持有，插件读不到，统一显示为「—」（避免 0 或陈旧值误导）。
+	$is_edge = $jpc && 'edge' === ( $jpc['reason'] ?? '' );
+	// 命中率来源：server=服务器日志（边缘模式解析 $upstream_cache_status），plugin=插件 PHP 层自采（简单模式）。
+	$hit_rate      = $jpc['hit_rate'] ?? null;
+	$hit_src       = (string) ( $jpc['hit_source'] ?? '' );
+	$hit_src_label = 'server' === $hit_src
+    ? __( '服务器日志', 'jinyu-theme-companion' )
+    : ( 'plugin' === $hit_src ? __( '插件自采', 'jinyu-theme-companion' ) : '' );
+	if ( $jpc && $jpc['enabled'] ) :
+		?>
+<div class="jyc-cache-stat" id="jycCacheStat">
+    <div class="jyc-cache-stat-h">
+        <span class="jyc-cache-stat-l">
+            <span class="jyc-cache-stat-t"><?php echo esc_html__( '缓存状态', 'jinyu-theme-companion' ); ?></span>
+            <?php if ( $is_edge ) : ?>
+            <span class="jyc-cache-mode"><?php echo esc_html__( '边缘模式 · 服务器接管', 'jinyu-theme-companion' ); ?></span>
+            <?php endif; ?>
+        </span>
+        <span class="jyc-cache-stat-actions">
+            <?php if ( 'server' === $hit_src ) : ?>
+            <button type="button" class="jyc-btn-ghost" id="jycCacheReset"><?php echo esc_html__( '重置统计', 'jinyu-theme-companion' ); ?></button>
+            <?php endif; ?>
+            <button type="button" class="jyc-btn-ghost" id="jycCacheRefresh"><?php echo esc_html__( '刷新', 'jinyu-theme-companion' ); ?></button>
+        </span>
+    </div>
+    <div class="jyc-cache-grid">
+        <div class="jyc-cs-cell"><span class="jyc-cs-k"><?php echo esc_html__( '命中率', 'jinyu-theme-companion' ) . ( ( '' !== $hit_src_label ) ? '<em class="jyc-cs-tag">' . esc_html( $hit_src_label ) . '</em>' : '' ); ?></span><span class="jyc-cs-v" id="jycCsHit"><?php echo ( null === $hit_rate ) ? esc_html__( '—', 'jinyu-theme-companion' ) : esc_html( $hit_rate . '%' ); ?></span></div>
+        <div class="jyc-cs-cell"><span class="jyc-cs-k"><?php echo esc_html__( '缓存文件', 'jinyu-theme-companion' ); ?></span><span class="jyc-cs-v" id="jycCsFiles"><?php echo $is_edge ? esc_html__( '—', 'jinyu-theme-companion' ) : esc_html( number_format_i18n( (int) ( $jpc['files'] ?? 0 ) ) ); ?></span></div>
+        <div class="jyc-cs-cell"><span class="jyc-cs-k"><?php echo esc_html__( '占用空间', 'jinyu-theme-companion' ); ?></span><span class="jyc-cs-v" id="jycCsBytes"><?php echo $is_edge ? esc_html__( '—', 'jinyu-theme-companion' ) : esc_html( size_format( (int) ( $jpc['bytes'] ?? 0 ) ) ); ?></span></div>
+        <div class="jyc-cs-cell"><span class="jyc-cs-k"><?php echo esc_html__( '最近清除', 'jinyu-theme-companion' ); ?></span><span class="jyc-cs-v" id="jycCsFlush"><?php echo ( (int) ( $jpc['last_flush'] ?? 0 ) > 0 ) ? esc_html( human_time_diff( (int) $jpc['last_flush'] ) . __( '前', 'jinyu-theme-companion' ) ) : esc_html__( '从未', 'jinyu-theme-companion' ); ?></span></div>
+        <div class="jyc-cs-cell"><span class="jyc-cs-k"><?php echo esc_html__( '自定义时长文章', 'jinyu-theme-companion' ); ?></span><span class="jyc-cs-v" id="jycCsCustom"><?php echo esc_html( number_format_i18n( (int) ( $jpc['custom_count'] ?? 0 ) ) ); ?></span></div>
+        <div class="jyc-cs-cell"><span class="jyc-cs-k"><?php echo esc_html__( '全局有效期', 'jinyu-theme-companion' ); ?></span><span class="jyc-cs-v" id="jycCsTtl"><?php echo esc_html( $ttl_label ); ?></span></div>
+    </div>
+    <div class="jyc-cache-ops">
+        <div class="jyc-cache-lookup">
+            <input type="text" class="jyc-inp" id="jycCacheUrl" placeholder="<?php echo esc_attr__( '输入文章 / 页面 URL 查询缓存状态', 'jinyu-theme-companion' ); ?>">
+            <button type="button" class="jyc-btn jyc-btn-primary" id="jycCacheLookup"><?php echo esc_html__( '查询', 'jinyu-theme-companion' ); ?></button>
+        </div>
+        <div class="jyc-cache-lu-result" id="jycCacheLuResult" hidden></div>
+        <div class="jyc-cache-clear">
+            <button type="button" class="jyc-btn-ghost" id="jycCacheClearHome"><?php echo esc_html__( '清首页', 'jinyu-theme-companion' ); ?></button>
+            <button type="button" class="jyc-btn-ghost" id="jycCacheClearAll"><?php echo esc_html__( '清全站', 'jinyu-theme-companion' ); ?></button>
+            <span class="jyc-cs-div" aria-hidden="true"></span>
+            <div class="jyc-cache-urlclear">
+                <input type="text" class="jyc-inp jyc-cache-clear-url" id="jycCacheClearUrl" placeholder="<?php echo esc_attr__( '指定 URL', 'jinyu-theme-companion' ); ?>">
+                <button type="button" class="jyc-btn-ghost" id="jycCacheClearUrlBtn"><?php echo esc_html__( '清除', 'jinyu-theme-companion' ); ?></button>
+            </div>
+        </div>
+    </div>
+    <span class="jyc-fnote">
+		<?php
+		if ( ! $is_edge ) {
+			echo esc_html__( '命中率为近一个采集周期（约 5 分钟）的实时估算；「清全站」只清缓存文件，不影响文章级缓存时长设置。', 'jinyu-theme-companion' );
+		} elseif ( 'server' === $hit_src ) {
+			printf(
+			/* translators: %s: 参与统计的请求次数 */
+                esc_html__( '「命中率」来自服务器缓存统计（已覆盖 %s 次请求），自启用起累计，可点「重置统计」让其后新请求重新累计（不影响缓存本身）；「缓存文件 / 占用空间」由服务器持有，插件读不到，故显示「—」。清首页 / 指定 URL / 查询在 Nginx 下按 URL 精确生效，Apache 下清除退化为全量刷新、查询不可用。', 'jinyu-theme-companion' ),
+                esc_html( number_format_i18n( (int) ( $jpc['edge_samples'] ?? 0 ) ) )
+			);
+		} else {
+			echo esc_html__( '边缘缓存由服务器（Nginx / Apache）持有，「缓存文件 / 占用空间」插件读不到，故显示「—」；命中率需按下方「边缘模式配置」片段里的「命中统计日志」段在服务器启用后才会出现（Nginx 是第 4) 段、Apache 是末尾那段；旧站点请重新粘贴该片段以补上）。清首页 / 指定 URL / 查询在 Nginx 下按 URL 精确生效，Apache 下清除退化为全量刷新、查询不可用。', 'jinyu-theme-companion' );
+		}
+		?>
+    </span>
+</div>
+<?php endif; ?>
+
 <div class="jyc-panel">
 								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></span><?php echo esc_html__( '预取加速 (Speculation Rules)', 'jinyu-theme-companion' ); ?></h2><span class="jyc-hint"><?php echo esc_html__( '默认关闭', 'jinyu-theme-companion' ); ?></span></div>
 								<div class="jyc-panel-b">
@@ -1195,7 +1286,6 @@ function jinyu_companion_settings_page_html(): void {
 	</div>
 
 	<?php
-	$jpc = function_exists( 'jinyu_page_cache_status' ) ? jinyu_page_cache_status() : null;
 	if ( $jpc && $jpc['enabled'] ) :
 		if ( 'edge' === $page_cache_mode ) :
 			$edge_srv = isset( $jpc['edge_server'] ) ? $jpc['edge_server'] : 'nginx';
@@ -1230,16 +1320,28 @@ function jinyu_companion_settings_page_html(): void {
 			</div>
 			<?php
 		endif;
-	endif;
+		?>
+		<?php
+		endif;
 	?>
 
 	<div class="jyc-fsep"><?php echo esc_html__( '缓存有效期', 'jinyu-theme-companion' ); ?></div>
 	<div class="jyc-fl">
+		<input type="hidden" name="page_cache_ttl" id="jyc-ttlHidden" value="<?php echo esc_attr( $page_cache_ttl ); ?>">
+		<div class="jyc-ttl-presets" id="jyc-ttlPresets">
+			<button type="button" class="jyc-ttl-chip" data-sec="600">10 分钟</button>
+			<button type="button" class="jyc-ttl-chip" data-sec="3600">1 小时</button>
+			<button type="button" class="jyc-ttl-chip" data-sec="43200">12 小时</button>
+			<button type="button" class="jyc-ttl-chip" data-sec="86400">1 天</button>
+			<button type="button" class="jyc-ttl-chip" data-sec="604800">7 天</button>
+			<button type="button" class="jyc-ttl-chip" data-sec="1296000">15 天</button>
+			<button type="button" class="jyc-ttl-chip" data-sec="2592000">30 天</button>
+		</div>
 		<div class="jyc-slider-wrap">
-			<input type="range" name="page_cache_ttl" min="60" max="86400" step="60" value="<?php echo esc_attr( $page_cache_ttl ); ?>" id="jyc-ttlRange">
+			<input type="range" id="jyc-ttlRange" min="60" max="2592000" step="60" value="<?php echo esc_attr( $page_cache_ttl ); ?>">
 			<div class="jyc-slider-val"><span id="jyc-ttlVal"><?php echo esc_html( $_ttl_h ); ?></span><small id="jyc-ttlSec"><?php echo esc_html( $_ttl ); ?> 秒</small></div>
 		</div>
-		<span class="jyc-fnote"><?php echo esc_html__( '范围 60 秒 ～ 24 小时，建议 1 小时。', 'jinyu-theme-companion' ); ?></span>
+		<span class="jyc-fnote"><?php echo esc_html__( '范围 60 秒 ～ 30 天。发文或改文章会自动清缓存，长缓存不等于访客看到旧内容；默认 1 小时较稳妥。', 'jinyu-theme-companion' ); ?></span>
 	</div>
 
 	<div class="jyc-fsep"><?php echo esc_html__( '例外规则', 'jinyu-theme-companion' ); ?></div>
@@ -1304,7 +1406,7 @@ function jinyu_companion_settings_page_html(): void {
 					<button type="button" class="jyc-btn jyc-btn-soft jyc-code-copy" onclick="window.jycEdgeCodeCopy(this)"><?php esc_html_e( '复制片段', 'jinyu-theme-companion' ); ?></button>
 				</div>
 				<span class="jyc-code-hint" data-code="nginx"><?php esc_html_e( '分三处粘贴：http 段 / PHP 的 location 内 / server 段', 'jinyu-theme-companion' ); ?></span>
-				<span class="jyc-code-hint" data-code="apache"><?php esc_html_e( '只能放 vhost 配置，放 .htaccess 会 500', 'jinyu-theme-companion' ); ?></span>
+				<span class="jyc-code-hint" data-code="apache"><?php esc_html_e( '整段放 vhost 配置（含命中统计日志），放 .htaccess 会 500', 'jinyu-theme-companion' ); ?></span>
 				<textarea class="jyc-inp jyc-code" id="jycCodeText" rows="16" readonly spellcheck="false"></textarea>
 			</div>
 			<span class="jyc-fnote"><?php echo esc_html__( '切换标签查看对应服务器配置；插件不会自动写入服务器配置，粘贴后保存设置会触发一次全量刷新。', 'jinyu-theme-companion' ); ?></span>

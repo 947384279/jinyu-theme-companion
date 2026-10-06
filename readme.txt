@@ -4,11 +4,11 @@ Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.2.11
+Stable tag: 1.2.12
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Companion plugin for the Jinyu theme: SEO, structured data, social, related posts, shortcodes, cache, anti-spam. Every outbound feature is off by default.
+Companion plugin for the Jinyu theme: SEO, structured data, social, related posts, shortcodes, cache, anti-spam. Every feature is off by default.
 
 == Description ==
 
@@ -31,7 +31,7 @@ Features:
 == Screenshots ==
 
 = Overview dashboard =
-Every subsystem summarised on one screen: how many of the 117 switches are on, whether SEO cards and index pinging are live, comment-protection strength, real-user performance, outstanding optimisation items, and database/cache health.
+Every subsystem summarised on one screen: how many switches are on, whether SEO cards and index pinging are live, comment-protection strength, real-user performance, outstanding optimisation items, and database/cache health.
 
 `assets/screenshots/screenshot-1.png`
 
@@ -120,6 +120,14 @@ This plugin does not collect, store or transmit any personal data by default, an
 Administrators can disable any of the above outbound features at any time in the corresponding settings; once disabled, the related requests stop entirely.
 
 == Changelog ==
+
+= 1.2.12 =
+* 悬浮保存：补齐 5 个落库遗漏字段（文章作者通知、薄归档 noindex、GEO 信号开关，及薄归档保留 term ID、GEO 可读选择器/最小长度）——此前保存提示成功但刷新即回滚；导入/导出白名单同步补齐 26 键并新增 float 类型。
+* 悬浮保存：分区角标改为按真实 DOM 控件建索引并在保存/放弃后重建——修复初始关闭的开关首次勾选时角标不亮、保存/放弃后角标不熄灭。
+* 悬浮保存：「放弃更改」现完整回滚自绘控件（缓存 TTL 滑杆、验证码分段、水印九宫格）与预览（分享图、预览卡标题、水印画布）；修复保存请求往返期间的编辑被误标为已保存的竞态。
+* 触屏：修复移动端「使用说明」气泡与侧栏提示泡要点两次 / 闪现驻留的问题（hover 类事件仅在鼠标指针下生效，触屏统一单击切换）。
+* WP.org Plugin Check 全量清零（0 ERROR / 0 WARNING）：I18n translators 注释与占位符排序、GEO 内联脚本输出转义、edge-stats 文件句柄，全量告警逐一甄别批注。
+* 附带：新增语言包模板 languages/jinyu-theme-companion.pot；shortcodes.min.js / shortcodes-gb.min.js 更名为 shortcodes.js / shortcodes-gb.js（内容本为未压缩源码，旧名易误导）。
 
 = 1.2.11 =
 * 代码规范：补回 SMTP 测试表单输入处遗漏的 phpcs 忽略注释（消毒逻辑本已存在）；性能中心新增 translators 注释，预热频率关联数组改为多行写法。
@@ -239,13 +247,13 @@ Administrators can disable any of the above outbound features at any time in the
 Maintenance release for the WordPress.org review: input sanitizing in a few endpoints and a Plugin Check fix in the "moments" migration query. No configuration changes.
 
 = 1.2.4 =
-The theme update check is now opt-in and off by default — enable it on the new "Theme Updates" screen if you want the companion to keep the Jinyu theme up to date. The "moments" posts are migrated to the new `jinyu_moments` post type automatically on the next page load; front-end URLs do not change.
+Theme update checks are now opt-in and off by default — enable them on the new Theme Updates screen. Moments posts migrate to the new jinyu_moments post type automatically; front-end URLs do not change.
 
 = 1.2.2 =
 Adds the floating save bar (no page reload when saving) and the image watermark engine. Watermarking is off by default and runs on new uploads only until you start a batch from the Media pane; original images are preserved as `*-jywmo.*` sidecars. Settings and existing metadata are unaffected.
 
 = 1.2.1 =
-Page cache moves to a disk backend and gains conditional requests (ETag / 304), Multisite isolation, and cache-directory diagnostics. If caching was enabled, existing content is served from disk; nothing to configure. Note that a 304 response requires your web server to forward the conditional-request header to PHP — on Nginx add `fastcgi_param HTTP_IF_NONE_MATCH $http_if_none_match;` to the server block. Without it caching still works, you only lose the bandwidth saving. (Apache usually needs no change.)
+Page cache moves to a disk backend with ETag / 304 conditional requests, multisite isolation, and cache-directory diagnostics. Nothing to reconfigure. For 304 responses on Nginx, forward If-None-Match to PHP via fastcgi_param HTTP_IF_NONE_MATCH.
 
 = 1.1.0 =
 Adds the HTTP transport check and page-cache exclusion rules. Existing page-cache settings are preserved; the new "ignored parameters" default only raises the hit rate, it never changes which pages are cached.

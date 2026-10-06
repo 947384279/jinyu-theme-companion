@@ -172,6 +172,7 @@ function jinyu_sitemap_filter_query_args( $args, $post_type ) {
 	if ( ! empty( $args['post__in'] ) && is_array( $args['post__in'] ) ) {
 		$args['post__in'] = array_values( array_diff( (array) $args['post__in'], $exclude ) );
 	} else {
+		// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- 站点地图排除清单（选项控制，规模有限），仅低频重建时使用
 		$args['post__not_in'] = $exclude;
 	}
 

@@ -117,7 +117,7 @@ if ( ! function_exists( 'jinyu_sc_editor_list' ) ) {
 	}
 }
 
-// TinyMCE 外部插件（插件自带 assets/shortcodes.min.js，不依赖主题资源目录）
+// TinyMCE 外部插件（插件自带 assets/shortcodes.js，不依赖主题资源目录）
 add_filter(
     'mce_external_plugins',
     function ( $plugins ) {
@@ -125,9 +125,9 @@ add_filter(
 		if ( ! in_array( $pagenow, [ 'post.php', 'post-new.php' ], true ) ) {
 			return $plugins;
 		}
-		$sc_js = JINYU_COMPANION_DIR . 'assets/shortcodes.min.js';
+		$sc_js = JINYU_COMPANION_DIR . 'assets/shortcodes.js';
 		$sc_ver = file_exists( $sc_js ) ? filemtime( $sc_js ) : JINYU_COMPANION_VER;
-		$plugins['jinyu_shortcodes'] = JINYU_COMPANION_URL . 'assets/shortcodes.min.js?ver=' . $sc_ver;
+		$plugins['jinyu_shortcodes'] = JINYU_COMPANION_URL . 'assets/shortcodes.js?ver=' . $sc_ver;
 		return $plugins;
 	}
 );
@@ -182,11 +182,11 @@ add_action(
 add_action(
     'enqueue_block_editor_assets',
     function () {
-		$gb_js = JINYU_COMPANION_DIR . 'assets/shortcodes-gb.min.js';
+		$gb_js = JINYU_COMPANION_DIR . 'assets/shortcodes-gb.js';
 		$ver = file_exists( $gb_js ) ? filemtime( $gb_js ) : JINYU_COMPANION_VER;
 		wp_enqueue_script(
             'jinyu-shortcodes-gb',
-            JINYU_COMPANION_URL . 'assets/shortcodes-gb.min.js',
+            JINYU_COMPANION_URL . 'assets/shortcodes-gb.js',
             [ 'wp-plugins', 'wp-edit-post', 'wp-element', 'wp-components', 'wp-data', 'wp-blocks' ],
             $ver,
             true

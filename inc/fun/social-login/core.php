@@ -225,20 +225,6 @@ function jinyu_oauth_shortcode(): string {
 }
 add_shortcode( 'jinyu_oauth', 'jinyu_oauth_shortcode' );
 
-function jinyu_get_oauth_accounts(): array {
-	$out = [];
-	foreach ( jinyu_sl_providers() as $p => $prov ) {
-		$prov->set_config( jinyu_sl_get_config( $p ) );
-		if ( $prov->is_configured() ) {
-			$out[] = [
-				'platform' => $p,
-				'client_id' => $prov->conf['client_id'],
-			];
-		}
-	}
-	return $out;
-}
-
 /*
 ==========================================================================
  * 回调分发（admin-post.php?action=jinyu_social_login）
@@ -249,7 +235,9 @@ add_action( 'admin_post_nopriv_jinyu_social_login', 'jinyu_sl_dispatch' );
 add_action( 'admin_post_jinyu_social_login', 'jinyu_sl_dispatch' );
 
 function jinyu_sl_dispatch(): void {
+	// phpcs:ignore WordPress.Security.NonceVerification -- OAuth 公开端点，请求合法性由 state（服务端 transient）校验
 	if ( 'start' === sanitize_key( wp_unslash( $_GET['mode'] ?? '' ) ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification -- OAuth 公开端点，请求合法性由 state（服务端 transient）校验
 		jinyu_sl_begin( sanitize_key( wp_unslash( $_GET['platform'] ?? '' ) ) );
 		return;
 	}
@@ -311,11 +299,14 @@ function jinyu_sl_begin( string $platform ): void {
 	$nonce    = ( 'apple' === $platform ) ? bin2hex( random_bytes( 16 ) ) : '';
 
 	// 绑定意图：已登录用户从用户中心发起，回调后关联当前账号并回跳用户中心（而非新建账号/写文章页）
+	// phpcs:ignore WordPress.Security.NonceVerification -- OAuth 公开端点，请求合法性由 state（服务端 transient）校验
 	$intent      = ( 'bind' === sanitize_key( wp_unslash( $_GET['intent'] ?? '' ) ) ) ? 'bind' : '';
 	$redirect_to = '';
 	// 回跳地址（bind 与登录通用）：仅在同域安全时采纳，防开放重定向
+	// phpcs:ignore WordPress.Security.NonceVerification -- OAuth 公开端点，redirect_to 经 wp_validate_redirect 限同域
 	if ( ! empty( $_GET['redirect_to'] ) ) {
 		$redirect_to = wp_validate_redirect(
+			// phpcs:ignore WordPress.Security.NonceVerification -- OAuth 公开端点，redirect_to 经 wp_validate_redirect 限同域
 			esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ),
 			''
 		);
@@ -357,6 +348,7 @@ function jinyu_sl_begin( string $platform ): void {
 function jinyu_sl_callback(): void {
 	ob_start(); // 缓冲 token 交换阶段的零散输出，避免其在 Set-Cookie 之前冲刷 header 导致登录 cookie 静默失效
 	$is_post = 'POST' === ( isset( $_SERVER['REQUEST_METHOD'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : 'GET' );
+	// phpcs:ignore WordPress.Security.NonceVerification -- OAuth 公开端点，state 在后续步骤与服务端 transient 比对
 	$state   = sanitize_text_field( wp_unslash( $is_post ? ( $_POST['state'] ?? '' ) : ( $_GET['state'] ?? '' ) ) );
 	if ( '' === $state ) {
 		jinyu_sl_bail( '登录状态丢失（缺少 state），请重新点击第三方登录。' );
@@ -395,6 +387,7 @@ function jinyu_sl_callback(): void {
 		jinyu_sl_bail( '绑定第三方账号请先登录后再操作。' );
 	}
 
+	// phpcs:ignore WordPress.Security.NonceVerification -- OAuth 公开端点，code 为平台回传授权码
 	$code = sanitize_text_field( wp_unslash( $is_post ? ( $_POST['code'] ?? '' ) : ( $_GET['code'] ?? '' ) ) );
 	if ( '' === $code ) {
 		jinyu_sl_bail( 'QQ 未回传授权码（code 缺失）。' );
@@ -402,11 +395,12 @@ function jinyu_sl_callback(): void {
 
 	$extra = [];
 	if ( $is_post ) {
+		// phpcs:ignore WordPress.Security.NonceVerification -- OAuth 公开端点，id_token 为 Apple 平台回传
 		$extra['id_token'] = sanitize_text_field( wp_unslash( $_POST['id_token'] ?? '' ) );
 		// user 是 Apple 回传的原始 JSON（含 name.firstName 等嵌套结构），**不能** sanitize_text_field：
 		// 那样会把双引号转成 HTML 实体，json_decode 直接失败 → 拿不到昵称。
 		// 它只被 json_decode 解析、不进数据库也不进 HTML，安全性由 decode 后的白名单取值保证。
-		$extra['user'] = wp_unslash( $_POST['user'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 原始 JSON，仅经 json_decode 解析后按字段白名单取值
+		$extra['user'] = wp_unslash( $_POST['user'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification -- 原始 JSON，仅经 json_decode 解析后按字段白名单取值
 	}
 	if ( '' !== $nonce ) {
 		$extra['nonce'] = $nonce;
@@ -467,6 +461,7 @@ function jinyu_sl_fail( string $msg ): void {
 /** 在 wp-login 上渲染第三方登录失败原因（一次性 transient，消费后即删除，陈旧链接不再复现报错） */
 add_filter( 'login_message', 'jinyu_sl_login_message' );
 function jinyu_sl_login_message( $msg ) {
+	// phpcs:ignore WordPress.Security.NonceVerification -- login_message 只读一次性 err token id（sanitize_key），公开页面无 nonce
 	$tid = sanitize_key( wp_unslash( $_GET['jinyu_oauth_err'] ?? '' ) );
 	if ( '' === $tid ) {
 		return $msg;
@@ -562,6 +557,7 @@ function jinyu_sl_oauth_avatar_key( string $platform ): string {
 /** 按 openid 查绑定的用户 id（LIMIT 1，避免多绑定时返回不确定行） */
 function jinyu_sl_uid_by_oauth_id( string $platform, string $id ): int {
 	global $wpdb;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 登录路径上的定向查询，表名经白名单构造
 	$uid = $wpdb->get_var(
 		$wpdb->prepare(
 			"SELECT user_id FROM $wpdb->usermeta WHERE meta_key=%s AND meta_value=%s LIMIT 1",

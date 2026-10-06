@@ -1,0 +1,4811 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR Jinyu
+# This file is distributed under the same license as the Jinyu Theme Companion package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Jinyu Theme Companion 1.2.11\n"
+"Report-Msgid-Bugs-To: https://www.qicaiyun.top\n"
+"POT-Creation-Date: 2026-10-06 23:17+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: inc/admin/import-export.php:317 inc/admin/settings.php:33
+#: inc/admin/settings.php:262 inc/fun/ai-crawl-stats.php:203
+#: inc/fun/cron-manager.php:293 inc/fun/monitor.php:571
+#: inc/fun/primitives.php:232 inc/fun/warm-up.php:736 inc/fun/warm-up.php:778
+#: inc/seo.php:569
+msgid "权限不足"
+msgstr ""
+
+#: inc/admin/import-export.php:328
+msgid "导出失败：数据无法编码"
+msgstr ""
+
+#: inc/admin/import-export.php:617
+msgid "未确认：请勾选下方确认项后再导入。"
+msgstr ""
+
+#: inc/admin/import-export.php:634
+msgid "导入失败：只接受 .json 文件。"
+msgstr ""
+
+#: inc/admin/import-export.php:646
+#, php-format
+msgid "导入失败：文件超过 %s。"
+msgstr ""
+
+#: inc/admin/import-export.php:665
+msgid "导入失败：没有读到任何内容，请选择文件或粘贴 JSON。"
+msgstr ""
+
+#: inc/admin/import-export.php:678
+msgid "导入失败：不是合法的 JSON。"
+msgstr ""
+
+#: inc/admin/import-export.php:707
+msgid "导入完成，但没有需要更新的配置（与当前设置一致）。"
+msgstr ""
+
+#: inc/admin/import-export.php:727
+#, php-format
+msgid "主设置新增 %1$d 项、覆盖 %2$d 项"
+msgstr ""
+
+#: inc/admin/import-export.php:735
+#, php-format
+msgid "性能中心覆盖 %1$d 项"
+msgstr ""
+
+#: inc/admin/import-export.php:742
+#, php-format
+msgid "社交登录恢复 %1$d 个平台（凭据需重新填写）"
+msgstr ""
+
+#: inc/admin/import-export.php:747
+msgid "IndexNow 密钥已恢复"
+msgstr ""
+
+#: inc/admin/import-export.php:753
+msgid "导入成功："
+msgstr ""
+
+#: inc/admin/import-export.php:757
+#, php-format
+msgid "；忽略未知键 %1$d 项，跳过凭据 %2$d 项。"
+msgstr ""
+
+#: inc/admin/overview.php:30
+msgid "暂无样本 · 等待前台访问"
+msgstr ""
+
+#: inc/admin/overview.php:48
+#, php-format
+msgid "综合 %1$d 分 · %2$s 样本"
+msgstr ""
+
+#: inc/admin/overview.php:53
+msgid " · 数据已过期"
+msgstr ""
+
+#: inc/admin/overview.php:79
+msgid "整页缓存未开启"
+msgstr ""
+
+#: inc/admin/overview.php:80
+msgid "SMTP 未配置，通知邮件回落 PHP mail()"
+msgstr ""
+
+#: inc/admin/overview.php:81
+msgid "对象存储未启用，图片仍走本地"
+msgstr ""
+
+#: inc/admin/overview.php:82
+msgid "IndexNow 主动推送未开启"
+msgstr ""
+
+#: inc/admin/overview.php:83
+msgid "SEO / OG 分享卡片已关闭"
+msgstr ""
+
+#: inc/admin/overview.php:84
+msgid "评论验证码已关闭"
+msgstr ""
+
+#: inc/admin/overview.php:141
+msgid "性能中心未加载"
+msgstr ""
+
+#: inc/admin/overview.php:155
+#, php-format
+msgid "%s 条"
+msgstr ""
+
+#: inc/admin/overview.php:158
+msgid "干净"
+msgstr ""
+
+#: inc/admin/overview.php:161
+#, php-format
+msgid "过期缓存 · 表碎片 %1$s · 缓存 %2$s 条"
+msgstr ""
+
+#: inc/admin/settings.php:12 inc/admin/settings.php:13 inc/fun/privacy.php:116
+msgid "金玉增强"
+msgstr ""
+
+#: inc/admin/settings.php:254
+msgid "请求来源非法"
+msgstr ""
+
+#: inc/admin/settings.php:271 inc/fun/primitives.php:240
+#: inc/fun/warm-up.php:739 inc/fun/warm-up.php:781
+msgid "安全校验失败，请刷新页面后重试"
+msgstr ""
+
+#: inc/admin/settings.php:281 inc/admin/settings.php:2040
+#: inc/fun/warm-up.php:766
+msgid "设置已保存"
+msgstr ""
+
+#: inc/admin/settings.php:365
+msgid "文章 / 站点标题"
+msgstr ""
+
+#: inc/admin/settings.php:366
+msgid "article / website 自动切换"
+msgstr ""
+
+#: inc/admin/settings.php:367
+msgid "规范链接"
+msgstr ""
+
+#: inc/admin/settings.php:368
+msgid "回退站点名称"
+msgstr ""
+
+#: inc/admin/settings.php:369
+msgid "按 WP 语言自动"
+msgstr ""
+
+#: inc/admin/settings.php:370
+msgid "摘要 / 正文首段兜底"
+msgstr ""
+
+#: inc/admin/settings.php:371
+msgid "未设置，将回退封面 / Logo"
+msgstr ""
+
+#: inc/admin/settings.php:372
+msgid "自动用标题兜底"
+msgstr ""
+
+#: inc/admin/settings.php:373
+msgid "按扩展名推断"
+msgstr ""
+
+#: inc/admin/settings.php:374 inc/admin/settings.php:376
+msgid "未填写"
+msgstr ""
+
+#: inc/admin/settings.php:375
+msgid "Twitter 卡片已关闭"
+msgstr ""
+
+#: inc/admin/settings.php:377
+msgid "发布 / 更新时间等"
+msgstr ""
+
+#: inc/admin/settings.php:377
+msgid "已关闭"
+msgstr ""
+
+#: inc/admin/settings.php:378
+msgid "结构化数据"
+msgstr ""
+
+#: inc/admin/settings.php:519
+msgid "向左滚动"
+msgstr ""
+
+#: inc/admin/settings.php:570
+msgid "向右滚动"
+msgstr ""
+
+#: inc/admin/settings.php:573
+msgid "收起 / 展开侧栏"
+msgstr ""
+
+#: inc/admin/settings.php:576
+msgid "切换深色 / 浅色"
+msgstr ""
+
+#: inc/admin/settings.php:580 inc/admin/settings.php:581
+#: inc/admin/settings.php:583
+msgid "保存更改"
+msgstr ""
+
+#: inc/admin/settings.php:594
+msgid "金玉增强控制台"
+msgstr ""
+
+#: inc/admin/settings.php:595
+msgid ""
+"统一管理主题的 SEO、内容增强、整页缓存、评论防护与邮件投递。所有配置存于插件"
+"独立选项，不受主题导入 / 重置影响，可脱离主题独立运行。"
+msgstr ""
+
+#: inc/admin/settings.php:597
+msgid "功能分区"
+msgstr ""
+
+#: inc/admin/settings.php:598
+msgid "已启用开关"
+msgstr ""
+
+#: inc/admin/settings.php:599
+msgid "可配置字段"
+msgstr ""
+
+#: inc/admin/settings.php:600
+msgid "存储隔离"
+msgstr ""
+
+#: inc/admin/settings.php:638
+msgid "功能启用度"
+msgstr ""
+
+#: inc/admin/settings.php:639
+msgid "全部功能开关平均开启比例"
+msgstr ""
+
+#: inc/admin/settings.php:642 inc/admin/settings.php:1258
+msgid "整页缓存"
+msgstr ""
+
+#: inc/admin/settings.php:642
+msgid "前台静态化状态"
+msgstr ""
+
+#: inc/admin/settings.php:643 inc/admin/settings.php:1439
+#: inc/admin/settings.php:1440
+msgid "验证码策略"
+msgstr ""
+
+#: inc/admin/settings.php:646
+msgid "加载性能"
+msgstr ""
+
+#: inc/admin/settings.php:652
+msgid "优化待办"
+msgstr ""
+
+#: inc/admin/settings.php:658
+#, php-format
+msgid "%d 项"
+msgstr ""
+
+#: inc/admin/settings.php:664
+msgid "暂无优化建议"
+msgstr ""
+
+#: inc/admin/settings.php:668
+msgid "数据库健康"
+msgstr ""
+
+#: inc/admin/settings.php:677
+msgid "Feature Adoption"
+msgstr ""
+
+#: inc/admin/settings.php:678
+msgid "功能启用度明细"
+msgstr ""
+
+#: inc/admin/settings.php:679
+msgid "插件全部可配置能力的开启概况。点击任一功能可直接跳转对应设置面板。"
+msgstr ""
+
+#: inc/admin/settings.php:686
+msgid "功能启用度分段图"
+msgstr ""
+
+#: inc/admin/settings.php:687
+msgid "每一格代表一项功能，蓝色为已启用"
+msgstr ""
+
+#: inc/admin/settings.php:690
+msgid "已开启"
+msgstr ""
+
+#: inc/admin/settings.php:691
+msgid "未开启"
+msgstr ""
+
+#: inc/admin/settings.php:696
+msgid "内置恒启能力"
+msgstr ""
+
+#: inc/admin/settings.php:696
+msgid "插件常驻 · 无需配置"
+msgstr ""
+
+#: inc/admin/settings.php:699
+msgid ""
+"关注 / 消息系统 · 站点访问统计 · 相关文章 · 系列文章 · 快讯 (Moments) · 短代"
+"码与短代码 UI · 对象存储引擎。以上能力随插件常驻并自动启用，无需配置即可使"
+"用；若需整体停用，停用本插件即可。"
+msgstr ""
+
+#: inc/admin/settings.php:707
+msgid "SEO / 社交分享"
+msgstr ""
+
+#: inc/admin/settings.php:708
+msgid ""
+"控制社交平台分享卡片与 AI 爬虫可发现性。关闭 SEO 后社交分享退化为纯文本链接。"
+msgstr ""
+
+#: inc/admin/settings.php:713
+msgid "呈现与抓取"
+msgstr ""
+
+#: inc/admin/settings.php:713
+msgid "核心默认开启"
+msgstr ""
+
+#: inc/admin/settings.php:716
+msgid "SEO / Open Graph"
+msgstr ""
+
+#: inc/admin/settings.php:716
+msgid "输出 SEO 元标签与 Open Graph（微信 / QQ 分享卡片）。"
+msgstr ""
+
+#: inc/admin/settings.php:717
+msgid "正文标题规范化"
+msgstr ""
+
+#: inc/admin/settings.php:717
+msgid "将正文里嵌的 h1 标题降级为 h2（页面主标题已由模板输出 h1）。"
+msgstr ""
+
+#: inc/admin/settings.php:718
+msgid "Twitter 卡片"
+msgstr ""
+
+#: inc/admin/settings.php:718
+msgid "输出 Twitter Card 标签，适配 X / 海外社交分享。"
+msgstr ""
+
+#: inc/admin/settings.php:719
+msgid "XML 站点地图"
+msgstr ""
+
+#: inc/admin/settings.php:719
+msgid "补足收录规则：剔除附件与密码保护文章，<lastmod> 取最后修改时间。"
+msgstr ""
+
+#: inc/admin/settings.php:720
+msgid "薄归档页不进索引"
+msgstr ""
+
+#: inc/admin/settings.php:720
+msgid "标签页 <3 篇、分类页 <2 篇时自动 noindex 并移出站点地图。"
+msgstr ""
+
+#: inc/admin/settings.php:721
+msgid "GEO 机器可读信号"
+msgstr ""
+
+#: inc/admin/settings.php:721
+msgid "补作者署名 meta，并按选择器输出 speakable 供语音助手朗读。"
+msgstr ""
+
+#: inc/admin/settings.php:724
+msgid "高级抓取选项"
+msgstr ""
+
+#: inc/admin/settings.php:727
+msgid "输出 keywords 标签"
+msgstr ""
+
+#: inc/admin/settings.php:727
+msgid "legacy <meta name=\"keywords\">，主流引擎已不以此排序，默认关闭。"
+msgstr ""
+
+#: inc/admin/settings.php:728
+msgid "llms.txt 发现链接"
+msgstr ""
+
+#: inc/admin/settings.php:728
+msgid "输出 llms.txt 发现链接，便于大模型理解站点。"
+msgstr ""
+
+#: inc/admin/settings.php:729
+msgid "去除 /category/ 前缀"
+msgstr ""
+
+#: inc/admin/settings.php:729
+msgid "分类链接不再带 /category/ 前缀；开启前确认固定链接规则不含分类名。"
+msgstr ""
+
+#: inc/admin/settings.php:731
+msgid "站点地图排除文章 ID"
+msgstr ""
+
+#: inc/admin/settings.php:733
+msgid ""
+"指定文章不进 XML 站点地图（逗号 / 换行分隔）。noindex 只挡搜索结果、管不住站"
+"点地图；非插件目录读不到此设置，可改挂 jinyu_sitemap_exclude_ids 过滤器。"
+msgstr ""
+
+#: inc/admin/settings.php:735
+msgid "薄归档页保留分类项 ID"
+msgstr ""
+
+#: inc/admin/settings.php:737
+msgid "承担导航枢纽价值的分类项 ID（逗号分隔），始终保留索引。"
+msgstr ""
+
+#: inc/admin/settings.php:739
+msgid "正文容器选择器（speakable 用）"
+msgstr ""
+
+#: inc/admin/settings.php:741
+msgid ""
+"主题正文容器的 CSS 选择器（不带点，多个空格分隔）。留空则不输出 speakable。"
+msgstr ""
+
+#: inc/admin/settings.php:743
+msgid "朗读最短正文长度"
+msgstr ""
+
+#: inc/admin/settings.php:745
+msgid "字数少于此值的文章不输出 speakable。0 表示不做长度限制。"
+msgstr ""
+
+#: inc/admin/settings.php:752
+msgid "分享素材"
+msgstr ""
+
+#: inc/admin/settings.php:752
+msgid "og:image / og:site_name / card"
+msgstr ""
+
+#: inc/admin/settings.php:757
+msgid "1200×630"
+msgstr ""
+
+#: inc/admin/settings.php:760
+msgid "默认分享图 (og:image)"
+msgstr ""
+
+#: inc/admin/settings.php:764
+msgid "从媒体库选择"
+msgstr ""
+
+#: inc/admin/settings.php:765 inc/admin/settings.php:1185
+msgid "清除"
+msgstr ""
+
+#: inc/admin/settings.php:766
+msgid "建议 1200×630（微信 / 微博大图卡片比例）"
+msgstr ""
+
+#: inc/admin/settings.php:770
+msgid "图片替代文本 (og:image:alt)"
+msgstr ""
+
+#: inc/admin/settings.php:771
+msgid "留空自动用文章标题 / 站点名称"
+msgstr ""
+
+#: inc/admin/settings.php:772
+msgid "图片被读屏软件朗读的文本，微博 / X 等平台改版后也会取用；留空自动兜底。"
+msgstr ""
+
+#: inc/admin/settings.php:775
+msgid "站点名称 (og:site_name)"
+msgstr ""
+
+#: inc/admin/settings.php:778
+msgid "Facebook App ID (fb:app_id)"
+msgstr ""
+
+#: inc/admin/settings.php:779 inc/admin/settings.php:786
+msgid "可留空"
+msgstr ""
+
+#: inc/admin/settings.php:780
+msgid ""
+"Meta 开发者后台的 App ID，用于社区卡片调试与数据归属；不做海外分发可留空。"
+msgstr ""
+
+#: inc/admin/settings.php:782
+msgid "Twitter 站点账号 (twitter:site)"
+msgstr ""
+
+#: inc/admin/settings.php:785
+msgid "Twitter 作者账号 (twitter:creator)"
+msgstr ""
+
+#: inc/admin/settings.php:787
+msgid "只填账号名即可，插件自动补 @；随「Twitter 卡片」开关一起输出。"
+msgstr ""
+
+#: inc/admin/settings.php:792
+msgid "文章时效标签 (article:*)"
+msgstr ""
+
+#: inc/admin/settings.php:793
+msgid ""
+"为文章页补充 article:published_time / modified_time / author / section / tag "
+"与 og:updated_time，供 Facebook / LinkedIn / 聚合器识别发布时间与栏目。"
+msgstr ""
+
+#: inc/admin/settings.php:800
+msgid "全站 SEO 默认值"
+msgstr ""
+
+#: inc/admin/settings.php:800
+msgid "留空则自动兜底"
+msgstr ""
+
+#: inc/admin/settings.php:802
+msgid "全站默认描述 (meta description)"
+msgstr ""
+
+#: inc/admin/settings.php:804
+msgid "留空时：首页用站点副标题、文章用摘要 / 正文首段兜底。"
+msgstr ""
+
+#: inc/admin/settings.php:806
+msgid "全站默认关键词 (meta keywords)"
+msgstr ""
+
+#: inc/admin/settings.php:808
+msgid ""
+"英文逗号分隔；文章 / 分类页会覆盖此项。中文引擎（百度 / 360 等）仍会参考。"
+msgstr ""
+
+#: inc/admin/settings.php:814
+msgid "站点验证（搜索引擎归属）"
+msgstr ""
+
+#: inc/admin/settings.php:816
+msgid "使用说明"
+msgstr ""
+
+#: inc/admin/settings.php:820
+msgid ""
+"到站长平台（Bing / Google / 百度等）添加站点，验证方式选择「HTML 元标签」。"
+msgstr ""
+
+#: inc/admin/settings.php:821
+msgid ""
+"平台给出形如 <meta name=\"msvalidate.01\" content=\"XXXX\" /> 的标签，只需复"
+"制 content=\" 引号里的那串码（不含标签和引号）。"
+msgstr ""
+
+#: inc/admin/settings.php:822
+msgid "粘贴到下方对应输入框并保存，回到平台点「验证」即可。"
+msgstr ""
+
+#: inc/admin/settings.php:824
+msgid ""
+"找码示例：Bing 为站点下拉 → ⋯ → 「验证代码」，或左侧「配置我的网站 → 验证所有"
+"权」；Google 在 Search Console 的「设置 → 所有权验证」。"
+msgstr ""
+
+#: inc/admin/settings.php:829
+msgid "Google 验证代码"
+msgstr ""
+
+#: inc/admin/settings.php:832
+msgid "Bing 验证代码"
+msgstr ""
+
+#: inc/admin/settings.php:835
+msgid "百度验证代码"
+msgstr ""
+
+#: inc/admin/settings.php:838
+msgid "Yandex 验证代码"
+msgstr ""
+
+#: inc/admin/settings.php:841
+msgid "360 搜索验证代码"
+msgstr ""
+
+#: inc/admin/settings.php:844
+msgid ""
+"填入各站长平台提供的验证元标签内容。已安装 Yoast / Rank Math 等 SEO 插件时本"
+"项自动让位。"
+msgstr ""
+
+#: inc/admin/settings.php:850
+msgid "图片 SEO"
+msgstr ""
+
+#: inc/admin/settings.php:854
+msgid "图片缺失 alt 自动补全"
+msgstr ""
+
+#: inc/admin/settings.php:855
+msgid ""
+"正文里完全没有 alt 的站内图片，自动按附件标题 / 文件名补 alt，改善 SEO 与无障"
+"碍。"
+msgstr ""
+
+#: inc/admin/settings.php:859
+msgid "图片尺寸自动补齐（改善 CLS）"
+msgstr ""
+
+#: inc/admin/settings.php:860
+msgid ""
+"正文里缺 width/height 的站内图片，自动按媒体库真实尺寸补齐，浏览器可提前占"
+"位，减少页面加载时的布局跳动（CLS）。"
+msgstr ""
+
+#: inc/admin/settings.php:866
+msgid "结构化数据 (JSON-LD)"
+msgstr ""
+
+#: inc/admin/settings.php:866
+msgid "默认开启"
+msgstr ""
+
+#: inc/admin/settings.php:870
+msgid "启用结构化数据 JSON-LD"
+msgstr ""
+
+#: inc/admin/settings.php:871
+msgid ""
+"输出 WebSite / Article / FAQ / HowTo 等结构化数据，提升搜索富摘要与 AI（GEO）"
+"可发现性。"
+msgstr ""
+
+#: inc/admin/settings.php:874
+msgid "组织 Logo 地址"
+msgstr ""
+
+#: inc/admin/settings.php:875
+msgid ""
+"填 Logo 图片绝对地址（建议 600×60 以上）。留空则依次回退「主题自定义 Logo」与"
+"「站点图标」，三者皆空则不输出，避免出现空的 logo 字段。"
+msgstr ""
+
+#: inc/admin/settings.php:878
+msgid "Logo URL"
+msgstr ""
+
+#: inc/admin/settings.php:883
+msgid "作者身份档案（每行一个 URL）"
+msgstr ""
+
+#: inc/admin/settings.php:888
+msgid "作者 sameAs 填写说明"
+msgstr ""
+
+#: inc/admin/settings.php:889
+msgid ""
+"这里填作者本人的站外身份页（GitHub / 知乎 / X 等）。指向本站自己的 URL 会被自"
+"动剔除——人与站同形，搜索与 AI 分不清作者和组织，等于白填。"
+msgstr ""
+
+#: inc/admin/settings.php:897
+msgid "分享预览"
+msgstr ""
+
+#: inc/admin/settings.php:897
+msgid "随输入实时联动"
+msgstr ""
+
+#: inc/admin/settings.php:903
+msgid "未设置分享图"
+msgstr ""
+
+#: inc/admin/settings.php:903
+msgid "将回退站点 Logo"
+msgstr ""
+
+#: inc/admin/settings.php:907
+msgid "站点副标题为空，建议在「设置 → 常规」填写，或在上方填全站默认描述。"
+msgstr ""
+
+#: inc/admin/settings.php:912
+msgid ""
+"文章页卡片由文章封面与标题自动生成，无需在此配置；此处预览的是首页 / 归档页共"
+"用的兜底卡片。"
+msgstr ""
+
+#: inc/admin/settings.php:913
+msgid "当前输出的标签"
+msgstr ""
+
+#: inc/admin/settings.php:919
+msgid "● 蓝色 = 已输出　○ 灰色 = 未配置（可留空，不影响卡片生成）"
+msgstr ""
+
+#: inc/admin/settings.php:926
+msgid "爬虫放行清单"
+msgstr ""
+
+#: inc/admin/settings.php:926 inc/fun/cron-manager.php:247
+msgid "说明"
+msgstr ""
+
+#: inc/admin/settings.php:926
+msgid ""
+"本清单只读，用于随时核对站点根目录的 robots.txt 与实际内容是否一致，插件侧不"
+"接管输出。"
+msgstr ""
+
+#: inc/admin/settings.php:926
+msgid ""
+"本站的 robots.txt 由站点根目录的文件提供（而非插件生成）。注意两种部署的差别"
+"——根目录有静态 robots.txt 时，Web 服务器直接返回它、插件改不动；若站点由 "
+"WordPress 生成 robots.txt，规则同样不由本插件输出。"
+msgstr ""
+
+#: inc/admin/settings.php:926
+msgid ""
+"迁移或重建站点时，请照此内容原样写回新的 robots.txt，否则 AI 与社交抓取会被拦"
+"截。"
+msgstr ""
+
+#: inc/admin/settings.php:960
+#, php-format
+msgid "%1$d 个品牌 · %2$d 条 UA"
+msgstr ""
+
+#: inc/admin/settings.php:984
+#, php-format
+msgid "%1$s 次到访 · 最近 %2$s"
+msgstr ""
+
+#: inc/admin/settings.php:988
+msgid "近期无到访"
+msgstr ""
+
+#: inc/admin/settings.php:1000
+msgid "AI 爬虫到访统计"
+msgstr ""
+
+#: inc/admin/settings.php:1000
+msgid ""
+"按上方清单的 UA 识别并聚合计数——只记品牌、次数与最后到访时间，不记录 IP 与完"
+"整访问日志；明细显示在上方各品牌行内。清零后从下一次到访重新累计。"
+msgstr ""
+
+#: inc/admin/settings.php:1010
+#, php-format
+msgid "已记录 %1$d 个品牌、共 %2$s 次到访。"
+msgstr ""
+
+#: inc/admin/settings.php:1013
+msgid "清零统计"
+msgstr ""
+
+#: inc/admin/settings.php:1016
+msgid "暂无记录——AI 爬虫到访后，计数会出现在上方对应品牌行内。"
+msgstr ""
+
+#: inc/admin/settings.php:1026
+msgid "SEO 诊断"
+msgstr ""
+
+#: inc/admin/settings.php:1026
+msgid "只读诊断，不改数据"
+msgstr ""
+
+#: inc/admin/settings.php:1029 inc/admin/settings.php:1250
+msgid "体检中…"
+msgstr ""
+
+#: inc/admin/settings.php:1029
+msgid "图片 SEO 体检"
+msgstr ""
+
+#: inc/admin/settings.php:1029
+msgid "扫描全站正文，统计缺 alt / 缺尺寸的图片分布，对症补内容。"
+msgstr ""
+
+#: inc/admin/settings.php:1033
+msgid "诊断中…"
+msgstr ""
+
+#: inc/admin/settings.php:1033
+msgid "内容 SEO 诊断"
+msgstr ""
+
+#: inc/admin/settings.php:1033
+msgid ""
+"找出标题过短（&lt;15 字）与摘要过短（&lt;60 字）的已发布文章，对症补写内容；"
+"对应 Bing 报告的「标题过短 / 描述过短」。"
+msgstr ""
+
+#: inc/admin/settings.php:1046
+msgid "内容增强"
+msgstr ""
+
+#: inc/admin/settings.php:1047
+msgid "自动内链、主动推送与 AI 分享海报，提升内链权重、收录速度与传播体验。"
+msgstr ""
+
+#: inc/admin/settings.php:1050
+msgid "自动化"
+msgstr ""
+
+#: inc/admin/settings.php:1050
+msgid "默认关闭，按需开启"
+msgstr ""
+
+#: inc/admin/settings.php:1054
+msgid "自动内链"
+msgstr ""
+
+#: inc/admin/settings.php:1055
+msgid "自动为文章关键词添加内链，强化站内权重传递。"
+msgstr ""
+
+#: inc/admin/settings.php:1056
+msgid "单篇上限"
+msgstr ""
+
+#: inc/admin/settings.php:1062
+msgid "IndexNow 推送"
+msgstr ""
+
+#: inc/admin/settings.php:1063
+msgid "发布 / 更新文章时向 IndexNow 提交 URL，加速收录。"
+msgstr ""
+
+#: inc/admin/settings.php:1069
+msgid "IndexNow 密钥"
+msgstr ""
+
+#: inc/admin/settings.php:1069
+msgid "自动生成，无需手动配置"
+msgstr ""
+
+#: inc/admin/settings.php:1073 inc/fun/short-code.php:277
+#: inc/fun/social-login/settings.php:222
+msgid "复制"
+msgstr ""
+
+#: inc/admin/settings.php:1075
+msgid "验证文件位于站点根目录；把此地址加入 Bing 等平台后即可主动推送："
+msgstr ""
+
+#: inc/admin/settings.php:1080
+msgid "百度主动推送"
+msgstr ""
+
+#: inc/admin/settings.php:1082
+msgid "百度主动推送接口"
+msgstr ""
+
+#: inc/admin/settings.php:1084
+msgid "百度搜索资源平台「主动推送」接口地址（含 token）。留空则不推送。"
+msgstr ""
+
+#: inc/admin/settings.php:1090
+msgid "AI 分享海报"
+msgstr ""
+
+#: inc/admin/settings.php:1092
+msgid "AI 海报主色"
+msgstr ""
+
+#: inc/admin/settings.php:1096
+msgid "AI 生成分享海报时的主色调。"
+msgstr ""
+
+#: inc/admin/settings.php:1103 inc/fun/bulk-push.php:32
+#: inc/fun/bulk-push.php:39
+msgid "全量补推"
+msgstr ""
+
+#: inc/admin/settings.php:1103
+msgid "提交存量已发布内容"
+msgstr ""
+
+#: inc/admin/settings.php:1107
+msgid "推送中…"
+msgstr ""
+
+#: inc/admin/settings.php:1107
+msgid "提交全部已发布文章"
+msgstr ""
+
+#: inc/admin/settings.php:1107
+msgid ""
+"把历史文章/页面批量提交给已启用的 IndexNow 与百度，弥补仅发布时推送的收录盲"
+"区。"
+msgstr ""
+
+#: inc/admin/settings.php:1114
+msgid "推送记录"
+msgstr ""
+
+#: inc/admin/settings.php:1114
+msgid "最近 8 条"
+msgstr ""
+
+#: inc/admin/settings.php:1118
+msgid "刷新中…"
+msgstr ""
+
+#: inc/admin/settings.php:1118 inc/admin/settings.php:1162
+msgid "刷新"
+msgstr ""
+
+#: inc/admin/settings.php:1119 inc/fun/perf-center.php:2646
+msgid "清空中…"
+msgstr ""
+
+#: inc/admin/settings.php:1119
+msgid "清空记录"
+msgstr ""
+
+#: inc/admin/settings.php:1120
+msgid ""
+"单篇发布 / 更新的推送是非阻塞请求，读不到接口响应，记为「已提交（异步）」；全"
+"量补推为阻塞请求，记录真实成功 / 失败与响应码。"
+msgstr ""
+
+#: inc/admin/settings.php:1128
+msgid "前台加速"
+msgstr ""
+
+#: inc/admin/settings.php:1129
+msgid ""
+"配置整页缓存、预取加速与数据库维护。服务器缓存（OPcache / Memcached）看板与清"
+"理请前往「性能中心」。"
+msgstr ""
+
+#: inc/admin/settings.php:1138
+msgid "天"
+msgstr ""
+
+#: inc/admin/settings.php:1138
+msgid "小时"
+msgstr ""
+
+#: inc/admin/settings.php:1146
+msgid "服务器日志"
+msgstr ""
+
+#: inc/admin/settings.php:1147
+msgid "插件自采"
+msgstr ""
+
+#: inc/admin/settings.php:1153
+msgid "缓存状态"
+msgstr ""
+
+#: inc/admin/settings.php:1155
+msgid "边缘模式 · 服务器接管"
+msgstr ""
+
+#: inc/admin/settings.php:1160
+msgid "重置统计"
+msgstr ""
+
+#: inc/admin/settings.php:1166 inc/fun/perf-center.php:1670
+#: inc/fun/perf-center.php:1704
+msgid "命中率"
+msgstr ""
+
+#: inc/admin/settings.php:1166 inc/admin/settings.php:1167
+#: inc/admin/settings.php:1168 inc/fun/social-login/settings.php:281
+#: inc/fun/social-login/settings.php:305
+msgid "—"
+msgstr ""
+
+#: inc/admin/settings.php:1167
+msgid "缓存文件"
+msgstr ""
+
+#: inc/admin/settings.php:1168
+msgid "占用空间"
+msgstr ""
+
+#: inc/admin/settings.php:1169
+msgid "最近清除"
+msgstr ""
+
+#: inc/admin/settings.php:1169 inc/admin/settings.php:1302
+msgid "前"
+msgstr ""
+
+#: inc/admin/settings.php:1169 inc/fun/perf-center.php:1688
+msgid "从未"
+msgstr ""
+
+#: inc/admin/settings.php:1170
+msgid "自定义时长文章"
+msgstr ""
+
+#: inc/admin/settings.php:1171
+msgid "全局有效期"
+msgstr ""
+
+#: inc/admin/settings.php:1175
+msgid "输入文章 / 页面 URL 查询缓存状态"
+msgstr ""
+
+#: inc/admin/settings.php:1176
+msgid "查询"
+msgstr ""
+
+#: inc/admin/settings.php:1180
+msgid "清首页"
+msgstr ""
+
+#: inc/admin/settings.php:1181
+msgid "清全站"
+msgstr ""
+
+#: inc/admin/settings.php:1184
+msgid "指定 URL"
+msgstr ""
+
+#: inc/admin/settings.php:1192
+msgid ""
+"命中率为近一个采集周期（约 5 分钟）的实时估算；「清全站」只清缓存文件，不影响"
+"文章级缓存时长设置。"
+msgstr ""
+
+#: inc/admin/settings.php:1196
+#, php-format
+msgid ""
+"「命中率」来自服务器缓存统计（已覆盖 %s 次请求），自启用起累计，可点「重置统"
+"计」让其后新请求重新累计（不影响缓存本身）；「缓存文件 / 占用空间」由服务器持"
+"有，插件读不到，故显示「—」。清首页 / 指定 URL / 查询在 Nginx 下按 URL 精确生"
+"效，Apache 下清除退化为全量刷新、查询不可用。"
+msgstr ""
+
+#: inc/admin/settings.php:1200
+msgid ""
+"边缘缓存由服务器（Nginx / Apache）持有，「缓存文件 / 占用空间」插件读不到，故"
+"显示「—」；命中率需按下方「边缘模式配置」片段里的「命中统计日志」段在服务器启"
+"用后才会出现（Nginx 是第 4) 段、Apache 是末尾那段；旧站点请重新粘贴该片段以补"
+"上）。清首页 / 指定 URL / 查询在 Nginx 下按 URL 精确生效，Apache 下清除退化为"
+"全量刷新、查询不可用。"
+msgstr ""
+
+#: inc/admin/settings.php:1208
+msgid "预取加速 (Speculation Rules)"
+msgstr ""
+
+#: inc/admin/settings.php:1208 inc/admin/settings.php:1258
+#: inc/fun/perf-center.php:2761
+msgid "默认关闭"
+msgstr ""
+
+#: inc/admin/settings.php:1212
+msgid "启用 Speculation Rules"
+msgstr ""
+
+#: inc/admin/settings.php:1213
+msgid ""
+"WP 6.8+ 原生：对站内链接预取 / 预渲染，降低跳转体感延迟。需 WordPress 6.8 及"
+"以上。"
+msgstr ""
+
+#: inc/admin/settings.php:1215
+msgid "模式"
+msgstr ""
+
+#: inc/admin/settings.php:1217
+msgid "预取 Prefetch（保守，推荐）"
+msgstr ""
+
+#: inc/admin/settings.php:1218
+msgid "预渲染 Prerender（更快，更耗资源）"
+msgstr ""
+
+#: inc/admin/settings.php:1221
+msgid "急切度"
+msgstr ""
+
+#: inc/admin/settings.php:1223
+msgid "保守 Conservative"
+msgstr ""
+
+#: inc/admin/settings.php:1224
+msgid "适中 Moderate"
+msgstr ""
+
+#: inc/admin/settings.php:1225
+msgid "激进 Eager"
+msgstr ""
+
+#: inc/admin/settings.php:1227
+msgid "控制预取 / 预渲染触发时机；保守最安全，激进体感最快。"
+msgstr ""
+
+#: inc/admin/settings.php:1232
+msgid "数据库优化"
+msgstr ""
+
+#: inc/admin/settings.php:1232
+msgid "一次性维护工具"
+msgstr ""
+
+#: inc/admin/settings.php:1235 inc/fun/perf-center.php:2561
+msgid "优化中…"
+msgstr ""
+
+#: inc/admin/settings.php:1235
+msgid "立即优化"
+msgstr ""
+
+#: inc/admin/settings.php:1236
+msgid ""
+"清理文章修订版本、自动草稿、垃圾评论、孤立元数据与过期瞬态，并优化数据表；不"
+"影响正常文章 / 评论 / 用户。"
+msgstr ""
+
+#: inc/admin/settings.php:1239 inc/admin/settings.php:1505
+msgid "扫描中…"
+msgstr ""
+
+#: inc/admin/settings.php:1239
+msgid "扫描 Autoload 体积"
+msgstr ""
+
+#: inc/admin/settings.php:1240
+msgid ""
+"找出超过 128KB 的自动加载选项并改为按需加载（autoload=no），降低每次请求的内"
+"存与冷启动开销。核心必需选项受保护，单个选项可随时恢复。"
+msgstr ""
+
+#: inc/admin/settings.php:1246
+msgid "传输体检"
+msgstr ""
+
+#: inc/admin/settings.php:1246
+msgid "服务器 / CDN 层"
+msgstr ""
+
+#: inc/admin/settings.php:1250
+msgid "立即体检"
+msgstr ""
+
+#: inc/admin/settings.php:1251
+#, php-format
+msgid "上次 %s"
+msgstr ""
+
+#: inc/admin/settings.php:1253
+msgid ""
+"压缩、静态资源缓存、HTML 缓存头与 HTTP/3 都由服务器或 CDN 决定，站内配置改不"
+"到这一层。这里只做检测并指出该改哪一侧（nginx 配置或 CDN 控制台）；结果缓存 "
+"10 分钟，点一次才发两个请求。"
+msgstr ""
+
+#: inc/admin/settings.php:1262
+msgid "启用整页缓存"
+msgstr ""
+
+#: inc/admin/settings.php:1263
+msgid "为未登录访客缓存整页 HTML，显著提升匿名访问性能。"
+msgstr ""
+
+#: inc/admin/settings.php:1266
+msgid "缓存模式"
+msgstr ""
+
+#: inc/admin/settings.php:1272
+msgid "简单模式"
+msgstr ""
+
+#: inc/admin/settings.php:1272 inc/admin/settings.php:1281
+msgid "当前模式"
+msgstr ""
+
+#: inc/admin/settings.php:1273
+msgid "零服务器配置，插件自管磁盘缓存，全平台通用。"
+msgstr ""
+
+#: inc/admin/settings.php:1281
+msgid "边缘模式"
+msgstr ""
+
+#: inc/admin/settings.php:1282
+msgid ""
+"由 Nginx/Apache 在 PHP 之前缓存，支持过期先吐旧页（SWR），更快但需手动粘贴配"
+"置。"
+msgstr ""
+
+#: inc/admin/settings.php:1296
+#, php-format
+msgid ""
+"边缘模式已启用（%1$s）：缓存由 Web 服务器写入下方「边缘缓存目录」字段所指定的"
+"路径（插件自身不写盘）。复制下方配置片段粘贴到服务器即可；保存设置会触发一次"
+"全量刷新。"
+msgstr ""
+
+#: inc/admin/settings.php:1302 inc/fun/transport-check.php:333
+msgid "刚刚"
+msgstr ""
+
+#: inc/admin/settings.php:1308
+#, php-format
+msgid "缓存目录就绪：%1$s 个缓存文件，最近写入 %2$s。"
+msgstr ""
+
+#: inc/admin/settings.php:1317 inc/fun/page-cache.php:1027
+msgid "整页缓存未生效"
+msgstr ""
+
+#: inc/admin/settings.php:1328
+msgid "缓存有效期"
+msgstr ""
+
+#: inc/admin/settings.php:1344
+msgid ""
+"范围 60 秒 ～ 30 天。发文或改文章会自动清缓存，长缓存不等于访客看到旧内容；默"
+"认 1 小时较稳妥。"
+msgstr ""
+
+#: inc/admin/settings.php:1347
+msgid "例外规则"
+msgstr ""
+
+#: inc/admin/settings.php:1349
+msgid "不缓存的路径"
+msgstr ""
+
+#: inc/admin/settings.php:1351
+msgid ""
+"每行一条 URI 路径，命中即不读也不写缓存。支持目录前缀（/go 命中 /go/123）与 "
+"* 通配；# 开头为注释。"
+msgstr ""
+
+#: inc/admin/settings.php:1355
+msgid "忽略的参数（提升命中率）"
+msgstr ""
+
+#: inc/admin/settings.php:1357
+msgid "不参与缓存 key：同一页面的不同推广参数共用一份缓存。"
+msgstr ""
+
+#: inc/admin/settings.php:1360
+msgid "不缓存的参数"
+msgstr ""
+
+#: inc/admin/settings.php:1362
+msgid "出现任一参数即跳过缓存，用于动态 / 个性化页面。"
+msgstr ""
+
+#: inc/admin/settings.php:1369
+msgid "服务器类型"
+msgstr ""
+
+#: inc/admin/settings.php:1371
+msgid "自动识别"
+msgstr ""
+
+#: inc/admin/settings.php:1372 inc/admin/settings.php:1403
+msgid "Nginx"
+msgstr ""
+
+#: inc/admin/settings.php:1373 inc/admin/settings.php:1404
+msgid "Apache"
+msgstr ""
+
+#: inc/admin/settings.php:1375
+msgid "决定清理缓存时使用的精确/全量策略，以及展示哪段配置。"
+msgstr ""
+
+#: inc/admin/settings.php:1378
+msgid "边缘缓存目录"
+msgstr ""
+
+#: inc/admin/settings.php:1380
+msgid "Nginx/Apache 写入缓存文件的位置，须与下方片段一致且 PHP 进程可写。"
+msgstr ""
+
+#: inc/admin/settings.php:1395
+msgid "边缘模式配置"
+msgstr ""
+
+#: inc/admin/settings.php:1396
+msgid "查看并复制 Nginx / Apache 部署片段"
+msgstr ""
+
+#: inc/admin/settings.php:1406
+msgid "复制片段"
+msgstr ""
+
+#: inc/admin/settings.php:1408
+msgid "分三处粘贴：http 段 / PHP 的 location 内 / server 段"
+msgstr ""
+
+#: inc/admin/settings.php:1409
+msgid "整段放 vhost 配置（含命中统计日志），放 .htaccess 会 500"
+msgstr ""
+
+#: inc/admin/settings.php:1412
+msgid ""
+"切换标签查看对应服务器配置；插件不会自动写入服务器配置，粘贴后保存设置会触发"
+"一次全量刷新。"
+msgstr ""
+
+#: inc/admin/settings.php:1424
+msgid "性能中心"
+msgstr ""
+
+#: inc/admin/settings.php:1427
+msgid ""
+"服务器运行时运维：OPcache / Memcached 实时看板、可逆优化开关、多层缓存清理与"
+"一键优化。整页缓存等前台配置在「前台加速」。"
+msgstr ""
+
+#: inc/admin/settings.php:1433
+msgid "评论与互动"
+msgstr ""
+
+#: inc/admin/settings.php:1434
+msgid "验证码触发策略、垃圾评论过滤与旧文自动关评。"
+msgstr ""
+
+#: inc/admin/settings.php:1437
+msgid "防护策略"
+msgstr ""
+
+#: inc/admin/settings.php:1441
+msgid "智能"
+msgstr ""
+
+#: inc/admin/settings.php:1442
+msgid "始终启用"
+msgstr ""
+
+#: inc/admin/settings.php:1443
+msgid "关闭"
+msgstr ""
+
+#: inc/admin/settings.php:1446
+msgid "智能：失败过多时自动启用；始终：每次均验证；关闭：不验证。"
+msgstr ""
+
+#: inc/admin/settings.php:1448
+msgid "垃圾评论关键词"
+msgstr ""
+
+#: inc/admin/settings.php:1450
+msgid "逗号分隔，命中即判为垃圾评论。"
+msgstr ""
+
+#: inc/admin/settings.php:1454
+msgid "评论频率限制"
+msgstr ""
+
+#: inc/admin/settings.php:1455
+msgid "同一 IP 在设定时间内评论超过上限即判为垃圾，防刷屏。"
+msgstr ""
+
+#: inc/admin/settings.php:1456
+msgid "分钟"
+msgstr ""
+
+#: inc/admin/settings.php:1459
+msgid "条"
+msgstr ""
+
+#: inc/admin/settings.php:1465
+msgid "自动关闭旧文评论"
+msgstr ""
+
+#: inc/admin/settings.php:1466
+msgid "超过设定天数后自动关闭评论，减少垃圾评论入口。"
+msgstr ""
+
+#: inc/admin/settings.php:1467
+msgid "天数"
+msgstr ""
+
+#: inc/admin/settings.php:1475
+msgid "评论邮件通知"
+msgstr ""
+
+#: inc/admin/settings.php:1475
+msgid "经 SMTP 通道发信，可分别开关"
+msgstr ""
+
+#: inc/admin/settings.php:1479
+msgid "回复通知"
+msgstr ""
+
+#: inc/admin/settings.php:1480
+msgid "有人回复评论时，邮件通知父评论作者。"
+msgstr ""
+
+#: inc/admin/settings.php:1484
+msgid "作者通知"
+msgstr ""
+
+#: inc/admin/settings.php:1485
+msgid "文章有新评论时，邮件通知文章作者。"
+msgstr ""
+
+#: inc/admin/settings.php:1489
+msgid "拦截提醒"
+msgstr ""
+
+#: inc/admin/settings.php:1490
+msgid "评论被判为垃圾或待审核时，邮件提醒站长处理（15 分钟内合并为一封）。"
+msgstr ""
+
+#: inc/admin/settings.php:1494
+msgid "审核通过通知"
+msgstr ""
+
+#: inc/admin/settings.php:1495
+msgid "评论由待审 / 垃圾转为已通过时，邮件通知评论者。"
+msgstr ""
+
+#: inc/admin/settings.php:1501
+msgid "历史垃圾评论清理"
+msgstr ""
+
+#: inc/admin/settings.php:1501
+msgid "扫描 + 人工确认后删除，可先备份"
+msgstr ""
+
+#: inc/admin/settings.php:1503
+msgid ""
+"对已批准评论做加权评分（外链数、垃圾词、模板灌水、重复内容、同邮箱多评等），"
+"按风险降序展示疑似项；注册用户与可信邮箱自动排除。勾选确认后再删除，支持先备"
+"份到独立表。"
+msgstr ""
+
+#: inc/admin/settings.php:1505
+msgid "扫描疑似垃圾评论"
+msgstr ""
+
+#: inc/admin/settings.php:1507
+msgid "删除前备份到 wp_comments_cleanup_bak"
+msgstr ""
+
+#: inc/admin/settings.php:1517
+msgid "邮件 SMTP"
+msgstr ""
+
+#: inc/admin/settings.php:1518
+msgid "配置站点发信通道。密码留空表示保留已保存值，不会在保存时被清空。"
+msgstr ""
+
+#: inc/admin/settings.php:1521
+msgid "SMTP 服务"
+msgstr ""
+
+#: inc/admin/settings.php:1521
+msgid "推荐使用 SSL/TLS"
+msgstr ""
+
+#: inc/admin/settings.php:1525
+msgid "接管全站发信"
+msgstr ""
+
+#: inc/admin/settings.php:1526
+msgid ""
+"开启后全站系统邮件（评论回复、找回密码、注册通知等）均走 SMTP。关闭时配置保"
+"留，仅「发送测试邮件」可用，wp_mail 退回服务器默认发信方式。"
+msgstr ""
+
+#: inc/admin/settings.php:1529
+msgid "SMTP 主机"
+msgstr ""
+
+#: inc/admin/settings.php:1532
+msgid "端口"
+msgstr ""
+
+#: inc/admin/settings.php:1535
+msgid "加密方式"
+msgstr ""
+
+#: inc/admin/settings.php:1539
+msgid "不加密"
+msgstr ""
+
+#: inc/admin/settings.php:1542
+msgid "用户名"
+msgstr ""
+
+#: inc/admin/settings.php:1545 inc/fun/short-code.php:409
+msgid "密码"
+msgstr ""
+
+#: inc/admin/settings.php:1546 inc/admin/settings.php:1594
+#: inc/admin/settings.php:1702
+msgid "留空则不修改"
+msgstr ""
+
+#: inc/admin/settings.php:1548
+msgid "发件地址"
+msgstr ""
+
+#: inc/admin/settings.php:1551
+msgid "发件人名称"
+msgstr ""
+
+#: inc/admin/settings.php:1553
+msgid "收件箱里显示的署名，留空使用站点名称。"
+msgstr ""
+
+#: inc/admin/settings.php:1557
+msgid "发送中…"
+msgstr ""
+
+#: inc/admin/settings.php:1557
+msgid "发送测试邮件"
+msgstr ""
+
+#: inc/admin/settings.php:1558
+msgid "收件人为当前登录邮箱；可先于「保存」直接测试刚填的配置。"
+msgstr ""
+
+#: inc/admin/settings.php:1566
+msgid "对象存储 (CDN)"
+msgstr ""
+
+#: inc/admin/settings.php:1567
+msgid ""
+"附件自动上传云端，前台图片经加速域名分发。配置存于插件独立选项，不受主题导"
+"入 / 重置影响。Secret 留空表示保留已保存值。"
+msgstr ""
+
+#: inc/admin/settings.php:1570
+msgid "存储服务"
+msgstr ""
+
+#: inc/admin/settings.php:1570
+msgid "Secret 加密入库"
+msgstr ""
+
+#: inc/admin/settings.php:1572
+msgid "加速域名 (CDN)"
+msgstr ""
+
+#: inc/admin/settings.php:1574
+msgid ""
+"前台附件 URL 重写为「加速域名 + 前缀 + 相对路径」；留空回退本地 uploads。右侧"
+"按钮可即时切换 / 复原。"
+msgstr ""
+
+#: inc/admin/settings.php:1576
+msgid ""
+"当前已暂停 URL 重写（此前点过「复原为本地链接」），域名配置已保留；点「一键替"
+"换为 CDN 链接」即可恢复。"
+msgstr ""
+
+#: inc/admin/settings.php:1580
+msgid "服务商"
+msgstr ""
+
+#: inc/admin/settings.php:1582
+msgid "关闭（图片走本地）"
+msgstr ""
+
+#: inc/admin/settings.php:1583
+msgid "又拍云"
+msgstr ""
+
+#: inc/admin/settings.php:1584
+msgid "S3 兼容（阿里云 OSS / 腾讯云 COS / 七牛 / 华为 OBS）"
+msgstr ""
+
+#: inc/admin/settings.php:1587
+msgid "存储桶 (Bucket)"
+msgstr ""
+
+#: inc/admin/settings.php:1590
+msgid "AccessKey / 操作员账号"
+msgstr ""
+
+#: inc/admin/settings.php:1593
+msgid "Secret / 操作员密码"
+msgstr ""
+
+#: inc/admin/settings.php:1594 inc/admin/settings.php:1702
+msgid "已保存（留空则不修改）"
+msgstr ""
+
+#: inc/admin/settings.php:1596
+msgid "地域 (Region，S3 兼容用)"
+msgstr ""
+
+#: inc/admin/settings.php:1599
+msgid "Endpoint（S3 兼容用）"
+msgstr ""
+
+#: inc/admin/settings.php:1602
+msgid "远程路径前缀"
+msgstr ""
+
+#: inc/admin/settings.php:1604
+msgid "远端 key = 前缀 + uploads 相对路径；加速域名与桶内文件按此一一对应。"
+msgstr ""
+
+#: inc/admin/settings.php:1606
+msgid "排除目录（不同步）"
+msgstr ""
+
+#: inc/admin/settings.php:1608
+msgid ""
+"按目录名排除，使用英文逗号（,）分隔（中文逗号「，」亦可）；命中的目录及其全部"
+"子文件不会被同步（如 cache）。"
+msgstr ""
+
+#: inc/admin/settings.php:1610
+msgid "排除文件后缀（不同步）"
+msgstr ""
+
+#: inc/admin/settings.php:1612
+msgid ""
+"额外排除的后缀（不含点），使用英文逗号（,）分隔；叠加在默认安全黑名单之上，优"
+"先级最高。"
+msgstr ""
+
+#: inc/admin/settings.php:1619
+msgid "自动化与快捷操作"
+msgstr ""
+
+#: inc/admin/settings.php:1619
+msgid "开关随表单保存生效"
+msgstr ""
+
+#: inc/admin/settings.php:1623
+msgid "新附件自动同步云端"
+msgstr ""
+
+#: inc/admin/settings.php:1624
+msgid "上传媒体时自动把原图与全部缩略尺寸推送到存储桶。"
+msgstr ""
+
+#: inc/admin/settings.php:1628
+msgid "推送成功后删除本地原件"
+msgstr ""
+
+#: inc/admin/settings.php:1629
+msgid "节省本地磁盘；请确认桶内文件完整后再开启。"
+msgstr ""
+
+#: inc/admin/settings.php:1633
+msgid "同步文档 / 音视频 / 压缩包等非媒体静态资源"
+msgstr ""
+
+#: inc/admin/settings.php:1634
+msgid ""
+"默认仅同步图片、字体、CSS/JS。勾选后额外同步音视频、办公文档、压缩包、数据文"
+"件等。"
+msgstr ""
+
+#: inc/admin/settings.php:1638
+msgid "连通性自检"
+msgstr ""
+
+#: inc/admin/settings.php:1640
+msgid "测试中…"
+msgstr ""
+
+#: inc/admin/settings.php:1640
+msgid "测试存储连接"
+msgstr ""
+
+#: inc/admin/settings.php:1642
+msgid "上传并删除一个测试文件验证连通性；可直接测试刚填写、尚未保存的配置。"
+msgstr ""
+
+#: inc/admin/settings.php:1646
+msgid "链接切换"
+msgstr ""
+
+#: inc/admin/settings.php:1648
+msgid "CDN 加速中"
+msgstr ""
+
+#: inc/admin/settings.php:1648
+msgid "本地直连"
+msgstr ""
+
+#: inc/admin/settings.php:1651
+msgid "复原为本地链接"
+msgstr ""
+
+#: inc/admin/settings.php:1651
+msgid "一键替换为 CDN 链接"
+msgstr ""
+
+#: inc/admin/settings.php:1653
+msgid ""
+"按「加速域名」当前填写值一键切换全站附件链接（含清缓存）；按钮随状态自动变"
+"换，点击即反向切换，域名配置保留。"
+msgstr ""
+
+#: inc/admin/settings.php:1656
+msgid "批量传输"
+msgstr ""
+
+#: inc/admin/settings.php:1658
+msgid "全量上传到云端"
+msgstr ""
+
+#: inc/admin/settings.php:1658
+msgid ""
+"首次迁移：把整个本地图库一次性搬上云。日常新增附件会自动同步，不建议频繁点"
+"击。"
+msgstr ""
+
+#: inc/admin/settings.php:1659
+msgid "拉回本地"
+msgstr ""
+
+#: inc/admin/settings.php:1665
+msgid ""
+"「全量上传到云端」用于首次把已有本地图库整体迁移上云（一次性）；日常新增附件"
+"已自动同步，个别文件可用「同步指定资源」。整库互传自动分批续跑，关闭页面再进"
+"入自动接着跑，运行中按钮变「停止任务」。"
+msgstr ""
+
+#: inc/admin/settings.php:1668
+msgid "同步指定资源"
+msgstr ""
+
+#: inc/admin/settings.php:1669
+msgid "uploads 相对路径或本站图片 URL，每行一个，如 2026/09/photo.webp"
+msgstr ""
+
+#: inc/admin/settings.php:1671
+msgid "同步所选资源"
+msgstr ""
+
+#: inc/admin/settings.php:1672
+msgid ""
+"并发推上云端（16 线程），可中断续跑；若开启「推送后删本地原件」会同步删除。"
+msgstr ""
+
+#: inc/admin/settings.php:1687
+msgid "微信分享"
+msgstr ""
+
+#: inc/admin/settings.php:1688
+msgid ""
+"接入微信 JS-SDK，让文章 / 页面在微信内转发给好友、分享到朋友圈时显示自定义标"
+"题、描述与缩略图。"
+msgstr ""
+
+#: inc/admin/settings.php:1691
+msgid "分享配置"
+msgstr ""
+
+#: inc/admin/settings.php:1691
+msgid "AppSecret 加密存储"
+msgstr ""
+
+#: inc/admin/settings.php:1695
+msgid "启用微信分享"
+msgstr ""
+
+#: inc/admin/settings.php:1696
+msgid ""
+"开启后前台注入 wx.config 与分享数据；需认证服务号，个人订阅号调用会 "
+"config:fail。"
+msgstr ""
+
+#: inc/admin/settings.php:1698
+msgid "公众号 AppID"
+msgstr ""
+
+#: inc/admin/settings.php:1701
+msgid "公众号 AppSecret"
+msgstr ""
+
+#: inc/admin/settings.php:1706
+msgid "调试模式"
+msgstr ""
+
+#: inc/admin/settings.php:1707
+msgid ""
+"开启后微信内分享时弹窗显示 config 结果，便于排查签名 / 域名问题；正式上线请关"
+"闭。"
+msgstr ""
+
+#: inc/admin/settings.php:1713
+msgid "接入前置条件"
+msgstr ""
+
+#: inc/admin/settings.php:1716
+msgid "账号：必须是「已微信认证的服务号」（个人订阅号无分享接口）。"
+msgstr ""
+
+#: inc/admin/settings.php:1717
+msgid ""
+"JS 接口安全域名：在公众号后台填你自己的域名主域（仅主域，不带 http/www），并"
+"上传验证文件到站点根目录。"
+msgstr ""
+
+#: inc/admin/settings.php:1718
+msgid ""
+"IP 白名单：在公众号后台「基本配置」加入服务器出口 IP，否则获取 access_token "
+"报 40164。"
+msgstr ""
+
+#: inc/admin/settings.php:1719
+msgid ""
+"分享图：直接复用「分享素材」里的 og:image（1200×630），微信好友卡会中心裁成方"
+"形缩略图。"
+msgstr ""
+
+#: inc/admin/settings.php:1727
+msgid "图片水印"
+msgstr ""
+
+#: inc/admin/settings.php:1728
+msgid ""
+"在上传与批量处理时把水印写进图片文件本身（不是 CSS 叠加），另存 / 爬虫都拿不"
+"到无水印原图。原图以 rename 方式留一份 -jywmo 备份，随时可一键还原，磁盘占用"
+"不增加。"
+msgstr ""
+
+#: inc/admin/settings.php:1731
+msgid "水印内容与样式"
+msgstr ""
+
+#: inc/admin/settings.php:1731
+msgid "随表单保存生效"
+msgstr ""
+
+#: inc/admin/settings.php:1736
+msgid "启用图片水印"
+msgstr ""
+
+#: inc/admin/settings.php:1737
+msgid ""
+"总开关。关闭后不再对新图与批量任务生效；已处理的文件需单独执行「一键还原」。"
+msgstr ""
+
+#: inc/admin/settings.php:1741
+msgid "新上传的图片自动打水印"
+msgstr ""
+
+#: inc/admin/settings.php:1742
+msgid "发生在元数据生成阶段，早于对象存储上云，保证云端拿到的也是水印图。"
+msgstr ""
+
+#: inc/admin/settings.php:1745
+msgid "水印位置（九宫格）"
+msgstr ""
+
+#: inc/admin/settings.php:1747
+msgid "水印位置"
+msgstr ""
+
+#: inc/admin/settings.php:1752
+msgid "默认右下角。小图建议居中或右下，避免水印占比过大。"
+msgstr ""
+
+#: inc/admin/settings.php:1758
+msgid "实时预览"
+msgstr ""
+
+#: inc/admin/settings.php:1760
+msgid "水印效果预览"
+msgstr ""
+
+#: inc/admin/settings.php:1765
+msgid "水印文字"
+msgstr ""
+
+#: inc/admin/settings.php:1767
+msgid "留空则改用下方「图片水印」；两者都为空时批量任务会直接跳过。"
+msgstr ""
+
+#: inc/admin/settings.php:1769
+msgid "图片水印（PNG 水印图 URL）"
+msgstr ""
+
+#: inc/admin/settings.php:1771
+msgid "填了就优先用图片水印（带透明通道的 PNG 效果最好），忽略文字。"
+msgstr ""
+
+#: inc/admin/settings.php:1778
+msgid "处理范围与保护"
+msgstr ""
+
+#: inc/admin/settings.php:1778
+msgid "弱机保护，避免 OOM / 超时"
+msgstr ""
+
+#: inc/admin/settings.php:1781
+msgid "水印字号（px）"
+msgstr ""
+
+#: inc/admin/settings.php:1783
+msgid "上方预览即实际效果。图太小时自动缩到短边 18% 以内，不会糊满。"
+msgstr ""
+
+#: inc/admin/settings.php:1785
+msgid "文字颜色"
+msgstr ""
+
+#: inc/admin/settings.php:1787
+msgid "选取颜色"
+msgstr ""
+
+#: inc/admin/settings.php:1788
+msgid "颜色十六进制值"
+msgstr ""
+
+#: inc/admin/settings.php:1790
+msgid ""
+"取色或直接填 #rgb / #RRGGBB，两框双向同步。只作用于文字水印，深色描边保留。"
+msgstr ""
+
+#: inc/admin/settings.php:1792
+msgid "不透明度（%）"
+msgstr ""
+
+#: inc/admin/settings.php:1794
+msgid "越低越淡，压图越轻；建议 50~70。"
+msgstr ""
+
+#: inc/admin/settings.php:1796
+msgid "边距占短边比例"
+msgstr ""
+
+#: inc/admin/settings.php:1799
+msgid "JPEG 输出质量"
+msgstr ""
+
+#: inc/admin/settings.php:1801
+msgid "合成后按此质量重编码，通常比原图略小。"
+msgstr ""
+
+#: inc/admin/settings.php:1803
+msgid "跳过过窄的图（宽度小于）"
+msgstr ""
+
+#: inc/admin/settings.php:1805
+msgid "默认 400px：缩略图类小图不打，省空间也避免糊。"
+msgstr ""
+
+#: inc/admin/settings.php:1807
+msgid "像素上限（百万像素）"
+msgstr ""
+
+#: inc/admin/settings.php:1809
+msgid "超过则跳过，防大图把内存打爆。"
+msgstr ""
+
+#: inc/admin/settings.php:1811
+msgid "文件大小上限（MB）"
+msgstr ""
+
+#: inc/admin/settings.php:1815
+msgid "处理哪些尺寸"
+msgstr ""
+
+#: inc/admin/settings.php:1820
+msgid "缩略图 thumbnail"
+msgstr ""
+
+#: inc/admin/settings.php:1821
+msgid "中等 medium"
+msgstr ""
+
+#: inc/admin/settings.php:1822
+msgid "中大 medium_large"
+msgstr ""
+
+#: inc/admin/settings.php:1823
+msgid "大图 large"
+msgstr ""
+
+#: inc/admin/settings.php:1836
+msgid "原图 full（恒选，不可取消）"
+msgstr ""
+
+#: inc/admin/settings.php:1839
+msgid ""
+"全库批量时只处理这些已存在的尺寸文件；未注册的尺寸不会新建。处理越多占用越"
+"多，thumbnail(150px) 建议不勾选。"
+msgstr ""
+
+#: inc/admin/settings.php:1845
+msgid "批量处理与状态"
+msgstr ""
+
+#: inc/admin/settings.php:1845
+msgid "引擎可用"
+msgstr ""
+
+#: inc/admin/settings.php:1845
+msgid "环境不支持图像处理"
+msgstr ""
+
+#: inc/admin/settings.php:1848
+msgid ""
+"未检测到可用字体：服务器缺少支持中文的字体，中文水印会渲染成方块。英文 / 数字"
+"可用；中文需安装 fonts-wqy-zenhei 或把开源字体放进插件 assets/fonts/。"
+msgstr ""
+
+#: inc/admin/settings.php:1852
+msgid "全库批量"
+msgstr ""
+
+#: inc/admin/settings.php:1854
+msgid "开始加水印"
+msgstr ""
+
+#: inc/admin/settings.php:1854
+msgid "一键加水印"
+msgstr ""
+
+#: inc/admin/settings.php:1855
+msgid "开始还原"
+msgstr ""
+
+#: inc/admin/settings.php:1855
+msgid "一键还原"
+msgstr ""
+
+#: inc/admin/settings.php:1857
+msgid ""
+"只处理「当前配置签名」下尚未处理过的图片（已处理的不重复跑）；「还原」把备份"
+"原图改回原路径。批量改写的是本地文件，改完请到「对象存储」重新推送，云端才会"
+"同步。"
+msgstr ""
+
+#: inc/admin/settings.php:1860
+msgid "并发数"
+msgstr ""
+
+#: inc/admin/settings.php:1865
+msgid "1（串行，最稳）"
+msgstr ""
+
+#: inc/admin/settings.php:1866
+msgid "2"
+msgstr ""
+
+#: inc/admin/settings.php:1867
+msgid "4"
+msgstr ""
+
+#: inc/admin/settings.php:1868
+msgid "8（最快，弱机勿用）"
+msgstr ""
+
+#: inc/admin/settings.php:1875
+msgid ""
+"大于 1 时走多子请求并发，需要站点支持 admin-ajax；改完请先保存设置再启动任"
+"务。"
+msgstr ""
+
+#: inc/admin/settings.php:1878
+msgid "自选附件"
+msgstr ""
+
+#: inc/admin/settings.php:1879
+msgid ""
+"媒体库附件 ID，逗号或空格分隔，可多行。也可以去「媒体库」用批量操作「添加水"
+"印 / 去除水印」，处理完自动跳回本页。"
+msgstr ""
+
+#: inc/admin/settings.php:1881
+msgid "处理所选"
+msgstr ""
+
+#: inc/admin/settings.php:1882
+msgid "还原所选"
+msgstr ""
+
+#: inc/admin/settings.php:1893
+msgid "媒体库图片 —，已处理 —"
+msgstr ""
+
+#: inc/admin/settings.php:1894
+msgid "刷新统计"
+msgstr ""
+
+#: inc/admin/settings.php:1897
+msgid ""
+"图片文件会被真实改写：原图改名为 xxx-jywmo.ext 留在同目录，水印版占原路径，磁"
+"盘占用基本不变。"
+msgstr ""
+
+#: inc/admin/settings.php:1898
+msgid ""
+"修改水印样式后，历史图不会自动重建；点「一键加水印」时签名不匹配的图片会按新"
+"样式重做，绝不会在水印图上叠加。"
+msgstr ""
+
+#: inc/admin/settings.php:1899
+msgid ""
+"GIF / SVG / PDF 不处理；超过像素或体积上限的大图直接跳过（不计入失败）。"
+msgstr ""
+
+#: inc/admin/settings.php:1907
+msgid "配置备份"
+msgstr ""
+
+#: inc/admin/settings.php:1908
+msgid ""
+"把本插件的全部配置导出为 JSON，在另一站点导入复用；也可作为改坏设置前的手存快"
+"照。"
+msgstr ""
+
+#: inc/admin/settings.php:1929
+msgid "新增"
+msgstr ""
+
+#: inc/admin/settings.php:1930
+msgid "覆盖"
+msgstr ""
+
+#: inc/admin/settings.php:1931
+msgid "忽略未知"
+msgstr ""
+
+#: inc/admin/settings.php:1932
+msgid "凭据跳过"
+msgstr ""
+
+#: inc/admin/settings.php:1942
+msgid ""
+"凭据类配置（SMTP 密码 / 微信 AppSecret / 对象存储 Secret / 社交登录密钥）不会"
+"随文件迁移，需在新站点重新填写。"
+msgstr ""
+
+#: inc/admin/settings.php:1951
+msgid "导出配置"
+msgstr ""
+
+#: inc/admin/settings.php:1951
+msgid "不含任何密码与密钥"
+msgstr ""
+
+#: inc/admin/settings.php:1955
+msgid "包含"
+msgstr ""
+
+#: inc/admin/settings.php:1957
+msgid "主设置全部开关与配置项"
+msgstr ""
+
+#: inc/admin/settings.php:1958
+msgid "性能中心优化项"
+msgstr ""
+
+#: inc/admin/settings.php:1959
+msgid "第三方登录（非凭据字段）"
+msgstr ""
+
+#: inc/admin/settings.php:1960
+msgid "IndexNow 验证密钥"
+msgstr ""
+
+#: inc/admin/settings.php:1964
+msgid "剔除"
+msgstr ""
+
+#: inc/admin/settings.php:1966
+msgid "SMTP 密码"
+msgstr ""
+
+#: inc/admin/settings.php:1967
+msgid "微信 AppSecret"
+msgstr ""
+
+#: inc/admin/settings.php:1968
+msgid "对象存储 Secret"
+msgstr ""
+
+#: inc/admin/settings.php:1969
+msgid "社交登录密钥"
+msgstr ""
+
+#: inc/admin/settings.php:1973
+msgid ""
+"剔除的凭据在库内本就是加密密文，跨站迁移后也解不开；导出的 JSON 可直接交给他"
+"人，不含可登录的凭据。"
+msgstr ""
+
+#: inc/admin/settings.php:1976
+msgid ""
+"凭据一并导出（高风险）：勾选后备份将包含 SMTP 密码、微信 AppSecret、对象存储 "
+"Secret、社交登录密钥的加密密文，仅用于本站快照恢复；备份文件请妥善保管，不要"
+"交给他人。"
+msgstr ""
+
+#: inc/admin/settings.php:1983
+msgid "下载 JSON 备份"
+msgstr ""
+
+#: inc/admin/settings.php:1989
+msgid "导入配置"
+msgstr ""
+
+#: inc/admin/settings.php:1989
+msgid "合并覆盖，不清空现有配置"
+msgstr ""
+
+#: inc/admin/settings.php:1991
+msgid "点击选择或拖入备份 JSON 文件"
+msgstr ""
+
+#: inc/admin/settings.php:1993
+msgid "拖入备份文件，或 <b>点击选择</b>"
+msgstr ""
+
+#: inc/admin/settings.php:1994
+msgid "支持 .json（本插件导出的备份文件）"
+msgstr ""
+
+#: inc/admin/settings.php:2001
+msgid "移除已选文件"
+msgstr ""
+
+#: inc/admin/settings.php:2004
+msgid "高级：直接粘贴 JSON"
+msgstr ""
+
+#: inc/admin/settings.php:2009
+msgid ""
+"我已确认：导入会用备份文件里的同名配置项覆盖当前设置，未出现的配置保持现状。"
+msgstr ""
+
+#: inc/admin/settings.php:2012
+msgid "导入并覆盖同名配置"
+msgstr ""
+
+#: inc/admin/settings.php:2027
+msgid "有未保存的更改"
+msgstr ""
+
+#: inc/admin/settings.php:2031
+msgid "放弃更改"
+msgstr ""
+
+#: inc/admin/settings.php:2032 inc/fun/perf-center.php:2606
+msgid "保存中…"
+msgstr ""
+
+#: inc/admin/settings.php:2032
+msgid "保存"
+msgstr ""
+
+#: inc/ajax/media-batch.php:197
+#, php-format
+msgid "已处理 %1$d/%2$d，失败 %3$d"
+msgstr ""
+
+#: inc/ajax/media-batch.php:316
+msgid "水印未启用或当前环境不支持图像处理"
+msgstr ""
+
+#: inc/ajax/media-batch.php:319
+msgid "请求过于频繁，请稍后再试"
+msgstr ""
+
+#: inc/ajax/media-batch.php:330
+msgid "未解析到任何有效的附件 ID，请检查填写的数字"
+msgstr ""
+
+#: inc/ajax/media-batch.php:407
+msgid "添加水印"
+msgstr ""
+
+#: inc/ajax/media-batch.php:408
+msgid "去除水印（还原原图）"
+msgstr ""
+
+#: inc/ajax/poster.php:24
+msgid "海报生成请求已失效，请刷新页面后重试。"
+msgstr ""
+
+#: inc/ext/moments.php:23
+msgid "时光圈"
+msgstr ""
+
+#: inc/ext/moments.php:31 inc/ext/moments.php:33
+#, php-format
+msgid "发表%s"
+msgstr ""
+
+#: inc/ext/moments.php:35
+#, php-format
+msgid "编辑%s"
+msgstr ""
+
+#: inc/ext/moments.php:37
+#, php-format
+msgid "新%s"
+msgstr ""
+
+#: inc/ext/moments.php:39
+#, php-format
+msgid "查看%s"
+msgstr ""
+
+#: inc/ext/moments.php:41
+#, php-format
+msgid "搜索%s"
+msgstr ""
+
+#: inc/ext/moments.php:43
+#, php-format
+msgid "暂无%s"
+msgstr ""
+
+#: inc/ext/moments.php:45
+#, php-format
+msgid "没有已遗弃的%s"
+msgstr ""
+
+#: inc/fun/ai-crawl-stats.php:208
+msgid "AI 爬虫统计已清零"
+msgstr ""
+
+#: inc/fun/anti-spam.php:11
+msgid "Leave this field empty"
+msgstr ""
+
+#: inc/fun/baidu-push.php:58 inc/fun/indexnow.php:140
+msgid "发布推送"
+msgstr ""
+
+#: inc/fun/bulk-push.php:35
+#, php-format
+msgid "接口返回 %s"
+msgstr ""
+
+#: inc/fun/captcha.php:135
+msgid "验证码不正确或已过期"
+msgstr ""
+
+#: inc/fun/captcha.php:153
+msgid "验证码图片，看不清可点击刷新"
+msgstr ""
+
+#: inc/fun/captcha.php:155 inc/fun/captcha.php:156
+msgid "刷新验证码"
+msgstr ""
+
+#: inc/fun/captcha.php:160
+msgid "验证码"
+msgstr ""
+
+#: inc/fun/category-seo.php:15 inc/fun/category-seo.php:36
+msgid "SEO 关键字"
+msgstr ""
+
+#: inc/fun/category-seo.php:16 inc/fun/category-seo.php:37
+#: inc/fun/post-seo.php:59
+msgid "SEO 描述"
+msgstr ""
+
+#: inc/fun/category-seo.php:17 inc/fun/category-seo.php:38
+msgid "多个关键字使用英文逗号分隔，留空则默认显示分类名称"
+msgstr ""
+
+#: inc/fun/category-seo.php:18 inc/fun/category-seo.php:39
+msgid "留空则默认显示分类描述"
+msgstr ""
+
+#: inc/fun/comment-cleanup.php:160
+msgid "作者主页含站外链接"
+msgstr ""
+
+#: inc/fun/comment-cleanup.php:183
+#, php-format
+msgid "正文含 %d 个站外链接"
+msgstr ""
+
+#: inc/fun/comment-cleanup.php:203
+#, php-format
+msgid "命中垃圾词：%s"
+msgstr ""
+
+#: inc/fun/comment-cleanup.php:209
+msgid "作者名含链接"
+msgstr ""
+
+#: inc/fun/comment-cleanup.php:213
+msgid "作者名含推广词"
+msgstr ""
+
+#: inc/fun/comment-cleanup.php:220
+msgid "疑似模板化灌水（外文）"
+msgstr ""
+
+#: inc/fun/comment-cleanup.php:230
+#, php-format
+msgid "内容重复出现（疑似批量灌水，%d 条）"
+msgstr ""
+
+#: inc/fun/comment-cleanup.php:237
+#, php-format
+msgid "同一邮箱多次评论（%d 条）"
+msgstr ""
+
+#: inc/fun/comment-cleanup.php:243
+msgid "内容过短且含链接"
+msgstr ""
+
+#: inc/fun/comment-cleanup.php:252
+msgid "非中文内容且含链接"
+msgstr ""
+
+#: inc/fun/comment-cleanup.php:291
+#, php-format
+msgid ""
+"扫描完成：发现 %d 条疑似垃圾评论（已按风险评分降序排列）。请勾选确认后删除。"
+msgstr ""
+
+#: inc/fun/comment-cleanup.php:309
+msgid "未选择任何评论"
+msgstr ""
+
+#: inc/fun/comment-cleanup.php:326
+msgid "未找到可删除的已批准评论。"
+msgstr ""
+
+#: inc/fun/comment-cleanup.php:354
+#, php-format
+msgid ""
+"已备份 %1$d 条并彻底删除 %2$d 条垃圾评论（备份表 %3$s，可经 SQL 恢复）。"
+msgstr ""
+
+#: inc/fun/comment-cleanup.php:356
+#, php-format
+msgid "已彻底删除 %d 条垃圾评论（未备份）。"
+msgstr ""
+
+#: inc/fun/comment-notify.php:84
+msgid "有新的评论回复"
+msgstr ""
+
+#: inc/fun/comment-notify.php:94
+#, php-format
+msgid "你在《%s》下的评论有了新回复"
+msgstr ""
+
+#: inc/fun/comment-notify.php:99
+msgid "查看回复"
+msgstr ""
+
+#: inc/fun/comment-notify.php:111
+#, php-format
+msgid "你的文章《%s》有新评论"
+msgstr ""
+
+#: inc/fun/comment-notify.php:115
+msgid "查看文章"
+msgstr ""
+
+#: inc/fun/comment-notify.php:165
+msgid "（文章已删除）"
+msgstr ""
+
+#: inc/fun/comment-notify.php:169
+#, php-format
+msgid "%1$s 在《%2$s》提交的评论%3$s，请及时处理。"
+msgstr ""
+
+#: inc/fun/comment-notify.php:170
+msgid "访客"
+msgstr ""
+
+#: inc/fun/comment-notify.php:172
+msgid "被判定为垃圾"
+msgstr ""
+
+#: inc/fun/comment-notify.php:172
+msgid "进入待审队列"
+msgstr ""
+
+#: inc/fun/comment-notify.php:179
+#, php-format
+msgid "邮箱 %s"
+msgstr ""
+
+#: inc/fun/comment-notify.php:183
+#, php-format
+msgid "IP %s"
+msgstr ""
+
+#: inc/fun/comment-notify.php:187
+#, php-format
+msgid "另有 %d 条同类评论被合并通知"
+msgstr ""
+
+#: inc/fun/comment-notify.php:195
+msgid "查看垃圾评论"
+msgstr ""
+
+#: inc/fun/comment-notify.php:195
+msgid "前往审核"
+msgstr ""
+
+#: inc/fun/comment-notify.php:200
+msgid "有评论被判为垃圾"
+msgstr ""
+
+#: inc/fun/comment-notify.php:200
+msgid "有评论等待审核"
+msgstr ""
+
+#: inc/fun/comment-notify.php:236
+#, php-format
+msgid "你在《%s》下的评论已通过审核并显示。"
+msgstr ""
+
+#: inc/fun/comment-notify.php:240
+msgid "查看评论"
+msgstr ""
+
+#: inc/fun/comment-notify.php:242
+msgid "你的评论已通过审核"
+msgstr ""
+
+#: inc/fun/cron-manager.php:71
+msgid "定时清理回收站中超过设定天数的文章（设置→媒体→保留回收站天数）。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:72
+msgid "清理超过 7 天未保存的自动草稿（auto-draft）。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:73
+msgid "向 WordPress.org 检查核心是否有新版本（后台更新提示用）。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:74
+msgid "检查已安装插件是否有可用更新。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:75
+msgid "检查已安装主题是否有可用更新。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:76
+msgid "检查 WordPress 核心更新（与版本检查联动）。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:77
+msgid "删除过期的隐私数据导出文件（默认 3 天后）。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:78
+msgid "清理过期的个人数据导出页面与令牌。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:79
+msgid "清理恢复模式（死机保护）过期的退出密钥。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:80
+msgid "清理数据库中已过期的瞬时缓存（transient）。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:81
+msgid "WooCommerce Action Scheduler 处理后台队列任务。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:82
+msgid "WooCommerce 刷新产品查询表（统计/报表用）。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:83
+msgid "Yoast SEO 重建索引表（indexable）。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:84
+msgid "Yoast SEO 抓取首页以评估 SEO 评分。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:85
+msgid "Yoast SEO 批量索引内容。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:100
+msgid "第三方或主题/插件注册的自定义定时任务。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:197
+msgid "计划任务管理器已关闭。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:201
+msgid "当前没有计划中的事件。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:206 inc/fun/warm-up.php:27
+msgid "每小时"
+msgstr ""
+
+#: inc/fun/cron-manager.php:207
+msgid "每日两次"
+msgstr ""
+
+#: inc/fun/cron-manager.php:208 inc/fun/warm-up.php:28
+msgid "每天"
+msgstr ""
+
+#: inc/fun/cron-manager.php:209
+msgid "每周"
+msgstr ""
+
+#: inc/fun/cron-manager.php:210
+msgid "每月"
+msgstr ""
+
+#: inc/fun/cron-manager.php:221
+msgid "单次"
+msgstr ""
+
+#: inc/fun/cron-manager.php:226
+#, php-format
+msgid "每 %d 天"
+msgstr ""
+
+#: inc/fun/cron-manager.php:228
+#, php-format
+msgid "每 %d 小时"
+msgstr ""
+
+#: inc/fun/cron-manager.php:230
+#, php-format
+msgid "每 %d 分钟"
+msgstr ""
+
+#: inc/fun/cron-manager.php:238
+#, php-format
+msgid "%s后"
+msgstr ""
+
+#: inc/fun/cron-manager.php:239
+msgid "即将执行"
+msgstr ""
+
+#: inc/fun/cron-manager.php:244
+msgid "恢复"
+msgstr ""
+
+#: inc/fun/cron-manager.php:244
+msgid "暂停"
+msgstr ""
+
+#: inc/fun/cron-manager.php:257 inc/fun/cron-manager.php:277
+msgid "计划"
+msgstr ""
+
+#: inc/fun/cron-manager.php:259 inc/fun/cron-manager.php:278
+msgid "下次执行"
+msgstr ""
+
+#: inc/fun/cron-manager.php:261 inc/fun/cron-manager.php:279
+msgid "操作"
+msgstr ""
+
+#: inc/fun/cron-manager.php:264
+msgid "运行"
+msgstr ""
+
+#: inc/fun/cron-manager.php:269
+msgid "删除"
+msgstr ""
+
+#: inc/fun/cron-manager.php:276
+msgid "触发回调的钩子名（动作标识），如 wp_version_check。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:276
+msgid "Hook"
+msgstr ""
+
+#: inc/fun/cron-manager.php:277
+msgid "重复周期：daily / hourly 等，或「单次」。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:278
+msgid "该事件下一次预计运行的时间。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:279
+msgid "运行：立即触发一次；暂停：记录钩名拦截后续；删除：移除该时间戳事件。"
+msgstr ""
+
+#: inc/fun/cron-manager.php:301 inc/fun/monitor.php:579
+msgid "安全校验失败"
+msgstr ""
+
+#: inc/fun/cron-manager.php:315 inc/fun/cron-manager.php:343
+#: inc/fun/cron-manager.php:374
+msgid "参数缺失"
+msgstr ""
+
+#: inc/fun/cron-manager.php:332
+#, php-format
+msgid "已触发 %s"
+msgstr ""
+
+#: inc/fun/cron-manager.php:353
+#, php-format
+msgid "已暂停 %s"
+msgstr ""
+
+#: inc/fun/cron-manager.php:357
+#, php-format
+msgid "已恢复 %s"
+msgstr ""
+
+#: inc/fun/cron-manager.php:393
+#, php-format
+msgid "已删除 %s"
+msgstr ""
+
+#: inc/fun/cron-manager.php:405
+msgid "Hook 与间隔为必填"
+msgstr ""
+
+#: inc/fun/cron-manager.php:422
+#, php-format
+msgid "已新增 %s"
+msgstr ""
+
+#: inc/fun/cron-manager.php:432
+msgid "未知操作"
+msgstr ""
+
+#: inc/fun/db-optimize.php:83
+#, php-format
+msgid "数据库优化完成：共清理 %1$d 条冗余记录，优化 %2$d 张表。"
+msgstr ""
+
+#: inc/fun/db-optimize.php:284
+#, php-format
+msgid "Autoload 选项共 %1$d 条、%2$s；其中 %3$d 条超过 128KB。"
+msgstr ""
+
+#: inc/fun/db-optimize.php:307
+msgid "选项名无效"
+msgstr ""
+
+#: inc/fun/db-optimize.php:310
+msgid "该选项受保护（核心必需或高频读取），不可更改。"
+msgstr ""
+
+#: inc/fun/db-optimize.php:324
+msgid "选项不存在或已是自动加载，无需恢复。"
+msgstr ""
+
+#: inc/fun/db-optimize.php:328
+msgid "恢复失败，请重试。"
+msgstr ""
+
+#: inc/fun/db-optimize.php:334
+#, php-format
+msgid "已将 %s 恢复为自动加载（autoload=yes）。"
+msgstr ""
+
+#: inc/fun/db-optimize.php:353
+msgid "选项不存在、已是非 autoload 或未达体积阈值。"
+msgstr ""
+
+#: inc/fun/db-optimize.php:358
+msgid "更新失败，请重试。"
+msgstr ""
+
+#: inc/fun/db-optimize.php:365
+#, php-format
+msgid ""
+"已将 %s 改为按需加载（autoload=no）。若前台出现异常，刷新本页扫描后点「恢复」"
+"可改回。"
+msgstr ""
+
+#: inc/fun/email.php:27
+msgid "无法确定收件人邮箱，请先在个人资料中填写邮箱"
+msgstr ""
+
+#: inc/fun/email.php:70
+msgid "请先在「邮件 SMTP」填写 SMTP 主机并保存，再发送测试邮件。"
+msgstr ""
+
+#: inc/fun/email.php:83
+#, php-format
+msgid "测试邮件已发送至 %s"
+msgstr ""
+
+#: inc/fun/email.php:85
+msgid "发送失败："
+msgstr ""
+
+#: inc/fun/email.php:85
+msgid "请检查 SMTP 主机/端口/账号或服务器发信权限"
+msgstr ""
+
+#: inc/fun/email.php:97
+#, php-format
+msgid "已清理 %d 条缓存"
+msgstr ""
+
+#: inc/fun/ext-slots.php:96
+msgid "No messages"
+msgstr ""
+
+#: inc/fun/ext-slots.php:140
+msgid "第三方账号绑定"
+msgstr ""
+
+#: inc/fun/ext-slots.php:150
+#, php-format
+msgid "确定解除与「%s」的绑定吗？解绑后将无法再使用该平台一键登录。"
+msgstr ""
+
+#: inc/fun/ext-slots.php:156
+msgid "解除绑定"
+msgstr ""
+
+#: inc/fun/ext-slots.php:159
+msgid "去绑定"
+msgstr ""
+
+#: inc/fun/ext-slots.php:164
+msgid "绑定后可使用该平台一键登录，并关联到当前账号。"
+msgstr ""
+
+#: inc/fun/geo-robots.php:249
+msgid "国内 AI"
+msgstr ""
+
+#: inc/fun/geo-robots.php:250
+msgid "海外 AI"
+msgstr ""
+
+#: inc/fun/geo-robots.php:251
+msgid "社交分享"
+msgstr ""
+
+#: inc/fun/monitor.php:476
+#, php-format
+msgid "在线 · HTTP %d"
+msgstr ""
+
+#: inc/fun/monitor.php:477
+msgid "离线："
+msgstr ""
+
+#: inc/fun/monitor.php:481 inc/fun/monitor.php:523
+msgid "正常"
+msgstr ""
+
+#: inc/fun/monitor.php:482
+msgid "异常"
+msgstr ""
+
+#: inc/fun/monitor.php:483
+msgid "未启用"
+msgstr ""
+
+#: inc/fun/monitor.php:488
+#, php-format
+msgid "上次扫描 %s"
+msgstr ""
+
+#: inc/fun/monitor.php:489
+msgid "尚未扫描"
+msgstr ""
+
+#: inc/fun/monitor.php:496
+#, php-format
+msgid "致命 %1$d · 警告 %2$d"
+msgstr ""
+
+#: inc/fun/monitor.php:498
+#, php-format
+msgid "警告 %d 条"
+msgstr ""
+
+#: inc/fun/monitor.php:498
+msgid "无近期错误"
+msgstr ""
+
+#: inc/fun/monitor.php:511
+msgid "即将到期"
+msgstr ""
+
+#: inc/fun/monitor.php:511
+msgid "有效"
+msgstr ""
+
+#: inc/fun/monitor.php:512
+msgid "无法检测"
+msgstr ""
+
+#: inc/fun/monitor.php:517
+#, php-format
+msgid "%1$d 张表 · 自动加载 %2$s"
+msgstr ""
+
+#: inc/fun/monitor.php:523
+msgid "站点存活"
+msgstr ""
+
+#: inc/fun/monitor.php:523
+msgid "离线"
+msgstr ""
+
+#: inc/fun/monitor.php:525
+msgid "文件完整性"
+msgstr ""
+
+#: inc/fun/monitor.php:527
+msgid "PHP 错误"
+msgstr ""
+
+#: inc/fun/monitor.php:530
+msgid "服务器资源"
+msgstr ""
+
+#: inc/fun/monitor.php:530
+#, php-format
+msgid "磁盘 %1$d%% · 内存 %2$d%% · 负载 %3$s"
+msgstr ""
+
+#: inc/fun/monitor.php:532
+msgid "SSL 证书"
+msgstr ""
+
+#: inc/fun/monitor.php:534
+msgid "数据库"
+msgstr ""
+
+#: inc/fun/monitor.php:541
+#, php-format
+msgid "%s后执行"
+msgstr ""
+
+#: inc/fun/monitor.php:541
+msgid "无排队事件"
+msgstr ""
+
+#: inc/fun/monitor.php:542
+msgid "计划任务"
+msgstr ""
+
+#: inc/fun/monitor.php:542
+msgid "排队 · "
+msgstr ""
+
+#: inc/fun/monitor.php:546
+msgid "PHP 环境"
+msgstr ""
+
+#: inc/fun/monitor.php:546
+#, php-format
+msgid "内存限制 %1$s · 超时 %2$s"
+msgstr ""
+
+#: inc/fun/monitor.php:551
+msgid "站点监控"
+msgstr ""
+
+#: inc/fun/monitor.php:553
+#, php-format
+msgid "更新于 %s"
+msgstr ""
+
+#: inc/fun/monitor.php:554
+msgid "立即巡检"
+msgstr ""
+
+#: inc/fun/page-cache.php:495
+msgid "整页缓存时长"
+msgstr ""
+
+#: inc/fun/page-cache.php:514
+msgid "跟随全局默认"
+msgstr ""
+
+#: inc/fun/page-cache.php:515
+msgid "10 分钟"
+msgstr ""
+
+#: inc/fun/page-cache.php:516
+msgid "1 小时"
+msgstr ""
+
+#: inc/fun/page-cache.php:517
+msgid "12 小时"
+msgstr ""
+
+#: inc/fun/page-cache.php:518
+msgid "1 天"
+msgstr ""
+
+#: inc/fun/page-cache.php:519
+msgid "7 天"
+msgstr ""
+
+#: inc/fun/page-cache.php:520
+msgid "15 天"
+msgstr ""
+
+#: inc/fun/page-cache.php:521
+msgid "30 天"
+msgstr ""
+
+#: inc/fun/page-cache.php:525
+msgid "本页缓存时长"
+msgstr ""
+
+#: inc/fun/page-cache.php:531
+msgid ""
+"覆盖「整页缓存」面板的全局有效期；发文或改文章会自动清本页缓存。边缘 / CDN 模"
+"式仍按服务器全局值。"
+msgstr ""
+
+#: inc/fun/page-cache.php:990
+#, php-format
+msgid ""
+"整页缓存已开启，但无法把 HTML 写入 <code>%1$s</code>，缓存实际未生效。请在 "
+"SSH 中执行 <code>mkdir -p %1$s &amp;&amp; chown -R www:www %2$s</code>（把 "
+"www 换成你的 php-fpm 运行用户）；面板用户可在文件管理器中把 <code>%2$s</"
+"code> 改为 775、并让属主与 PHP 进程一致。设置完刷新本页即可。"
+msgstr ""
+
+#: inc/fun/page-cache.php:1049
+#, php-format
+msgid ""
+"命中时已下发 ETag。若希望浏览器 / CDN 回「304 未修改」以节省流量，需确认 Web "
+"服务器把条件请求头转给了 PHP（Nginx 在 server 段追加：<code>%1$s</code>）。未"
+"配置不影响缓存生效，仅少一次带宽优化；Apache 一般无需设置。"
+msgstr ""
+
+#: inc/fun/page-cache.php:2199
+msgid "请输入要查询的 URL"
+msgstr ""
+
+#: inc/fun/perf-center.php:143
+msgid "关闭心跳（Heartbeat）轮询"
+msgstr ""
+
+#: inc/fun/perf-center.php:146
+msgid ""
+"后台默认每 15~60 秒向 admin-ajax.php 发一次心跳请求（协同编辑提示、自动保存增"
+"量、锁状态都靠它）。关闭后后台明显安静，但代价：编辑文章时不显示「他人正在编"
+"辑」锁定提示，自动保存间隔变得不可靠。单管理员站点建议开。"
+msgstr ""
+
+#: inc/fun/perf-center.php:150
+msgid "禁用仪表盘「WordPress 动态与新闻」"
+msgstr ""
+
+#: inc/fun/perf-center.php:153
+msgid ""
+"该小工具每次打开仪表盘都会同步请求 api.wordpress.org 拉取资讯与活动，海外网络"
+"波动时可拖慢仪表盘 1~3 秒。移除后仅影响这一个官方小工具，其余小工具不受影响。"
+msgstr ""
+
+#: inc/fun/perf-center.php:157
+msgid "移除 WP Emoji 脚本（推荐）"
+msgstr ""
+
+#: inc/fun/perf-center.php:160
+msgid ""
+"WP 会在前台/后台注入 emoji 检测脚本，并在浏览器不支持时把部分 emoji 字符替换"
+"成 WordPress.org 的 emoji 图片 CDN——国内不可达时就会看到「裂开的图」。移除后 "
+"emoji 恢复为系统原生渲染（显示效果不变），只是不再转图片。本页面已全程改用 "
+"CSS 绘制图标，不再依赖 emoji。"
+msgstr ""
+
+#: inc/fun/perf-center.php:164
+msgid "移除 wp-embed 脚本"
+msgstr ""
+
+#: inc/fun/perf-center.php:167
+msgid ""
+"wp-embed.js 用于把其他 WordPress 文章以卡片形式嵌入到内容里（oEmbed）。绝大多"
+"数站点从不使用。移除后正常文章显示完全不变；仅在「嵌入别人的 WP 文章卡片」这"
+"一场景失效。"
+msgstr ""
+
+#: inc/fun/perf-center.php:171
+msgid "限制文章修订（每篇最多 5 个）"
+msgstr ""
+
+#: inc/fun/perf-center.php:174
+msgid ""
+"WP 默认无限保存修订版本，编辑频繁时 wp_posts 表会持续膨胀、拖慢文章查询。开启"
+"后每篇文章最多保留 5 个修订。注意：只限制新增，不删除历史修订，可用性不受影"
+"响。"
+msgstr ""
+
+#: inc/fun/perf-center.php:178
+msgid "短接实时小工具的外部地理查询"
+msgstr ""
+
+#: inc/fun/perf-center.php:181
+msgid ""
+"实时小工具会同步请求 whois.pconline.com.cn 查询访客 IP 归属地（超时上限 3 "
+"秒）。该外链一旦变慢，会拖慢每一个带实时小工具的页面。开启后请求被本地直接拒"
+"绝，归属地显示为空，其余实时数据不受影响。"
+msgstr ""
+
+#: inc/fun/perf-center.php:185
+msgid "移除 WordPress 后台页脚文案"
+msgstr ""
+
+#: inc/fun/perf-center.php:188
+msgid ""
+"开启后隐藏后台底部的「感谢使用 WordPress 进行创作。」与 WordPress 版本号。仅"
+"后台可见，不影响前台访客。"
+msgstr ""
+
+#: inc/fun/perf-center.php:192
+msgid "禁用 XML-RPC 接口"
+msgstr ""
+
+#: inc/fun/perf-center.php:195
+msgid ""
+"XML-RPC 用于旧版编辑器与部分第三方客户端的远程调用，也是暴力破解与 pingback "
+"攻击的常见入口。关闭后手机原生 App、Jetpack 的部分远程功能可能失效；普通站点"
+"无影响。"
+msgstr ""
+
+#: inc/fun/perf-center.php:199
+msgid "清理 wp_head 冗余输出"
+msgstr ""
+
+#: inc/fun/perf-center.php:202
+msgid ""
+"移除 wp_head 中的 wlwmanifest（Windows Live Writer）链接，少一处可被探测的痕"
+"迹，不影响任何功能。"
+msgstr ""
+
+#: inc/fun/perf-center.php:206
+msgid "禁用 pingback 自引用"
+msgstr ""
+
+#: inc/fun/perf-center.php:209
+msgid ""
+"摘掉 XML-RPC 的 pingback.ping 方法并关闭新文章默认 pingback，减少外链回推请求"
+"与攻击面。已发布文章的既有 pingback 不受影响。"
+msgstr ""
+
+#: inc/fun/perf-center.php:213
+msgid "屏蔽 WordPress.org 外部 API 请求（推荐）"
+msgstr ""
+
+#: inc/fun/perf-center.php:216
+msgid ""
+"仅拦截发往 *.wordpress.org 的「插件详情 / 插件安装弹窗 / 主题详情 / 主题安装"
+"弹窗」等请求（路径 /plugins/、/themes/），打开这些弹窗不再卡数秒。核心版本探"
+"测、更新检查、语言包与升级包下载整条链路照常放行，后台「有新版本」提示与一键"
+"升级不受影响。仅拦 WP 官方源，站点自身接口（CDN / ajax 等）与国内头像源"
+"（Cravatar 等）完全不受影响。"
+msgstr ""
+
+#: inc/fun/perf-center.php:220
+msgid "前台对非管理员隐藏 admin bar"
+msgstr ""
+
+#: inc/fun/perf-center.php:223
+msgid ""
+"未登录 / 非管理员访问前台时不再显示 WordPress 管理条，减少一处前台 CSS/JS 注"
+"入。管理员在后台与前台均不受影响。"
+msgstr ""
+
+#: inc/fun/perf-center.php:227
+msgid "关键域名 DNS 预连接（Preconnect）"
+msgstr ""
+
+#: inc/fun/perf-center.php:230
+msgid ""
+"在 <head> 最前面为静态资源 CDN 域名提前建好 DNS+TCP+TLS 连接（并附 dns-"
+"prefetch 兼容老浏览器）。首屏图片/脚本命中该域名时省去建连往返，TTFB 与 LCP "
+"略降。仅作用于已配置的「静态资源 CDN 域名」（主题设置→资源），未配置 CDN 时不"
+"发任何多余请求；不影响其它域名。还可通过 jinyu_perf_preconnect_hosts 过滤器追"
+"加字体/统计等源。"
+msgstr ""
+
+#: inc/fun/perf-center.php:234
+msgid "iframe 懒加载"
+msgstr ""
+
+#: inc/fun/perf-center.php:237
+msgid ""
+"自动给正文/小工具里的 <iframe>（视频嵌入、第三方组件等）补上 "
+"loading=\"lazy\"，延迟到进入视口才加载，减少首屏请求与带宽。主题 "
+"[jinyu_video] 的 B站 嵌入已内置该属性，此处对其它来源的 iframe 兜底。已带 "
+"loading 的不会被重复添加。现代浏览器对 iframe 本就默认懒加载，此开关为显式保"
+"险，默认开。"
+msgstr ""
+
+#: inc/fun/perf-center.php:241
+msgid "限制游客 REST API 访问（加固）"
+msgstr ""
+
+#: inc/fun/perf-center.php:244
+msgid ""
+"未登录访客仅能访问公开内容类 REST 路由（文章/页面/评论/分类/标签/媒体/搜索"
+"等），其余内部/管理类路由（用户 /wp/v2/users、设置、插件、主题、区块、菜单、"
+"小工具、模板、全局样式、类型/分类法/状态枚举等）一律返回 403。主要阻断「通"
+"过 /wp/v2/users 枚举作者用户名」这类常见探测与 API 滥用。登录用户不受影响（后"
+"台区块编辑器等照常）。注意：若站内插件在前台依赖被拦截的路由，相关功能会受影"
+"响——默认关，确认无依赖后再开。"
+msgstr ""
+
+#: inc/fun/perf-center.php:248
+msgid "前台 HTML 压缩"
+msgstr ""
+
+#: inc/fun/perf-center.php:251
+msgid ""
+"输出前压缩整页 HTML：去掉标签间多余空白与注释（pre / textarea / script / "
+"style / noscript 内容原样保护），减小传输体积。压缩会去掉源码里的缩进换行，日"
+"后查看页面源代码会变成一整行；页面结构与样式不受影响。默认开，如需查看源码或"
+"依赖 HTML 空白排版（如部分邮件模板、打印样式）请关闭。"
+msgstr ""
+
+#: inc/fun/perf-center.php:255
+msgid "评论懒加载（加载更多）"
+msgstr ""
+
+#: inc/fun/perf-center.php:258
+msgid ""
+"评论数多的文章，首屏只渲染第一页评论，底部出现「加载更多评论」按钮，点击后通"
+"过 admin-ajax 增量拉取后续评论并追加（复用主题评论回调与嵌套结构，锚点/SEO 不"
+"受影响）。长文评论区 DOM 量大幅下降。关闭开关即恢复原生评论分页。默认关，按需"
+"开启。"
+msgstr ""
+
+#: inc/fun/perf-center.php:379
+msgid "地理查询已被性能优化开关关闭"
+msgstr ""
+
+#: inc/fun/perf-center.php:463
+msgid "WordPress.org 外部 API 已被性能优化开关屏蔽"
+msgstr ""
+
+#: inc/fun/perf-center.php:543
+msgid "加载更多评论"
+msgstr ""
+
+#: inc/fun/perf-center.php:544
+msgid "加载中…"
+msgstr ""
+
+#: inc/fun/perf-center.php:624
+msgid "游客无权访问该 REST 接口"
+msgstr ""
+
+#: inc/fun/perf-center.php:868
+msgid "最大内容绘制"
+msgstr ""
+
+#: inc/fun/perf-center.php:872
+msgid "视口内最大元素（图片/标题/区块）渲染完成的时间。≤2.5s 良好，≥4s 较差。"
+msgstr ""
+
+#: inc/fun/perf-center.php:874
+msgid "压缩首屏大图并转 WebP，预加载关键资源，非首屏图片懒加载。"
+msgstr ""
+
+#: inc/fun/perf-center.php:878
+msgid "交互延迟"
+msgstr ""
+
+#: inc/fun/perf-center.php:882
+msgid ""
+"用户点击/输入到页面响应的延迟，反映整体交互流畅度。≤200ms 良好，≥500ms 较差。"
+msgstr ""
+
+#: inc/fun/perf-center.php:884
+msgid "拆分长任务、精简第三方脚本，交互回调避免强制同步布局。"
+msgstr ""
+
+#: inc/fun/perf-center.php:888
+msgid "累计布局位移"
+msgstr ""
+
+#: inc/fun/perf-center.php:892
+msgid "页面加载中元素意外位移的幅度，衡量视觉稳定性。≤0.1 良好，≥0.25 较差。"
+msgstr ""
+
+#: inc/fun/perf-center.php:894
+msgid "为图片/视频/广告预留宽高比，禁止插入内容引发位移。"
+msgstr ""
+
+#: inc/fun/perf-center.php:898
+msgid "首次内容绘制"
+msgstr ""
+
+#: inc/fun/perf-center.php:902
+msgid "浏览器首次画出任意文本/图片的时间，首屏出图的快慢。≤1.8s 良好。"
+msgstr ""
+
+#: inc/fun/perf-center.php:904
+msgid "内联关键 CSS，移除阻塞渲染的脚本，启用对象缓存。"
+msgstr ""
+
+#: inc/fun/perf-center.php:908
+msgid "首字节时间"
+msgstr ""
+
+#: inc/fun/perf-center.php:912
+msgid "从请求到收到服务器第一个字节的耗时，反映后端与网络。≤0.8s 良好。"
+msgstr ""
+
+#: inc/fun/perf-center.php:914
+msgid "开启页面缓存与对象缓存，优化数据库查询，启用 CDN。"
+msgstr ""
+
+#: inc/fun/perf-center.php:1053
+msgid "OPcache 未安装，无需重置"
+msgstr ""
+
+#: inc/fun/perf-center.php:1057
+msgid "OPcache 已重置"
+msgstr ""
+
+#: inc/fun/perf-center.php:1058
+msgid "OPcache 重置未生效（当前可能是 CLI 上下文，请在后台页面点击）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1072
+msgid "对象缓存已清空（仅本站，不影响同机其它站点）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1072
+msgid "对象缓存清空失败"
+msgstr ""
+
+#: inc/fun/perf-center.php:1080
+msgid "已直连清空 Memcached（服务器级，同机其它站点也会被清）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1080
+msgid "Memcached 清空失败"
+msgstr ""
+
+#: inc/fun/perf-center.php:1082
+msgid "对象缓存未启用（无 drop-in 也无 Memcached 扩展）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1139
+msgid "请求内本地缓存（避免同请求重复查询 Memcached）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1143
+msgid "批量获取（wp_cache_get_multiple / getMulti）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1147
+msgid "CAS 乐观锁（高并发计数防竞争）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1151
+msgid "一致性哈希（多客户端分布一致）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1155
+msgid "缓存加法挂起（wp_suspend_cache_addition 兼容）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1159
+msgid "Memcached 扩展缺失时优雅降级（回退核心缓存，不白屏）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1163
+msgid "统计接口（getStats）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1167
+msgid "命中 / 未命中计数"
+msgstr ""
+
+#: inc/fun/perf-center.php:1229
+msgid "部署模板缺失（object-cache-dropin.tpl）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1235
+msgid "PECL Memcached 扩展不可用，无法部署"
+msgstr ""
+
+#: inc/fun/perf-center.php:1244
+msgid "对象缓存已部署，无需重复"
+msgstr ""
+
+#: inc/fun/perf-center.php:1250
+msgid "已存在外部 object-cache.php，未覆盖以免破坏现有缓存"
+msgstr ""
+
+#: inc/fun/perf-center.php:1258
+msgid "备份原文件失败，已中止替换以确保安全"
+msgstr ""
+
+#: inc/fun/perf-center.php:1272
+msgid "写入 wp-content/object-cache.php 失败，请检查目录写权限"
+msgstr ""
+
+#: inc/fun/perf-center.php:1277
+msgid "已部署 object-cache.php，下次请求起 WordPress 启用 Memcached 对象缓存"
+msgstr ""
+
+#: inc/fun/perf-center.php:1346
+msgid "未部署对象缓存"
+msgstr ""
+
+#: inc/fun/perf-center.php:1352
+msgid "该 object-cache.php 非本插件部署，未删除"
+msgstr ""
+
+#: inc/fun/perf-center.php:1358
+msgid "删除 object-cache.php 失败，请检查目录权限"
+msgstr ""
+
+#: inc/fun/perf-center.php:1363
+msgid "已移除 object-cache.php，下次请求起恢复默认数据库缓存"
+msgstr ""
+
+#: inc/fun/perf-center.php:1374
+msgid "已部署（本插件管理）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1377
+msgid "移除 / 停用"
+msgstr ""
+
+#: inc/fun/perf-center.php:1378
+msgid ""
+"WordPress 当前使用 Memcached 对象缓存。移除后下次请求恢复默认数据库缓存。"
+msgstr ""
+
+#: inc/fun/perf-center.php:1381
+msgid "已存在外部 object-cache.php"
+msgstr ""
+
+#: inc/fun/perf-center.php:1383
+msgid "对比发现：金玉版可额外提供以下能力，当前外部文件未包含："
+msgstr ""
+
+#: inc/fun/perf-center.php:1390
+msgid "功能与金玉版相当。替换为金玉版后可由本插件统一管理（支持一键回滚）。"
+msgstr ""
+
+#: inc/fun/perf-center.php:1395
+msgid "升级替换为金玉版"
+msgstr ""
+
+#: inc/fun/perf-center.php:1397
+msgid ""
+"将用金玉版 object-cache.php 替换现有文件。替换前建议备份原文件以便随时还原。"
+msgstr ""
+
+#: inc/fun/perf-center.php:1398
+msgid "替换前备份原文件（推荐）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1400
+msgid "确认升级"
+msgstr ""
+
+#: inc/fun/perf-center.php:1401
+msgid "取消"
+msgstr ""
+
+#: inc/fun/perf-center.php:1406
+msgid "部署对象缓存"
+msgstr ""
+
+#: inc/fun/perf-center.php:1407
+msgid ""
+"一键写入 object-cache.php，让 WordPress 直接使用 Memcached，无需手动配置。"
+msgstr ""
+
+#: inc/fun/perf-center.php:1410
+msgid "无法连接 Memcached 守护进程（127.0.0.1:11211）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1411
+msgid "服务器未安装 PECL Memcached 扩展"
+msgstr ""
+
+#: inc/fun/perf-center.php:1412
+msgid "不支持部署"
+msgstr ""
+
+#: inc/fun/perf-center.php:1436
+msgid "整页缓存已清空（但缓存目录不可用，缓存未生效）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1438 inc/fun/perf-center.php:1453
+#: inc/fun/perf-center.php:1456
+msgid "整页缓存已清空"
+msgstr ""
+
+#: inc/fun/perf-center.php:1447
+#, php-format
+msgid "片段缓存已清空（%d 项）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1459 inc/fun/perf-center.php:1988
+#: inc/fun/perf-center.php:1991
+msgid "；"
+msgstr ""
+
+#: inc/fun/perf-center.php:1527
+#, php-format
+msgid "已清除 %d 个预热 URL 的整页缓存"
+msgstr ""
+
+#: inc/fun/perf-center.php:1529
+msgid "当前没有可清除的预热缓存"
+msgstr ""
+
+#: inc/fun/perf-center.php:1531
+msgid "预热簿记已重置（标记未暖）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1555
+msgid " 天 "
+msgstr ""
+
+#: inc/fun/perf-center.php:1555
+msgid " 小时"
+msgstr ""
+
+#: inc/fun/perf-center.php:1555
+msgid " 秒"
+msgstr ""
+
+#: inc/fun/perf-center.php:1623
+msgid "未安装"
+msgstr ""
+
+#: inc/fun/perf-center.php:1623
+msgid "不可达"
+msgstr ""
+
+#: inc/fun/perf-center.php:1630 inc/fun/perf-center.php:2574
+msgid "OPcache 命中率"
+msgstr ""
+
+#: inc/fun/perf-center.php:1632
+msgid "字节码缓存有效"
+msgstr ""
+
+#: inc/fun/perf-center.php:1637 inc/fun/perf-center.php:2575
+msgid "Memcached 命中率"
+msgstr ""
+
+#: inc/fun/perf-center.php:1639
+msgid "对象缓存有效"
+msgstr ""
+
+#: inc/fun/perf-center.php:1644
+msgid "待清理 Transient"
+msgstr ""
+
+#: inc/fun/perf-center.php:1646
+msgid "已过期待回收"
+msgstr ""
+
+#: inc/fun/perf-center.php:1651
+msgid "活跃插件"
+msgstr ""
+
+#: inc/fun/perf-center.php:1653
+msgid "含主题内置模块"
+msgstr ""
+
+#: inc/fun/perf-center.php:1660
+msgid "运行时监控"
+msgstr ""
+
+#: inc/fun/perf-center.php:1666
+msgid "OPcache 字节码缓存"
+msgstr ""
+
+#: inc/fun/perf-center.php:1667
+msgid "清除 OPcache"
+msgstr ""
+
+#: inc/fun/perf-center.php:1673 inc/fun/perf-center.php:1675
+#: inc/fun/perf-center.php:1707 inc/fun/perf-center.php:1711
+msgid "状态"
+msgstr ""
+
+#: inc/fun/perf-center.php:1673 inc/fun/perf-center.php:1707
+msgid "未安装扩展"
+msgstr ""
+
+#: inc/fun/perf-center.php:1675
+msgid "当前上下文未启用"
+msgstr ""
+
+#: inc/fun/perf-center.php:1677
+msgid "缓存脚本"
+msgstr ""
+
+#: inc/fun/perf-center.php:1678 inc/fun/perf-center.php:1714
+msgid "内存占用"
+msgstr ""
+
+#: inc/fun/perf-center.php:1679 inc/fun/perf-center.php:1715
+msgid "内存使用率"
+msgstr ""
+
+#: inc/fun/perf-center.php:1680
+msgid "浪费内存"
+msgstr ""
+
+#: inc/fun/perf-center.php:1685
+msgid "剩余内存"
+msgstr ""
+
+#: inc/fun/perf-center.php:1686
+msgid "累计命中"
+msgstr ""
+
+#: inc/fun/perf-center.php:1687
+msgid "OOM 重启"
+msgstr ""
+
+#: inc/fun/perf-center.php:1688
+msgid "上次重置"
+msgstr ""
+
+#: inc/fun/perf-center.php:1688
+#, php-format
+msgid "%s前"
+msgstr ""
+
+#: inc/fun/perf-center.php:1700
+msgid "Memcached 对象缓存"
+msgstr ""
+
+#: inc/fun/perf-center.php:1701
+msgid "清除 Memcached"
+msgstr ""
+
+#: inc/fun/perf-center.php:1710
+msgid "未连接 Memcached（当前使用其他对象缓存后端）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1710
+msgid "无法连接 127.0.0.1:11211"
+msgstr ""
+
+#: inc/fun/perf-center.php:1713
+msgid "缓存条目"
+msgstr ""
+
+#: inc/fun/perf-center.php:1716
+msgid "已运行"
+msgstr ""
+
+#: inc/fun/perf-center.php:1731
+msgid "清空体验数据"
+msgstr ""
+
+#: inc/fun/perf-center.php:1733
+msgid "真实用户体验（近 7 天）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1736
+msgid ""
+"暂无样本。前端已采集 LCP / INP / CLS / FCP / TTFB，访客浏览后这里会出现真实均"
+"值。"
+msgstr ""
+
+#: inc/fun/perf-center.php:1739
+#, php-format
+msgid "基于 %s 次真实访问"
+msgstr ""
+
+#: inc/fun/perf-center.php:1741
+msgid "（窗口已过期，等待新样本）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1746
+msgid "优秀"
+msgstr ""
+
+#: inc/fun/perf-center.php:1746
+msgid "待提升"
+msgstr ""
+
+#: inc/fun/perf-center.php:1746
+msgid "一般"
+msgstr ""
+
+#: inc/fun/perf-center.php:1777
+#, php-format
+msgid "%1$d / %2$d 项达标 · 最短板 %3$s（%4$s，良好线 %5$s）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1779
+#, php-format
+msgid "%d 项全部达标 · 真实用户访问体验处于良好区间"
+msgstr ""
+
+#: inc/fun/perf-center.php:1785
+msgid "满分 100"
+msgstr ""
+
+#: inc/fun/perf-center.php:1787
+msgid "综合体验评分"
+msgstr ""
+
+#: inc/fun/perf-center.php:1793
+#, php-format
+msgid "良好 %1$d / 需优化 %2$d / 较差 %3$d"
+msgstr ""
+
+#: inc/fun/perf-center.php:1801
+#, php-format
+msgid ""
+"%d 项加权（LCP / INP 各 25%%、TTFB 20%%、CLS / FCP 各 15%%）· 近 7 天滚动均值"
+msgstr ""
+
+#: inc/fun/perf-center.php:1812 inc/fun/perf-center.php:1846
+#: inc/fun/perf-center.php:1860
+msgid "良好"
+msgstr ""
+
+#: inc/fun/perf-center.php:1812 inc/fun/perf-center.php:1847
+#: inc/fun/perf-center.php:1860
+msgid "较差"
+msgstr ""
+
+#: inc/fun/perf-center.php:1812 inc/fun/perf-center.php:1846
+#: inc/fun/perf-center.php:1860
+msgid "需优化"
+msgstr ""
+
+#: inc/fun/perf-center.php:1816
+msgid " 的说明"
+msgstr ""
+
+#: inc/fun/perf-center.php:1819
+msgid "最差 "
+msgstr ""
+
+#: inc/fun/perf-center.php:1820
+msgid "优化"
+msgstr ""
+
+#: inc/fun/perf-center.php:1829
+msgid "热门页面"
+msgstr ""
+
+#: inc/fun/perf-center.php:1830
+msgid "样本 TOP 5"
+msgstr ""
+
+#: inc/fun/perf-center.php:1844
+msgid "按上报样本数排序 · 点击量最高的入口页"
+msgstr ""
+
+#: inc/fun/perf-center.php:1847
+msgid "除综合评分外，数值越低越好"
+msgstr ""
+
+#: inc/fun/perf-center.php:1851
+msgid "最慢路径（按 LCP 最差）"
+msgstr ""
+
+#: inc/fun/perf-center.php:1852
+msgid "各路径真实访客的首屏最慢渲染时长"
+msgstr ""
+
+#: inc/fun/perf-center.php:1872
+#, php-format
+msgid "最差 %1$s · %2$s 次"
+msgstr ""
+
+#: inc/fun/perf-center.php:1882
+msgid "数据管理"
+msgstr ""
+
+#: inc/fun/perf-center.php:1985
+msgid "本站未启用整页缓存插件，无需清理"
+msgstr ""
+
+#: inc/fun/perf-center.php:2022
+msgid "设置已保存，页面缓存已同步清理"
+msgstr ""
+
+#: inc/fun/perf-center.php:2023
+msgid "设置已保存，下一次请求起生效"
+msgstr ""
+
+#: inc/fun/perf-center.php:2029
+msgid "没有需要保存的改动"
+msgstr ""
+
+#: inc/fun/perf-center.php:2036
+msgid "体验数据已清空"
+msgstr ""
+
+#: inc/fun/perf-center.php:2054
+msgid "操作失败"
+msgstr ""
+
+#: inc/fun/perf-center.php:2062
+msgid "没有可替换的外部 object-cache.php"
+msgstr ""
+
+#: inc/fun/perf-center.php:2070 inc/fun/perf-center.php:2696
+msgid "升级失败"
+msgstr ""
+
+#: inc/fun/perf-center.php:2180
+msgid "对象缓存运行中"
+msgstr ""
+
+#: inc/fun/perf-center.php:2180
+msgid "对象缓存未启用"
+msgstr ""
+
+#: inc/fun/perf-center.php:2183
+msgid "清除整页缓存"
+msgstr ""
+
+#: inc/fun/perf-center.php:2184
+msgid "清除全部缓存"
+msgstr ""
+
+#: inc/fun/perf-center.php:2212
+msgid "优化开关"
+msgstr ""
+
+#: inc/fun/perf-center.php:2213
+msgid "每项均可单独开启 / 回退，不影响有效数据"
+msgstr ""
+
+#: inc/fun/perf-center.php:2218
+msgid "前端优化"
+msgstr ""
+
+#: inc/fun/perf-center.php:2220
+msgid "后台减负"
+msgstr ""
+
+#: inc/fun/perf-center.php:2222
+msgid "安全加固"
+msgstr ""
+
+#: inc/fun/perf-center.php:2224
+msgid "缓存与评论"
+msgstr ""
+
+#: inc/fun/perf-center.php:2241
+msgid "项"
+msgstr ""
+
+#: inc/fun/perf-center.php:2251
+msgid "默认开"
+msgstr ""
+
+#: inc/fun/perf-center.php:2251
+#, php-format
+msgid "%s 的说明"
+msgstr ""
+
+#: inc/fun/perf-center.php:2267
+msgid "一键打开推荐开关"
+msgstr ""
+
+#: inc/fun/perf-center.php:2270
+msgid "一键应用推荐优化"
+msgstr ""
+
+#: inc/fun/perf-center.php:2273
+msgid ""
+"「保存设置」保存以上优化开关；改动任意一项后，底部会出现悬浮「保存设置」按"
+"钮。「一键打开推荐开关」仅切换界面状态不直接保存；「推荐优化」= 保存 + 清理过"
+"期 transient + 优化碎片表 + 重置 OPcache 与 Memcached。缓存预热已移至「前台加"
+"速」分区，配置与触发在那里独立进行。"
+msgstr ""
+
+#: inc/fun/perf-center.php:2277
+msgid "有改动未保存"
+msgstr ""
+
+#: inc/fun/perf-center.php:2279
+msgid "撤销改动"
+msgstr ""
+
+#: inc/fun/perf-center.php:2281
+msgid "保存设置"
+msgstr ""
+
+#: inc/fun/perf-center.php:2382 inc/fun/perf-center.php:2858
+msgid "失败："
+msgstr ""
+
+#: inc/fun/perf-center.php:2395
+msgid "更新于 "
+msgstr ""
+
+#: inc/fun/perf-center.php:2426
+msgid "已撤销改动，恢复到上次保存的状态"
+msgstr ""
+
+#: inc/fun/perf-center.php:2545
+msgid "已按推荐状态切换 "
+msgstr ""
+
+#: inc/fun/perf-center.php:2545
+msgid " 项开关（尚未保存）。请核对后点「保存设置」生效。"
+msgstr ""
+
+#: inc/fun/perf-center.php:2546
+msgid "当前开关已是推荐状态，无需改动。"
+msgstr ""
+
+#: inc/fun/perf-center.php:2565 inc/fun/perf-center.php:2610
+#: inc/fun/perf-center.php:2634 inc/fun/perf-center.php:2650
+#: inc/fun/perf-center.php:2713 inc/fun/perf-center.php:2879
+#: inc/fun/perf-center.php:2943
+msgid "未知错误"
+msgstr ""
+
+#: inc/fun/perf-center.php:2567
+msgid "清理过期 transient："
+msgstr ""
+
+#: inc/fun/perf-center.php:2567 inc/fun/perf-center.php:2577
+msgid " 条"
+msgstr ""
+
+#: inc/fun/perf-center.php:2568
+msgid "优化数据表："
+msgstr ""
+
+#: inc/fun/perf-center.php:2568
+msgid " 张"
+msgstr ""
+
+#: inc/fun/perf-center.php:2568
+msgid "（"
+msgstr ""
+
+#: inc/fun/perf-center.php:2568
+msgid "、"
+msgstr ""
+
+#: inc/fun/perf-center.php:2568
+msgid "）"
+msgstr ""
+
+#: inc/fun/perf-center.php:2571
+msgid "：未启用"
+msgstr ""
+
+#: inc/fun/perf-center.php:2576
+msgid "自动加载选项："
+msgstr ""
+
+#: inc/fun/perf-center.php:2576 inc/fun/perf-center.php:2577
+#: inc/fun/perf-center.php:2578
+msgid " → "
+msgstr ""
+
+#: inc/fun/perf-center.php:2577
+msgid "过期 transient："
+msgstr ""
+
+#: inc/fun/perf-center.php:2578
+msgid "数据表碎片："
+msgstr ""
+
+#: inc/fun/perf-center.php:2579
+msgid "开关已保存，下一次请求起生效。"
+msgstr ""
+
+#: inc/fun/perf-center.php:2583
+msgid "推荐优化已应用"
+msgstr ""
+
+#: inc/fun/perf-center.php:2630 inc/fun/perf-center.php:2792
+#: inc/fun/perf-center.php:2939
+msgid "清除中…"
+msgstr ""
+
+#: inc/fun/perf-center.php:2642
+msgid "确定清空真实用户体验聚合数据？此操作不可撤销。"
+msgstr ""
+
+#: inc/fun/perf-center.php:2691
+msgid "升级中…"
+msgstr ""
+
+#: inc/fun/perf-center.php:2709 inc/fun/perf-center.php:2870
+msgid "处理中…"
+msgstr ""
+
+#: inc/fun/perf-center.php:2761
+msgid "缓存预热"
+msgstr ""
+
+#: inc/fun/perf-center.php:2765
+msgid "启用缓存预热"
+msgstr ""
+
+#: inc/fun/perf-center.php:2766
+msgid ""
+"清缓存 / 升级主题插件 / 定时任务后自动爬取首页、列表、分类、近期与热门文章暖"
+"缓存，把重建成本从首个真实访客转移到后台，访客始终命中热缓存。"
+msgstr ""
+
+#: inc/fun/perf-center.php:2768
+msgid "自动预热频率"
+msgstr ""
+
+#: inc/fun/perf-center.php:2770
+msgid "频率"
+msgstr ""
+
+#: inc/fun/perf-center.php:2778
+msgid "额外预热 URL（每行一个）"
+msgstr ""
+
+#: inc/fun/perf-center.php:2780
+msgid "仅本域名或显式 http(s)，不外发第三方。"
+msgstr ""
+
+#: inc/fun/perf-center.php:2783
+msgid "最多暖 N 篇（0 = 全量，按修改时间倒序取前 N）"
+msgstr ""
+
+#: inc/fun/perf-center.php:2787 inc/fun/perf-center.php:2812
+#: inc/fun/perf-center.php:2900
+msgid "预热中…"
+msgstr ""
+
+#: inc/fun/perf-center.php:2787
+msgid "立即预热"
+msgstr ""
+
+#: inc/fun/perf-center.php:2788
+msgid "点击即保存配置并立即预热。"
+msgstr ""
+
+#: inc/fun/perf-center.php:2790
+msgid ""
+"新发布 / 更新文章会优先即时预热；首页与核心分类每轮强制重暖（并发抓取，不阻塞"
+"访客）。"
+msgstr ""
+
+#: inc/fun/perf-center.php:2792
+msgid "清除预热数据"
+msgstr ""
+
+#: inc/fun/perf-center.php:2793
+msgid ""
+"仅删除预热队列各 URL 的整页缓存（不动 OPcache / Memcached / 全站其他页）；不"
+"自动重暖，需重暖请点「立即预热」。"
+msgstr ""
+
+#: inc/fun/perf-center.php:2800
+#, php-format
+msgid "上次：%1$s，成功 %2$d / %3$d，耗时 %4$s 秒"
+msgstr ""
+
+#: inc/fun/perf-center.php:2811
+#, php-format
+msgid "已暖 %1$d / 共 %2$d（覆盖率 %3$d%%）"
+msgstr ""
+
+#: inc/fun/perf-center.php:2900
+msgid "已暖 "
+msgstr ""
+
+#: inc/fun/perf-center.php:2900
+msgid "覆盖率 "
+msgstr ""
+
+#: inc/fun/perf-center.php:2912
+msgid "成功 "
+msgstr ""
+
+#: inc/fun/perf-center.php:2912
+msgid "，失败 "
+msgstr ""
+
+#: inc/fun/perf-center.php:2912
+msgid "，耗时 "
+msgstr ""
+
+#: inc/fun/perf-center.php:2944
+msgid "已清除"
+msgstr ""
+
+#: inc/fun/post-seo.php:43
+msgid "金玉 SEO（关键词 / 描述）"
+msgstr ""
+
+#: inc/fun/post-seo.php:60
+msgid "留空则用摘要 / 正文首段"
+msgstr ""
+
+#: inc/fun/post-seo.php:61
+msgid "输出为 <meta name=\"description\">，也被结构化数据引用。"
+msgstr ""
+
+#: inc/fun/post-seo.php:64
+msgid "SEO 关键词"
+msgstr ""
+
+#: inc/fun/post-seo.php:65
+msgid "英文逗号分隔"
+msgstr ""
+
+#: inc/fun/post-seo.php:66
+msgid ""
+"留空则用文章标签；是否输出为 <meta name=\"keywords\"> 由「SEO / 社交分享」面"
+"板的「输出 keywords 标签」开关决定（默认关闭）。"
+msgstr ""
+
+#: inc/fun/privacy.php:54 inc/fun/privacy.php:133
+msgid "金玉增强（绑定账号与社交关系）"
+msgstr ""
+
+#: inc/fun/privacy.php:93
+msgid "正在关注的用户"
+msgstr ""
+
+#: inc/fun/privacy.php:100
+msgid "关注该用户的用户"
+msgstr ""
+
+#: inc/fun/privacy.php:107
+msgid "正在关注的分类/标签"
+msgstr ""
+
+#: inc/fun/privacy.php:117
+msgid "第三方登录绑定与关注关系数据。"
+msgstr ""
+
+#: inc/fun/push-log.php:87
+msgid ""
+"暂无推送记录。开启 IndexNow 或填写百度接口后，发布文章与执行全量补推都会在这"
+"里留痕。"
+msgstr ""
+
+#: inc/fun/push-log.php:92
+msgid "成功"
+msgstr ""
+
+#: inc/fun/push-log.php:93
+msgid "失败"
+msgstr ""
+
+#: inc/fun/push-log.php:94
+msgid "已提交（异步）"
+msgstr ""
+
+#: inc/fun/push-log.php:98
+msgid "时间"
+msgstr ""
+
+#: inc/fun/push-log.php:99
+msgid "渠道"
+msgstr ""
+
+#: inc/fun/push-log.php:100
+msgid "动作"
+msgstr ""
+
+#: inc/fun/push-log.php:101
+msgid "条数"
+msgstr ""
+
+#: inc/fun/push-log.php:102
+msgid "结果"
+msgstr ""
+
+#: inc/fun/push-log.php:154
+msgid "推送记录已清空"
+msgstr ""
+
+#: inc/fun/series.php:20 inc/fun/series.php:31
+msgid "文章系列"
+msgstr ""
+
+#: inc/fun/series.php:21
+msgid "系列"
+msgstr ""
+
+#: inc/fun/series.php:22
+msgid "搜索系列"
+msgstr ""
+
+#: inc/fun/series.php:23
+msgid "热门系列"
+msgstr ""
+
+#: inc/fun/series.php:24
+msgid "全部系列"
+msgstr ""
+
+#: inc/fun/series.php:25
+msgid "编辑系列"
+msgstr ""
+
+#: inc/fun/series.php:26
+msgid "更新系列"
+msgstr ""
+
+#: inc/fun/series.php:27
+msgid "新建系列"
+msgstr ""
+
+#: inc/fun/series.php:28
+msgid "新系列名"
+msgstr ""
+
+#: inc/fun/series.php:29
+msgid "用逗号分隔多个系列"
+msgstr ""
+
+#: inc/fun/series.php:30
+msgid "添加或移除系列"
+msgstr ""
+
+#: inc/fun/short-code.php:99
+msgid "登录后可见"
+msgstr ""
+
+#: inc/fun/short-code.php:100 inc/fun/short-code.php:356
+msgid "立即登录"
+msgstr ""
+
+#: inc/fun/short-code.php:124
+msgid "评论后可见，请先登录并评论"
+msgstr ""
+
+#: inc/fun/short-code.php:134
+msgid "隐藏内容，仅管理员可见"
+msgstr ""
+
+#: inc/fun/short-code.php:273
+msgid "CODE"
+msgstr ""
+
+#: inc/fun/short-code.php:277
+msgid "复制代码"
+msgstr ""
+
+#: inc/fun/short-code.php:315
+msgid "音乐"
+msgstr ""
+
+#: inc/fun/short-code.php:355
+msgid "登录并验证邮箱后可见"
+msgstr ""
+
+#: inc/fun/short-code.php:367
+msgid "请输入阅读密码"
+msgstr ""
+
+#: inc/fun/short-code.php:410
+msgid "查看"
+msgstr ""
+
+#: inc/fun/social-login/core.php:518
+msgid ""
+"该邮箱已在本站注册。为保障账号安全，请先用密码登录，再从用户中心绑定第三方账"
+"号。"
+msgstr ""
+
+#: inc/fun/social-login/core.php:525
+msgid ""
+"第三方登录自动注册已被管理员关闭，请先注册本站账号后在个人中心绑定社交身份。"
+msgstr ""
+
+#: inc/fun/social-login/core.php:591
+msgid "本站未开放注册，请先用已有账号登录后再绑定第三方账号。"
+msgstr ""
+
+#: inc/fun/social-login/core.php:640
+msgid "请先登录。"
+msgstr ""
+
+#: inc/fun/social-login/core.php:648
+msgid "安全校验失败，请刷新页面后重试。"
+msgstr ""
+
+#: inc/fun/social-login/core.php:657
+msgid "第三方登录功能已关闭。"
+msgstr ""
+
+#: inc/fun/social-login/core.php:668
+msgid "参数无效。"
+msgstr ""
+
+#: inc/fun/social-login/core.php:678
+msgid "该平台尚未绑定。"
+msgstr ""
+
+#: inc/fun/social-login/core.php:695
+msgid ""
+"此账号未设置密码，解绑后将无法登录。请先在上方设置密码，或绑定其他平台后再解"
+"绑。"
+msgstr ""
+
+#: inc/fun/social-login/core.php:704
+msgid "解绑成功。"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:23
+msgid ""
+"启用「第三方登录」后，用户使用以下平台账号登录本站时，本站会依据对应平台的 "
+"OAuth 协议向该平台发送并取回必要的用户标识信息（始终经用户显式授权）："
+msgstr ""
+
+#: inc/fun/social-login/settings.php:175
+msgid "第三方登录（社交登录）"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:176
+msgid ""
+"启用后前台登录弹窗将显示对应入口。各平台密钥经 AES 加密存储于本站数据库，不会"
+"以明文落库。"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:182
+msgid "第三方账号登录"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:183
+msgid "开启后，访客可使用下方任一平台账号一键授权登录本站，无需记忆新密码。"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:186
+msgid "已完整填写凭据的平台数量"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:188
+#, php-format
+msgid "/ %d 已配置"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:195
+msgid "新用户注册"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:195
+msgid "控制全新访客首次授权时的行为"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:199
+msgid "允许自动注册"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:200
+msgid ""
+"关闭后，未绑定社交身份的新访客将被拒绝登录，需先注册本站账号再到个人中心绑定"
+"（已绑定用户不受影响）。"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:202
+msgid "新用户默认角色"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:204
+msgid "订阅者 Subscriber（推荐：仅能评论与维护个人资料）"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:205
+msgid "投稿者 Contributor（可投稿草稿，不可发布）"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:206
+msgid "作者 Author（可直接发布文章，慎选）"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:216
+msgid "回调地址 (Redirect URI)"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:217
+msgid ""
+"在各平台开发者后台的「回调 / Redirect URI」处填写此地址（必须 HTTPS，Apple 需"
+"完全一致）。"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:221
+msgid "恢复为默认地址"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:221
+msgid "恢复默认"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:242
+msgid "已配置"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:243
+msgid "待完善"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:243
+msgid "未配置"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:268
+msgid "App ID / Client ID"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:272
+msgid "已填写"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:276
+msgid "App Key / Client Secret"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:280 inc/fun/social-login/settings.php:303
+msgid "已保存"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:281
+msgid "••••••••（留空保持不变）"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:305
+msgid "••••••••（已设置，留空保持不变）"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:306
+msgid "粘贴密钥文件完整内容，需包含首尾 BEGIN / END 行。"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:319
+msgid "凭据加密存储"
+msgstr ""
+
+#: inc/fun/social-login/settings.php:321
+msgid "开发者后台"
+msgstr ""
+
+#: inc/fun/social.php:35
+msgid "关注了你"
+msgstr ""
+
+#: inc/fun/social.php:226
+msgid "有人"
+msgstr ""
+
+#: inc/fun/social.php:230
+#, php-format
+msgid "%s 回复了你的评论"
+msgstr ""
+
+#: inc/fun/storage.php:935
+#, php-format
+msgid ""
+"S3 兼容模式必须填写：%s（例如阿里云 OSS 填 oss-cn-hangzhou.aliyuncs.com，"
+"Region 填 oss-cn-hangzhou）"
+msgstr ""
+
+#: inc/fun/storage.php:947
+#, php-format
+msgid "%1$s 的 Region 格式不正确：应为「%2$s」（示例：%3$s）"
+msgstr ""
+
+#: inc/fun/storage.php:1630 inc/fun/storage.php:1799
+#, php-format
+msgid "已处理 %1$d/%2$d，%3$d 个失败"
+msgstr ""
+
+#: inc/fun/storage.php:1632 inc/fun/storage.php:1801
+#, php-format
+msgid "已处理 %1$d/%2$d"
+msgstr ""
+
+#: inc/fun/storage.php:1658
+msgid "请填写完整的存储配置（服务商 / 桶 / AccessKey / Secret）"
+msgstr ""
+
+#: inc/fun/storage.php:1666 inc/fun/storage.php:1698 inc/fun/storage.php:1836
+#: inc/fun/storage.php:2026
+msgid "不支持的存储服务商"
+msgstr ""
+
+#: inc/fun/storage.php:1670
+msgid "连接成功：已上传并删除测试文件"
+msgstr ""
+
+#: inc/fun/storage.php:1672
+msgid "连接失败："
+msgstr ""
+
+#: inc/fun/storage.php:1690 inc/fun/storage.php:1832 inc/fun/storage.php:2022
+msgid "请先填写并保存存储配置"
+msgstr ""
+
+#: inc/fun/storage.php:1935
+#, php-format
+msgid "已拉回 %1$d/%2$d，%3$d 个失败"
+msgstr ""
+
+#: inc/fun/storage.php:1937
+#, php-format
+msgid "已拉回 %1$d/%2$d"
+msgstr ""
+
+#: inc/fun/storage.php:1997
+msgid "已手动停止（进度保留，可重新开始）"
+msgstr ""
+
+#: inc/fun/storage.php:2042
+msgid "没有进行中的同步任务"
+msgstr ""
+
+#: inc/fun/storage.php:2055
+msgid "已有同步任务进行中，请等待其完成或先点「停止任务」"
+msgstr ""
+
+#: inc/fun/storage.php:2060
+msgid "请先在文本框里填写要同步的文件路径（每行一个）"
+msgstr ""
+
+#: inc/fun/storage.php:2097
+msgid "没有找到有效文件："
+msgstr ""
+
+#: inc/fun/storage.php:2158
+#, php-format
+msgid "已同步 %1$d/%2$d"
+msgstr ""
+
+#: inc/fun/storage.php:2161
+#, php-format
+msgid "本批失败 %1$d 个：%2$s"
+msgstr ""
+
+#: inc/fun/storage.php:2164
+#, php-format
+msgid "已同步 %d 个文件到云端"
+msgstr ""
+
+#: inc/fun/storage.php:2280
+msgid "请先在上方填写加速域名"
+msgstr ""
+
+#: inc/fun/storage.php:2312
+msgid "加速域名已更新并刷新缓存，正文与附件链接已切换"
+msgstr ""
+
+#: inc/fun/storage.php:2348
+msgid ""
+"已暂停加速域名重写（域名配置保留），正文与附件链接回退本地并刷新缓存；恢复请"
+"再点「一键替换为 CDN 链接」"
+msgstr ""
+
+#: inc/fun/theme-compat.php:134
+msgid "REST API 已对未登录用户关闭。"
+msgstr ""
+
+#: inc/fun/theme-compat.php:150
+msgid ""
+"「关闭 REST API」已生效：仅未登录访客被拒绝，已登录用户在后台使用古登堡编辑器"
+"不受影响。"
+msgstr ""
+
+#: inc/fun/theme-compat.php:183
+#, php-format
+msgid "登录尝试过于频繁，已被临时锁定，请 %d 分钟后再试。"
+msgstr ""
+
+#: inc/fun/transport-check.php:124
+#, php-format
+msgid "%d 天"
+msgid_plural "%d 天"
+msgstr[0] ""
+msgstr[1] ""
+
+#: inc/fun/transport-check.php:129
+#, php-format
+msgid "%d 小时"
+msgid_plural "%d 小时"
+msgstr[0] ""
+msgstr[1] ""
+
+#: inc/fun/transport-check.php:133
+#, php-format
+msgid "%d 分钟"
+msgid_plural "%d 分钟"
+msgstr[0] ""
+msgstr[1] ""
+
+#: inc/fun/transport-check.php:166
+#, php-format
+msgid ""
+"目标返回异常状态（首页 %1$d · 静态资源 %2$d）。站点若开启了访问口令 / 防火"
+"墙，请把本服务器 IP 加入白名单后重试。"
+msgstr ""
+
+#: inc/fun/transport-check.php:188 inc/fun/transport-check.php:206
+msgid "文本压缩"
+msgstr ""
+
+#: inc/fun/transport-check.php:192
+msgid "HTML 与静态资源压缩算法不一致，通常只配了一处。"
+msgstr ""
+
+#: inc/fun/transport-check.php:194
+msgid "已压缩；另有体积小于 1KB 的响应未压缩，属 nginx 正常行为。"
+msgstr ""
+
+#: inc/fun/transport-check.php:195
+msgid "HTML 与静态资源均已压缩传输。"
+msgstr ""
+
+#: inc/fun/transport-check.php:200
+msgid "HTML"
+msgstr ""
+
+#: inc/fun/transport-check.php:203
+msgid "静态资源"
+msgstr ""
+
+#: inc/fun/transport-check.php:208
+#, php-format
+msgid "%s未压缩"
+msgstr ""
+
+#: inc/fun/transport-check.php:210
+msgid "需在 nginx / CDN 开启 gzip 或 Brotli，并确认覆盖对应 MIME 类型。"
+msgstr ""
+
+#: inc/fun/transport-check.php:217
+msgid "静态资源缓存"
+msgstr ""
+
+#: inc/fun/transport-check.php:218 inc/fun/transport-check.php:230
+msgid "未设置"
+msgstr ""
+
+#: inc/fun/transport-check.php:221
+msgid "回访时静态资源可直接命中本地缓存。"
+msgstr ""
+
+#: inc/fun/transport-check.php:222
+msgid "每次访问都会重新下载静态资源，需在 nginx / CDN 配置 Cache-Control。"
+msgstr ""
+
+#: inc/fun/transport-check.php:229 inc/fun/transport-check.php:236
+#: inc/fun/transport-check.php:243
+msgid "HTML 缓存头"
+msgstr ""
+
+#: inc/fun/transport-check.php:232
+msgid "浏览器按启发式缓存处理；HTML 建议由整页缓存或 CDN 显式接管。"
+msgstr ""
+
+#: inc/fun/transport-check.php:239
+msgid "HTML 不被共享缓存保存，符合预期 —— 由整页缓存负责加速。"
+msgstr ""
+
+#: inc/fun/transport-check.php:244
+msgid "已设置"
+msgstr ""
+
+#: inc/fun/transport-check.php:246
+msgid "CDN / 共享缓存会保存 HTML，请确认内容更新后能及时失效。"
+msgstr ""
+
+#: inc/fun/transport-check.php:253
+msgid "HTTP/3 (QUIC)"
+msgstr ""
+
+#: inc/fun/transport-check.php:254
+msgid "已宣告"
+msgstr ""
+
+#: inc/fun/transport-check.php:254
+msgid "未宣告"
+msgstr ""
+
+#: inc/fun/transport-check.php:257
+msgid "服务器已通过 alt-svc 宣告支持 HTTP/3。"
+msgstr ""
+
+#: inc/fun/transport-check.php:258
+msgid "响应未带 alt-svc: h3（可能由 CDN 边缘提供，本机探测不可见）。"
+msgstr ""
+
+#: inc/fun/transport-check.php:311
+msgid "尚未体检。点击下方按钮发起一次探测（2 个请求，约 1～2 秒）。"
+msgstr ""
+
+#: inc/fun/transport-check.php:338
+#, php-format
+msgid "%d 分钟前"
+msgstr ""
+
+#: inc/fun/transport-check.php:344
+#, php-format
+msgid "%d 小时前"
+msgstr ""
+
+#: inc/fun/warm-up.php:25
+msgid "仅手动 / 清缓存后触发"
+msgstr ""
+
+#: inc/fun/warm-up.php:26 inc/fun/warm-up.php:631
+msgid "每 15 分钟"
+msgstr ""
+
+#: inc/fun/warm-up.php:766
+msgid "已启动预热"
+msgstr ""
+
+#: inc/seo-jsonld.php:270
+msgid "搜索: "
+msgstr ""
+
+#: inc/seo.php:295
+msgid "分类"
+msgstr ""
+
+#: inc/seo.php:295
+msgid "标签"
+msgstr ""
+
+#: inc/seo.php:297
+#, php-format
+msgid "「%1$s」%2$s下的 %3$d 篇文章合集，持续更新中。"
+msgstr ""
+
+#: inc/seo.php:491
+#, php-format
+msgid "%1$s 分类 · %2$d 篇文章合集"
+msgstr ""
+
+#: inc/seo.php:499
+#, php-format
+msgid "%1$s 标签 · %2$d 篇文章合集"
+msgstr ""
+
+#: inc/seo.php:507
+#, php-format
+msgid "%s 的全部文章"
+msgstr ""
+
+#: inc/seo.php:551
+#, php-format
+msgid "%1$s · %2$s"
+msgstr ""
+
+#: jinyu-theme-companion.php:76
+msgid ""
+"「金玉主题配套插件」的第三方登录模块需要 PHP 8.0 及以上版本，当前 PHP 版本过"
+"低，该模块已停用；其余功能不受影响。"
+msgstr ""

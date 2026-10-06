@@ -161,6 +161,7 @@ add_action( 'wp_ajax_jinyu_img_audit', 'jinyu_img_seo_audit_ajax' );
  */
 function jinyu_img_seo_audit_ajax() {
 	jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
+	// phpcs:ignore WordPress.Security.NonceVerification -- nonce 已在入口经 jinyu_companion_guard() 校验
 	$force = isset( $_POST['force'] ) && '1' === $_POST['force'];
 	wp_send_json_success( jinyu_img_seo_audit( $force ) );
 }
@@ -175,6 +176,7 @@ function jinyu_img_seo_audit( bool $force = false ): array {
 	}
 
 	global $wpdb;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 只读体检扫描，结果由上层 12h 缓存兜底
 	$rows = $wpdb->get_results(
 		"SELECT ID, post_title, post_content
 		 FROM {$wpdb->posts}

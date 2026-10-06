@@ -92,6 +92,7 @@ function jinyu_comment_cleanup_scan() {
 	}
 
 	// 拉取全部已批准评论（上限 2000），在 PHP 内逐条评分；只返回评分 > 0 的疑似项。
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 评论清理/备份操作，管理端手动触发；备份表为插件自建表
 	$rows = $wpdb->get_results(
 		"SELECT comment_ID, comment_post_ID, comment_author, comment_author_email, comment_author_url, comment_content, comment_date
 		 FROM {$wpdb->comments}
@@ -301,6 +302,7 @@ function jinyu_comment_cleanup_scan() {
 function jinyu_comment_cleanup_delete() {
 	jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
 
+	// phpcs:ignore WordPress.Security.NonceVerification -- nonce 已在入口经 jinyu_companion_guard() 校验
 	$ids_raw = isset( $_POST['ids'] ) ? sanitize_text_field( wp_unslash( $_POST['ids'] ) ) : '';
 	$ids     = array_filter( array_map( 'intval', explode( ',', $ids_raw ) ) );
 	if ( empty( $ids ) ) {
@@ -312,12 +314,13 @@ function jinyu_comment_cleanup_delete() {
 	}
 
 	global $wpdb;
-	$backup = ! empty( $_POST['backup'] ) && '1' === (string) wp_unslash( $_POST['backup'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 只与字面量 '1' 严格比较，无注入面
+	$backup = ! empty( $_POST['backup'] ) && '1' === (string) wp_unslash( $_POST['backup'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification -- 只与字面量 '1' 严格比较，无注入面
 
 	// 仅作用于确为"已批准"的评论（与扫描口径一致），其余忽略
 	$ph            = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 评论清理/备份操作，管理端手动触发；备份表为插件自建表
 	$approved_ids  = $wpdb->get_col(
-		$wpdb->prepare( "SELECT comment_ID FROM {$wpdb->comments} WHERE comment_ID IN ({$ph}) AND ...'1'", ...$ids ) // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- 占位符来自 $ph（implode 出的 %d 串），同理静态分析看不见，运行时 prepare 有效
+		$wpdb->prepare( "SELECT comment_ID FROM {$wpdb->comments} WHERE comment_ID IN ({$ph}) AND ...'1'", ...$ids ) // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- 占位符来自 $ph（implode 出的 %d 串），同理静态分析看不见，运行时 prepare 有效
 	);
 	if ( empty( $approved_ids ) ) {
 		wp_send_json_error( __( '未找到可删除的已批准评论。', 'jinyu-theme-companion' ) );
@@ -327,10 +330,12 @@ function jinyu_comment_cleanup_delete() {
 	if ( $backup ) {
 		$table = $wpdb->prefix . 'comments_cleanup_bak';
 		// 与本站前缀一致，绝不越权；仅复制结构，不复制其它库表。
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 评论清理/备份操作，管理端手动触发；备份表为插件自建表
 		$wpdb->query( "CREATE TABLE IF NOT EXISTS {$table} LIKE {$wpdb->comments}" );
 		$bph        = implode( ',', array_fill( 0, count( $approved_ids ), '%d' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 评论清理/备份操作，管理端手动触发；备份表为插件自建表
 		$backed_up = (int) $wpdb->query(
-			$wpdb->prepare( "INSERT INTO {$table} SELECT * FROM {$wpdb->comments} WHERE comment_ID IN ({$bph})", ...$approved_ids ) // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- 占位符来自 $bph，同上；备份写入是本地表操作，无外部输入
+			$wpdb->prepare( "INSERT INTO {$table} SELECT * FROM {$wpdb->comments} WHERE comment_ID IN ({$bph})", ...$approved_ids ) // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- 占位符来自 $bph，同上；备份写入是本地表操作，无外部输入
 		);
 	}
 

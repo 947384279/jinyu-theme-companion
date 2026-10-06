@@ -261,6 +261,36 @@ function jinyu_page_cache_gc(): void {
             @wp_delete_file( $lf );
         }
     }
+
+    // 聚合命中率计数：把本周期内追加的命中/未命中字节数累加进 option，再清空计数文件。
+    // GC 自带频率闸门（JINYU_PAGE_CACHE_GC_INTERVAL），不会每次请求都读写 option。
+    if ( jinyu_page_cache_php_layer_active() && is_dir( $dir ) ) {
+        $hits = strlen( (string) @file_get_contents( $dir . '/.jinyu_hits' ) );
+        $miss = strlen( (string) @file_get_contents( $dir . '/.jinyu_miss' ) );
+        if ( $hits > 0 || $miss > 0 ) {
+            $agg = get_option(
+                'jinyu_page_cache_stats',
+                array(
+					'hits' => 0,
+					'miss' => 0,
+					'at' => 0,
+                )
+            );
+            if ( ! is_array( $agg ) ) {
+                $agg = array(
+					'hits' => 0,
+					'miss' => 0,
+					'at' => 0,
+				);
+            }
+            $agg['hits'] += $hits;
+            $agg['miss'] += $miss;
+            $agg['at']    = time();
+            update_option( 'jinyu_page_cache_stats', $agg, false );
+        }
+        @file_put_contents( $dir . '/.jinyu_hits', '' );
+        @file_put_contents( $dir . '/.jinyu_miss', '' );
+    }
 }
 
 /**
@@ -272,6 +302,7 @@ function jinyu_page_cache_flush(): void {
     // 多个钩子连锁触发），time() 在这一秒里返回同一个值，update_option 写入相同字符串时
     // 不会真正推进代际 —— 而这一秒内已有页面按旧代际落盘，它们将不被失效，旧内容会一直服务到 TTL。
     update_option( 'jinyu_page_cache_epoch', (string) ( (int) jinyu_page_cache_epoch() + 1 ), false );
+    update_option( 'jinyu_page_cache_last_flush', time(), false );
     // GC 自身带频率闸门，此处调用不会每次都扫目录
     jinyu_page_cache_gc();
     // 边缘模式：服务器层缓存走全量刷新（配合 stale-while-revalidate 无感）
@@ -353,6 +384,205 @@ function jinyu_page_cache_flush_post( int $post_id ): void {
         jinyu_edge_purge_url( $u );
     }
 }
+
+/**
+ * 文章级缓存时长：单篇可在编辑页覆盖全局 TTL。
+ *
+ * 机制：保存文章时把「规范化 URI → TTL(秒)」写进选项 page_cache_ttl_map；
+ * serve 早期（init，尚无 WP 查询、不知道文章类型）直接查表，无需依赖文章类型判定。
+ * 仅简单模式（文件缓存）真实生效；边缘模式服务器层 TTL 由 nginx 配置决定，仍走全局默认值。
+ */
+
+/**
+ * 读取「规范化 URI → TTL」映射表。
+ *
+ * @return array<string,int>
+ */
+function jinyu_page_cache_ttl_map(): array {
+    $map = get_option( 'page_cache_ttl_map' );
+    return is_array( $map ) ? $map : [];
+}
+
+/**
+ * 当前请求应使用的缓存时长（秒）。命中映射表则用文章级覆盖值，否则回退全局默认。
+ */
+function jinyu_page_cache_ttl_for_uri(): int {
+    $default = max( 60, (int) jinyu_companion_get_option( 'page_cache_ttl', '3600' ) );
+    $map     = jinyu_page_cache_ttl_map();
+    if ( $map ) {
+        $uri = jinyu_page_cache_canonical_uri();
+        if ( isset( $map[ $uri ] ) ) {
+            $v = (int) $map[ $uri ];
+            if ( $v >= 60 ) {
+                return min( $v, 2592000 );
+            }
+        }
+    }
+    return $default;
+}
+
+/**
+ * 写入/删除映射表单项（ttl < 60 视为「跟随默认」并移除该项）。
+ *
+ * @param string $uri 规范化 URI（与 jinyu_page_cache_canonical_uri() 同算法）
+ * @param int    $ttl 秒；0 或 < 60 表示清除该项
+ */
+function jinyu_page_cache_ttl_map_set( string $uri, int $ttl ): void {
+    $map = jinyu_page_cache_ttl_map();
+    if ( $ttl < 60 ) {
+        unset( $map[ $uri ] );
+    } else {
+        $map[ $uri ] = min( $ttl, 2592000 );
+    }
+    update_option( 'page_cache_ttl_map', $map, false );
+}
+
+/**
+ * 由单篇永久链接计算规范化 URI，并把其文章级 TTL 同步进映射表。
+ *
+ * @param int $post_id
+ */
+function jinyu_page_cache_ttl_map_for_post( int $post_id ): void {
+    $permalink = get_permalink( $post_id );
+    if ( ! is_string( $permalink ) || '' === $permalink ) {
+        return;
+    }
+    $path = (string) wp_parse_url( $permalink, PHP_URL_PATH );
+    $path = '' === $path ? '/' : $path;
+    $params = [];
+    $query = wp_parse_url( $permalink, PHP_URL_QUERY );
+    if ( is_string( $query ) && '' !== $query ) {
+        parse_str( $query, $params );
+    }
+    $uri = jinyu_page_cache_canonicalize( $path, $params );
+    $ttl = (int) get_post_meta( $post_id, 'jinyu_page_cache_ttl', true );
+    jinyu_page_cache_ttl_map_set( $uri, $ttl );
+}
+
+/**
+ * 注册文章级 TTL 元数据（进入 REST，区块编辑器可保存）。
+ */
+function jinyu_page_cache_ttl_register_meta(): void {
+    register_meta(
+        'post',
+        'jinyu_page_cache_ttl',
+        [
+            'type'              => 'integer',
+            'single'            => true,
+            'sanitize_callback' => static function ( $val ) {
+				return (int) $val; },
+            'auth_callback'     => static function ( $allowed, $meta_key, $object_id ): bool {
+                return current_user_can( 'edit_post', (int) $object_id );
+            },
+            'show_in_rest'      => true,
+        ]
+    );
+}
+add_action( 'init', 'jinyu_page_cache_ttl_register_meta' );
+
+/**
+ * 仅在整页缓存开启时，给公开文章类型挂「整页缓存时长」侧栏框。
+ */
+function jinyu_page_cache_ttl_add_meta_box(): void {
+    if ( ! function_exists( 'jinyu_companion_is_checked' ) || ! jinyu_companion_is_checked( 'page_cache_enable' ) ) {
+        return;
+    }
+    $types = get_post_types( [ 'public' => true ] );
+    unset( $types['attachment'] );
+    foreach ( $types as $type ) {
+        add_meta_box(
+            'jinyu-page-cache-ttl',
+            __( '整页缓存时长', 'jinyu-theme-companion' ),
+            'jinyu_page_cache_ttl_meta_box_html',
+            $type,
+            'side',
+            'default'
+        );
+    }
+}
+add_action( 'add_meta_boxes', 'jinyu_page_cache_ttl_add_meta_box' );
+
+/**
+ * 文章编辑页「本页缓存时长」下拉。0 = 跟随全局默认。
+ *
+ * @param WP_Post $post
+ */
+function jinyu_page_cache_ttl_meta_box_html( WP_Post $post ): void {
+    wp_nonce_field( 'jinyu_page_cache_ttl_save', 'jinyu_page_cache_ttl_nonce' );
+    $val   = (int) get_post_meta( $post->ID, 'jinyu_page_cache_ttl', true );
+    $opts  = [
+        0       => __( '跟随全局默认', 'jinyu-theme-companion' ),
+        600     => __( '10 分钟', 'jinyu-theme-companion' ),
+        3600    => __( '1 小时', 'jinyu-theme-companion' ),
+        43200   => __( '12 小时', 'jinyu-theme-companion' ),
+        86400   => __( '1 天', 'jinyu-theme-companion' ),
+        604800  => __( '7 天', 'jinyu-theme-companion' ),
+        1296000 => __( '15 天', 'jinyu-theme-companion' ),
+        2592000 => __( '30 天', 'jinyu-theme-companion' ),
+    ];
+    ?>
+    <p>
+        <label for="jinyu_page_cache_ttl" style="display:block;font-weight:600;margin-bottom:4px"><?php echo esc_html__( '本页缓存时长', 'jinyu-theme-companion' ); ?></label>
+        <select id="jinyu_page_cache_ttl" name="jinyu_page_cache_ttl" style="width:100%">
+            <?php foreach ( $opts as $sec => $label ) : ?>
+                <option value="<?php echo esc_attr( (string) $sec ); ?>"<?php selected( $val, $sec ); ?>><?php echo esc_html( $label ); ?></option>
+            <?php endforeach; ?>
+        </select>
+        <span class="description" style="font-size:12px"><?php echo esc_html__( '覆盖「整页缓存」面板的全局有效期；发文或改文章会自动清本页缓存。边缘 / CDN 模式仍按服务器全局值。', 'jinyu-theme-companion' ); ?></span>
+    </p>
+    <?php
+}
+
+/**
+ * 保存文章级 TTL：写 meta + 刷新映射表 + 立即清本页缓存令新值生效。
+ *
+ * @param int $post_id
+ */
+function jinyu_page_cache_ttl_save( int $post_id ): void {
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+        return;
+    }
+    if ( ! isset( $_POST['jinyu_page_cache_ttl_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['jinyu_page_cache_ttl_nonce'] ) ), 'jinyu_page_cache_ttl_save' ) ) {
+        return;
+    }
+    if ( ! current_user_can( 'edit_post', $post_id ) ) {
+        return;
+    }
+    if ( ! isset( $_POST['jinyu_page_cache_ttl'] ) ) {
+        return;
+    }
+    $ttl = (int) wp_unslash( $_POST['jinyu_page_cache_ttl'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- (int) 强制转型即完全消毒，TTL 为整数秒。
+    if ( $ttl !== 0 && $ttl < 60 ) {
+        $ttl = 0;
+    }
+    update_post_meta( $post_id, 'jinyu_page_cache_ttl', $ttl );
+    jinyu_page_cache_ttl_map_for_post( $post_id );
+    if ( function_exists( 'jinyu_page_cache_flush_post' ) ) {
+        jinyu_page_cache_flush_post( $post_id );
+    }
+}
+add_action( 'save_post', 'jinyu_page_cache_ttl_save', 20 );
+
+/**
+ * 删文时顺手移除映射表里的陈旧项，避免无限堆积。
+ *
+ * @param int $post_id
+ */
+function jinyu_page_cache_ttl_on_delete( int $post_id ): void {
+    $permalink = get_permalink( $post_id );
+    if ( ! is_string( $permalink ) || '' === $permalink ) {
+        return;
+    }
+    $path = (string) wp_parse_url( $permalink, PHP_URL_PATH );
+    $path = '' === $path ? '/' : $path;
+    $params = [];
+    $query = wp_parse_url( $permalink, PHP_URL_QUERY );
+    if ( is_string( $query ) && '' !== $query ) {
+        parse_str( $query, $params );
+    }
+    jinyu_page_cache_ttl_map_set( jinyu_page_cache_canonicalize( $path, $params ), 0 );
+}
+add_action( 'before_delete_post', 'jinyu_page_cache_ttl_on_delete' );
 
 /**
  * 全局缓存失效入口（插件独占，主题不可覆盖）。
@@ -543,6 +773,34 @@ function jinyu_page_cache_release_build_lock( $fh ): void {
  *
  * @param string $reason no_mkdir | not_writable | write_fail
  */
+/**
+ * 命中率统计：在缓存目录写独立计数文件（每命中/未命中追加 1 字节「1」），
+ * 由 GC 周期聚合进 option，避免每次前端请求都写数据库（热路径零 DB 写入）。
+ * 仅 PHP 层缓存（非边缘模式）且目录可写时采集；失败静默，绝不阻断主流程。
+ *
+ * @param string $kind hit | miss
+ */
+function jinyu_page_cache_stat_file( string $kind ): string {
+    $dir = jinyu_page_cache_dir();
+    return $dir . '/.jinyu_' . ( 'hit' === $kind ? 'hits' : 'miss' );
+}
+
+function jinyu_page_cache_record_hit(): void {
+    if ( ! jinyu_page_cache_php_layer_active() ) {
+        return;
+    }
+    $f = jinyu_page_cache_stat_file( 'hit' );
+    @file_put_contents( $f, '1', FILE_APPEND | LOCK_EX ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents,WordPress.PHP.NoSilencedErrors -- 命中计数追加，失败静默不影响缓存主流程
+}
+
+function jinyu_page_cache_record_miss(): void {
+    if ( ! jinyu_page_cache_php_layer_active() ) {
+        return;
+    }
+    $f = jinyu_page_cache_stat_file( 'miss' );
+    @file_put_contents( $f, '1', FILE_APPEND | LOCK_EX ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents,WordPress.PHP.NoSilencedErrors -- 未命中计数追加，失败静默不影响缓存主流程
+}
+
 function jinyu_page_cache_note_blocked( string $reason ): void {
     $prev    = (string) get_option( 'jinyu_page_cache_blocked_reason', '' );
     $at      = (int) get_option( 'jinyu_page_cache_blocked_at', 0 );
@@ -607,56 +865,109 @@ function jinyu_page_cache_status(): array {
     }
 
     // 边缘模式：缓存由 Web 服务器写入，插件不碰目录，跳过可写性诊断，改报模式信息。
+    // 不提前 return：下方仍填充插件侧可知的字段（全局有效期 / 自定义时长文章 / 最近清除），
+    // 让设置面板的缓存状态卡在边缘模式下也能展示真实值，不退化成硬编码的「1 小时」。
+    $is_edge = false;
     if ( 'edge' === jinyu_page_cache_mode() ) {
-        $status['reason']       = 'edge';
-        $status['ready']        = true;
-        $status['writable']     = true;
-        $status['edge_server']  = jinyu_page_cache_edge_server_effective();
-        $status['edge_path']    = jinyu_page_cache_edge_snippet_path();
-        return $status;
+        $is_edge                  = true;
+        $status['reason']         = 'edge';
+        $status['ready']          = true;
+        $status['writable']       = true;
+        $status['edge_server']    = jinyu_page_cache_edge_server_effective();
+        $status['edge_path']      = jinyu_page_cache_edge_snippet_path();
     }
 
-    if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) && ! is_dir( $dir ) ) {
-        $status['reason'] = 'no_mkdir';
-        return $status;
-    }
-
-    if ( ! is_writable( $dir ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- 前端缓存目录可写性检查，无可替代 WP API
-        $status['reason'] = 'not_writable';
-        return $status;
-    }
-
-    $status['ready']    = true;
-    $status['writable'] = true;
-    $status['reason']   = 'ok';
-
-    // 文件数 / 最近写入需要扫目录，带闸门：只在超过间隔时重算，结果复用
-    $probe = (int) get_option( 'jinyu_page_cache_probe_at', 0 );
-    if ( time() - $probe > JINYU_PAGE_CACHE_PROBE_INTERVAL ) {
-        $files  = glob( $dir . '/page_*.html' ) ?: [];
-        $newest = 0;
-        foreach ( $files as $f ) {
-            $m = (int) @filemtime( $f );
-            if ( $m > $newest ) {
-                $newest = $m;
-            }
+    if ( ! $is_edge ) {
+        if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) && ! is_dir( $dir ) ) {
+            $status['reason'] = 'no_mkdir';
+            return $status;
         }
-        update_option( 'jinyu_page_cache_probe_at', time(), false );
-        update_option(
-            'jinyu_page_cache_stat',
-            [
-				'files'      => count( $files ),
-				'last_write' => $newest,
-			],
-            false
-        );
+
+        if ( ! is_writable( $dir ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- 前端缓存目录可写性检查，无可替代 WP API
+            $status['reason'] = 'not_writable';
+            return $status;
+        }
+
+        $status['ready']    = true;
+        $status['writable'] = true;
+        $status['reason']   = 'ok';
     }
 
-    $stat = get_option( 'jinyu_page_cache_stat' );
-    if ( is_array( $stat ) ) {
-        $status['files']      = (int) ( $stat['files'] ?? 0 );
-        $status['last_write'] = (int) ( $stat['last_write'] ?? 0 );
+    // 文件数 / 最近写入需要扫目录，带闸门：只在超过间隔时重算，结果复用。
+    // 边缘模式跳过：缓存文件在 Web 服务器侧，插件目录为空，扫它没有意义。
+    if ( ! $is_edge ) {
+        $probe = (int) get_option( 'jinyu_page_cache_probe_at', 0 );
+        if ( time() - $probe > JINYU_PAGE_CACHE_PROBE_INTERVAL ) {
+            $files  = glob( $dir . '/page_*.html' ) ?: [];
+            $newest = 0;
+            $bytes  = 0;
+            foreach ( $files as $f ) {
+                $m = (int) @filemtime( $f );
+                if ( $m > $newest ) {
+                    $newest = $m;
+                }
+                $bytes += (int) @filesize( $f );
+                $meta   = $f . '.meta';
+                if ( is_file( $meta ) ) {
+                    $bytes += (int) @filesize( $meta );
+                }
+            }
+            update_option( 'jinyu_page_cache_probe_at', time(), false );
+            update_option( 'jinyu_page_cache_stat_bytes', $bytes, false );
+            update_option(
+                'jinyu_page_cache_stat',
+                [
+					'files'      => count( $files ),
+					'last_write' => $newest,
+				],
+                false
+            );
+        }
     }
+
+    // 边缘模式：文件数/最近写入读的是插件目录的陈旧残留（真实缓存由 Web 服务器持有），一律跳过，避免误导。
+    if ( ! $is_edge ) {
+        $stat = get_option( 'jinyu_page_cache_stat' );
+        if ( is_array( $stat ) ) {
+            $status['files']      = (int) ( $stat['files'] ?? 0 );
+            $status['last_write'] = (int) ( $stat['last_write'] ?? 0 );
+        }
+    }
+
+    // 命中率来源分两路：
+    // - 简单模式：本插件 PHP 层自采（GC 周期聚合，非实时）。
+    // - 边缘模式：PHP 不参与命中，改为解析 Web 服务器写出的 $upstream_cache_status 日志
+    // （inc/fun/edge-stats.php）；日志未启用时保持 null，前端仍显示「—」。
+    $st                     = get_option( 'jinyu_page_cache_stats', array() );
+    $status['hit_count']    = (int) ( $st['hits'] ?? 0 );
+    $status['miss_count']   = (int) ( $st['miss'] ?? 0 );
+    $status['hit_rate']     = null;
+    $status['hit_source']   = '';
+    $status['edge_samples'] = 0;
+    if ( $is_edge ) {
+        if ( function_exists( 'jinyu_edge_stats_available' ) && jinyu_edge_stats_available() ) {
+            $es                     = jinyu_edge_stats_collect();
+            $status['hit_rate']     = jinyu_edge_stats_rate( $es );
+            $status['hit_source']   = 'server';
+            $status['edge_samples'] = (int) $es['hits'] + (int) $es['miss'] + (int) $es['expired'] + (int) $es['stale'];
+            $status['edge_stats']   = $es;
+        }
+    } elseif ( ( $status['hit_count'] + $status['miss_count'] ) > 0 ) {
+        $status['hit_rate']   = round( $status['hit_count'] / ( $status['hit_count'] + $status['miss_count'] ) * 100, 1 );
+        $status['hit_source'] = 'plugin';
+    }
+    $status['stats_at']     = (int) ( $st['at'] ?? 0 );
+    $status['bytes']        = $is_edge ? 0 : (int) get_option( 'jinyu_page_cache_stat_bytes', 0 );
+    $status['last_flush']   = (int) get_option( 'jinyu_page_cache_last_flush', 0 );
+    $status['custom_count'] = count(
+        array_filter(
+            jinyu_page_cache_ttl_map(),
+            static function ( $v ) {
+				return (int) $v >= 60;
+			}
+        )
+    );
+    $status['ttl_default']  = max( 60, (int) jinyu_companion_get_option( 'page_cache_ttl', '3600' ) );
 
     return $status;
 }
@@ -1029,7 +1340,7 @@ function jinyu_page_cache_capture_headers(): array {
  * 配合 ETag 即可零字节 304。
  */
 function jinyu_page_cache_send_headers( string $etag ): void {
-    $ttl = max( 60, (int) jinyu_companion_get_option( 'page_cache_ttl', '3600' ) );
+    $ttl = jinyu_page_cache_ttl_for_uri();
     // 浏览器 max-age 固定 600 是为了「比服务端 TTL 短」——更短才好在服务端清理后尽快回源。
     // 但反过来不成立：TTL 配得比 600 小时（如 300），固定 600 会让访客在服务端已过期、
     // 已清理之后，仍从自己浏览器的本地缓存读旧页面，must-revalidate 也拦不住。
@@ -1190,7 +1501,7 @@ function jinyu_page_cache_serve(): void {
 
     $file     = jinyu_page_cache_file();
     $servable = ( '' !== $file && is_readable( $file ) ) ? $file : '';
-    $ttl      = max( 60, (int) jinyu_companion_get_option( 'page_cache_ttl', '3600' ) );
+    $ttl      = jinyu_page_cache_ttl_for_uri();
     $expired  = false;
     if ( $servable ) {
         $written = (int) @filemtime( $servable );
@@ -1213,6 +1524,7 @@ function jinyu_page_cache_serve(): void {
         // 标记本进程为「重建者」；锁在 capture 的 shutdown（写盘之后）释放，
         // 避免释放后他人抢锁时文件尚未落盘，导致并发写同一文件。
         jinyu_page_cache_build_lock( $lock );
+        jinyu_page_cache_record_miss();
         return; // 交给 WP 正常渲染，capture 在 shutdown 写盘并释放锁
     }
 
@@ -1231,6 +1543,7 @@ function jinyu_page_cache_serve(): void {
         exit;
     }
     // 极端冷启动竞态：放弃互斥，直接渲染（写盘仍用 LOCK_EX 防半截文件）。
+    jinyu_page_cache_record_miss();
 }
 
 /**
@@ -1240,6 +1553,7 @@ function jinyu_page_cache_serve(): void {
  * @param bool   $stale true=内容可能略旧，标 STALE（仍走 304：客户端若已持有相同字节则无需重传）
  */
 function jinyu_page_cache_emit( string $file, bool $stale ): void {
+    jinyu_page_cache_record_hit();
     $body = (string) file_get_contents( $file );
 
     // 响应头已在极早阶段发出（主题或插件提前 echo 过）：ETag / Cache-Control 都设不了，
@@ -1492,7 +1806,7 @@ function jinyu_page_cache_edge_headers(): void {
         return;
     }
 
-    $ttl = max( 60, (int) jinyu_companion_get_option( 'page_cache_ttl', '3600' ) );
+    $ttl = jinyu_page_cache_ttl_for_uri();
 
     if ( function_exists( 'header_remove' ) ) {
         header_remove( 'Cache-Control' );
@@ -1520,6 +1834,31 @@ function jinyu_page_cache_edge_late_guard(): void {
 }
 
 /**
+ * 边缘模式（Nginx）：把页面 URL 映射到 fastcgi_cache 的平铺缓存文件路径。
+ *
+ * 文件名 = md5( $scheme$host$request_uri )，须与 nginx 片段里的 fastcgi_cache_key
+ * "$scheme$host$request_uri" 完全一致。Apache 的 mod_cache_disk 按哈希多层铺开、
+ * 布局不透明，返回空串表示「无法定位」（调用方需退化为全量刷新）。
+ *
+ * @param string $url 页面 URL.
+ * @return string 缓存文件绝对路径；无法定位时返回 ''。
+ */
+function jinyu_page_cache_edge_file_for_url( string $url ): string {
+    if ( 'edge' !== jinyu_page_cache_mode() || 'apache' === jinyu_page_cache_edge_server_effective() ) {
+        return '';
+    }
+
+    $parts   = (array) wp_parse_url( $url );
+    $scheme  = isset( $parts['scheme'] ) && 'https' === $parts['scheme'] ? 'https' : (string) wp_parse_url( home_url(), PHP_URL_SCHEME );
+    $host    = isset( $parts['host'] ) ? (string) $parts['host'] : (string) wp_parse_url( home_url(), PHP_URL_HOST );
+    $path    = isset( $parts['path'] ) ? (string) $parts['path'] : '/';
+    $query   = isset( $parts['query'] ) ? (string) $parts['query'] : '';
+    $req_uri = $path . ( '' !== $query ? '?' . $query : '' );
+
+    return jinyu_page_cache_edge_path() . '/' . md5( $scheme . $host . $req_uri );
+}
+
+/**
  * 边缘模式按 URL 精确清除服务器缓存。
  *
  * - Nginx（fastcgi_cache，flat path 无 levels）：缓存文件名 = md5(cache_key)，直接 unlink 即可精确删。
@@ -1537,17 +1876,8 @@ function jinyu_edge_purge_url( string $url ): void {
         return;
     }
 
-    $parts  = (array) wp_parse_url( $url );
-    $scheme = isset( $parts['scheme'] ) && 'https' === $parts['scheme'] ? 'https' : (string) wp_parse_url( home_url(), PHP_URL_SCHEME );
-    $host   = isset( $parts['host'] ) ? (string) $parts['host'] : (string) wp_parse_url( home_url(), PHP_URL_HOST );
-    $path   = isset( $parts['path'] ) ? (string) $parts['path'] : '/';
-    $query  = isset( $parts['query'] ) ? (string) $parts['query'] : '';
-    $req_uri = $path . ( '' !== $query ? '?' . $query : '' );
-
-    // 须与片段里的 fastcgi_cache_key "$scheme$host$request_uri" 完全一致.
-    $key  = $scheme . $host . $req_uri;
-    $file = jinyu_page_cache_edge_path() . '/' . md5( $key );
-    if ( is_file( $file ) ) {
+    $file = jinyu_page_cache_edge_file_for_url( $url );
+    if ( '' !== $file && is_file( $file ) ) {
         @wp_delete_file( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors -- 边缘缓存精确清理，无可替代 WP API 且无外部输入
     }
 }
@@ -1603,9 +1933,12 @@ function jinyu_page_cache_edge_snippet( string $server ): string {
         // 注：Plugin Check（wp.org）不允许 heredoc，配置片段以逐行数组拼接。
         $lines = array(
             '# ===== 金玉配套插件 · 边缘缓存（Apache / mod_cache_disk）=====',
-            '# 需启用 mod_cache / mod_cache_disk。',
+            '# 需启用 mod_cache / mod_cache_disk / mod_log_config。',
+            '# 部署说明：本段整段放进 vhost（server）配置。末尾「命中统计日志」段负责让后台「命中率」显示真值；',
+            '#           不配那几行也完全可用（缓存照常生效，仅「命中率」显示「—」）。',
+            '# 若曾粘贴过旧版本片段，请用本段整段替换，避免 LogFormat 重名。',
             '# 本段只能放在 vhost（server）配置里。放进 .htaccess 会 500 ——',
-            '# CacheQuickHandler / CacheLock / CacheIgnoreHeaders 在 Apache 里仅允许出现于 server / vhost 上下文。',
+            '# CacheQuickHandler / CacheLock / CacheIgnoreHeaders / LogFormat 在 Apache 里仅允许出现于 server / vhost 上下文。',
             '<IfModule mod_cache_disk.c>',
             "\t" . 'CacheQuickHandler off',
             "\t" . 'CacheLock on',
@@ -1634,6 +1967,21 @@ function jinyu_page_cache_edge_snippet( string $server ): string {
             "\t" . 'SetEnvIf Request_URI "^/(wp-admin|wp-login|wp-json|xmlrpc.php)" no-cache',
             "\t" . 'SetEnvIf Request_URI "rest_route="    no-cache',
             '</IfModule>',
+            '',
+            '# ── 命中统计日志（与 Nginx 片段同名同格式，插件共用同一个解析器）──',
+            '# 依赖上面的 CacheHeader on：mod_cache 会把缓存结果写进响应头 X-Cache（HIT / MISS / REVALIDATE / INVALIDATE）。',
+            '# 这里把它记进日志，后台「命中率」即可显示真值；不配不影响缓存本身。',
+            '# 注意：不能用 %{cache-status}e —— 它输出的是「conditional cache hit: ...」这类长描述串，不是干净的状态词；',
+            '#       干净的状态词只在 X-Cache 响应头里（因此必须先打开 CacheHeader on）。',
+            '# %{%Y-%m-%dT%H:%M:%S%z}t 只用于对齐字段位置，Nginx 与 Apache 两种来源的日志结构一致。',
+            'LogFormat "%{%Y-%m-%dT%H:%M:%S%z}t|%{X-Cache}o|%>s|%U%q" jinyu_edge',
+            'CustomLog "' . dirname( $path ) . '/edge-access.log" jinyu_edge',
+            '# 若该目录不存在，请先 mkdir -p ' . dirname( $path ) . '（否则 Apache 会因日志路径不存在而启动失败）。',
+            '',
+            '# 防止统计日志被直接下载（Apache 2.4 语法；2.2 请改用 Order allow,deny + Deny from all）。',
+            '<FilesMatch "^edge-access\.log">',
+            "\t" . 'Require all denied',
+            '</FilesMatch>',
         );
 
         return implode( "\n", $lines );
@@ -1643,8 +1991,16 @@ function jinyu_page_cache_edge_snippet( string $server ): string {
     // 注：Plugin Check（wp.org）不允许 heredoc，配置片段以逐行数组拼接。
     $lines = array(
         '# ===== 金玉配套插件 · 边缘缓存（Nginx / fastcgi_cache）=====',
+        '# 部署三步：①「1)」段放 http 段；②「2)」段放处理 PHP 的 location；③「3)」「4)」段放 server 段。最后 nginx -t 校验、nginx -s reload。',
+        '# 升级提示：本片段新增了「4) 命中统计日志」。旧站点需重新粘贴（或手动补上那两行），后台「命中率」才会显示真值；不补不影响缓存本身。',
+        '',
         '# 1) 放入 http 段（或 conf.d 独立文件）：',
         'fastcgi_cache_path ' . $path . ' keys_zone=jinyu_edge:10m max_size=512m inactive=60m use_temp_path=off;',
+        '',
+        // 命中统计日志格式（HTTP 段唯一定义一次）：把每次请求的缓存结果写成
+        // 「时间|状态|HTTP码|URI」，插件据此算出真实命中率。已有站点把这两行补进
+        // 原片段即可；不补也不影响缓存本身，只是「命中率」继续显示「—」。
+        'log_format jinyu_edge \'$time_iso8601|$upstream_cache_status|$status|$request_uri\';',
         '',
         'map $http_cookie $jinyu_skip_cookie {',
         "\t" . 'default               0;',
@@ -1684,8 +2040,189 @@ function jinyu_page_cache_edge_snippet( string $server ): string {
         '#    always 让 404 / 5xx 也带上该头，便于排查；不加的话只有 2xx/3xx 能看到。',
         'add_header X-Jinyu-Cache $upstream_cache_status always;',
         '',
+        '# 4) 命中统计日志（同样放 server 段，与 3) 并列）：插件据此算出真实命中率。',
+        '#    路径与「边缘缓存目录」同级；末尾 deny 防止日志被直接下载。',
+        '#    若你改过缓存目录，请把 deny 里的 /wp-content/cache/jinyu/ 换成对应 URL 前缀。',
+        '#    若该目录不存在，请先 mkdir -p ' . dirname( $path ) . '（否则 nginx -t 会因日志路径不存在而失败）。',
+        'access_log ' . dirname( $path ) . '/edge-access.log jinyu_edge buffer=32k flush=5s;',
+        'location ~* ^/wp-content/cache/jinyu/.*\.log.*$ { deny all; access_log off; }',
+        '',
         '# 改完先 nginx -t 校验，再 nginx -s reload。',
     );
 
     return implode( "\n", $lines );
+}
+
+/**
+ * 查询某 URL 的缓存状态（是否存在 / 写入时间 / 是否过期 / 剩余 TTL）。
+ * 用身份通配跨代际匹配，与 jinyu_page_cache_delete_uri 同一算法。
+ *
+ * @param string $url
+ * @return array{found:bool,written:int,ttl:int,expired:bool,remaining:int,mode:string}
+ */
+function jinyu_page_cache_lookup( string $url ): array {
+    $out = array(
+        'url'       => $url,
+        'found'     => false,
+        'written'   => 0,
+        'ttl'       => 0,
+        'expired'   => false,
+        'remaining' => 0,
+        'mode'      => jinyu_page_cache_mode(),
+        'blind'     => false,
+    );
+
+    // 边缘模式：直接查 Web 服务器缓存文件。Nginx 平铺 md5 命名可精确查；
+    // Apache 哈希布局不透明，置 blind 让前端提示「无法按 URL 查询」。
+    if ( 'edge' === jinyu_page_cache_mode() ) {
+        if ( 'apache' === jinyu_page_cache_edge_server_effective() ) {
+            $out['blind'] = true;
+            return $out;
+        }
+        $file = jinyu_page_cache_edge_file_for_url( $url );
+        if ( '' === $file || ! is_file( $file ) ) {
+            return $out;
+        }
+        // 边缘层 TTL 由 nginx 配置 / 全局值决定，文章级映射只作用于简单模式，故此处只取全局值。
+        $ttl              = max( 60, (int) jinyu_companion_get_option( 'page_cache_ttl', '3600' ) );
+        $written          = (int) @filemtime( $file );
+        $out['found']     = true;
+        $out['written']   = $written;
+        $out['ttl']       = $ttl;
+        $out['expired']   = ( time() - $written > $ttl );
+        $out['remaining'] = max( 0, $written + $ttl - time() );
+        return $out;
+    }
+
+    $dir = jinyu_page_cache_dir();
+    if ( '' === $dir || ! is_dir( $dir ) ) {
+        return $out;
+    }
+    $identity = jinyu_page_cache_identity_for_uri( $url );
+    if ( '' === $identity ) {
+        return $out;
+    }
+    $files = glob( $dir . '/page_*_*_*_' . $identity . '.html' ) ?: array();
+    if ( ! $files ) {
+        return $out;
+    }
+    $best   = '';
+    $newest = 0;
+    foreach ( $files as $f ) {
+        $m = (int) @filemtime( $f );
+        if ( $m > $newest ) {
+            $newest = $m;
+            $best   = $f;
+        }
+    }
+    if ( '' === $best ) {
+        return $out;
+    }
+    // TTL：优先文章级映射，否则全局默认（jinyu_page_cache_ttl_for_uri 依赖当前请求 URI，此处按传入 URL 计算）。
+    $ttl = max( 60, (int) jinyu_companion_get_option( 'page_cache_ttl', '3600' ) );
+    $map = jinyu_page_cache_ttl_map();
+    if ( $map ) {
+        $parts  = wp_parse_url( $url );
+        $path   = isset( $parts['path'] ) ? $parts['path'] : '/';
+        $params = array();
+        if ( ! empty( $parts['query'] ) ) {
+            parse_str( $parts['query'], $params );
+        }
+        $uri = jinyu_page_cache_canonicalize( $path, $params );
+        if ( isset( $map[ $uri ] ) ) {
+            $v = (int) $map[ $uri ];
+            if ( $v >= 60 ) {
+                $ttl = min( $v, 2592000 );
+            }
+        }
+    }
+    $out['found']     = true;
+    $out['written']   = $newest;
+    $out['ttl']       = $ttl;
+    $out['expired']   = ( time() - $newest > $ttl );
+    $out['remaining'] = max( 0, $newest + $ttl - time() );
+    return $out;
+}
+
+/**
+ * 分组清除：all=全站推进代际；home=首页；url=指定 URL。
+ *
+ * 两种缓存层都清：简单模式删插件静态文件，边缘模式清服务器层
+ * （Nginx 按 URL 精确 / Apache 退化为全量）。两层各自带「模式不匹配即返回」的自我保护，
+ * 可无顾虑地一起调用。
+ *
+ * @param string $scope all | home | url
+ * @param string $url
+ * @return int 影响的分组数（0/1）
+ */
+function jinyu_page_cache_clear_scope( string $scope, string $url = '' ): int {
+    $n = 0;
+    if ( 'all' === $scope ) {
+        jinyu_page_cache_flush();
+        $n = 1;
+    } elseif ( 'home' === $scope ) {
+        $home = home_url( '/' );
+        jinyu_page_cache_delete_uri( $home );
+        jinyu_edge_purge_url( $home );
+        $n = 1;
+    } elseif ( 'url' === $scope && '' !== $url ) {
+        jinyu_page_cache_delete_uri( $url );
+        jinyu_edge_purge_url( $url );
+        $n = 1;
+    }
+    if ( $n > 0 ) {
+        update_option( 'jinyu_page_cache_last_flush', time(), false );
+    }
+    return $n;
+}
+
+add_action( 'wp_ajax_jinyu_page_cache_stat', 'jinyu_page_cache_ajax_stat' );
+add_action( 'wp_ajax_jinyu_page_cache_lookup', 'jinyu_page_cache_ajax_lookup' );
+add_action( 'wp_ajax_jinyu_page_cache_clear', 'jinyu_page_cache_ajax_clear' );
+add_action( 'wp_ajax_jinyu_page_cache_reset_stats', 'jinyu_page_cache_ajax_reset_stats' );
+
+function jinyu_page_cache_ajax_stat(): void {
+    jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
+    // 用户点「刷新」时传 force：绕过统计日志的解析节流，确保看到的是刚写入的日志值。
+    // phpcs:ignore WordPress.Security.NonceVerification -- nonce 已在入口经 jinyu_companion_guard() 校验
+    if ( ! empty( $_POST['force'] ) && function_exists( 'jinyu_edge_stats_collect' ) ) {
+        jinyu_edge_stats_collect( true );
+    }
+    wp_send_json_success( jinyu_page_cache_status() );
+}
+
+function jinyu_page_cache_ajax_lookup(): void {
+    jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
+    // phpcs:ignore WordPress.Security.NonceVerification -- nonce 已在入口经 jinyu_companion_guard() 校验
+    $url = isset( $_POST['url'] ) ? esc_url_raw( wp_unslash( $_POST['url'] ) ) : '';
+    if ( '' === $url ) {
+        wp_send_json_error( __( '请输入要查询的 URL', 'jinyu-theme-companion' ) );
+    }
+    wp_send_json_success( jinyu_page_cache_lookup( $url ) );
+}
+
+function jinyu_page_cache_ajax_clear(): void {
+    jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
+    // phpcs:ignore WordPress.Security.NonceVerification -- nonce 已在入口经 jinyu_companion_guard() 校验
+    $scope = isset( $_POST['scope'] ) ? sanitize_key( wp_unslash( $_POST['scope'] ) ) : '';
+    // phpcs:ignore WordPress.Security.NonceVerification -- nonce 已在入口经 jinyu_companion_guard() 校验
+    $url   = isset( $_POST['url'] ) ? esc_url_raw( wp_unslash( $_POST['url'] ) ) : '';
+    $n     = jinyu_page_cache_clear_scope( $scope, $url );
+    wp_send_json_success(
+        array(
+            'cleared' => $n,
+            'status'  => jinyu_page_cache_status(),
+        )
+    );
+}
+
+/**
+ * 重置边缘命中统计：偏移推进到日志末尾，此后只统计新增请求（不影响缓存本身）。
+ */
+function jinyu_page_cache_ajax_reset_stats(): void {
+    jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
+    if ( function_exists( 'jinyu_edge_stats_reset' ) ) {
+        jinyu_edge_stats_reset();
+    }
+    wp_send_json_success( jinyu_page_cache_status() );
 }

@@ -118,6 +118,7 @@ function jinyu_companion_uninstall_site( array $options, array $tables ): void {
 	 *
 	 * LIKE 里的下划线是单字符通配，要转义成字面量（写 jinyu\_% 而非 jinyu_%）。
 	 */
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 卸载清理必须直查插件自建表与元数据，一次性动作
 	$wpdb->query(
 		"DELETE FROM {$wpdb->options}
 		 WHERE (
@@ -150,9 +151,11 @@ function jinyu_companion_uninstall_site( array $options, array $tables ): void {
 			'jinyu_companion_theme_notice_dismissed',
 		) as $jinyu_um_key
 	) {
+		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 卸载清理必须直查插件自建表与元数据，一次性动作
 		$wpdb->delete( $wpdb->usermeta, [ 'meta_key' => $jinyu_um_key ], [ '%s' ] );
 	}
 	// 第三方登录的平台绑定键形如 jinyu_oauth_github / jinyu_oauth_avatar_github，按前缀清。
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 卸载清理必须直查插件自建表与元数据，一次性动作
 	$wpdb->query(
 		"DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE 'jinyu\_oauth\_%'"
 	);
@@ -164,7 +167,9 @@ function jinyu_companion_uninstall_site( array $options, array $tables ): void {
 	 *    插件卸载后没有任何东西再引用它们，留着就是纯占地方。
 	 * （transient 已由上面的统一前缀清理覆盖。）
 	 */
+	// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 卸载清理必须直查插件自建表与元数据，一次性动作
 	$wpdb->delete( $wpdb->postmeta, [ 'meta_key' => '_jinyu_wm_sig' ], [ '%s' ] );
+	// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 卸载清理必须直查插件自建表与元数据，一次性动作
 	$wpdb->delete( $wpdb->postmeta, [ 'meta_key' => '_jinyu_wm_files' ], [ '%s' ] );
 	jinyu_companion_uninstall_wm_files();
 
@@ -176,6 +181,7 @@ function jinyu_companion_uninstall_site( array $options, array $tables ): void {
 
 	foreach ( $tables as $table ) {
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- 表名来自本文件硬编码，非用户输入
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 卸载清理必须直查插件自建表与元数据，一次性动作
 		$wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
 	}
 }

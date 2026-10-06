@@ -668,6 +668,14 @@ input.jyc-inp { max-width: 640px; }
 .jyc-slider-wrap input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid var(--brand); cursor: pointer; }
 .jyc-slider-val { font-size: 15px; font-weight: 700; color: var(--brand); min-width: 96px; text-align: right; font-family: var(--font-display); }
 .jyc-slider-val small { display: block; font-size: 11px; color: var(--ink-3); font-weight: 500; }
+.jyc-ttl-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.jyc-ttl-chip { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2);
+  padding: 7px 15px; border-radius: 99px; font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: var(--font-display); transition: border-color .16s var(--ease), color .16s var(--ease), background .16s var(--ease); }
+.jyc-ttl-chip:hover { border-color: var(--brand); color: var(--brand); }
+.jyc-ttl-chip.is-active { background: var(--brand); border-color: var(--brand); color: #fff; }
+.jyc-app[data-theme="dark"] .jyc-ttl-chip.is-active { color: #0b1220; }
+.jyc-ttl-chip:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .jyc-color-row { display: flex; align-items: center; gap: 14px; }
 .jyc-color-row input[type=color] { width: 52px; height: 40px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 4px; cursor: pointer; }
 .jyc-color-row .jyc-chip { font-family: ui-monospace, monospace; font-size: 13px; color: var(--ink-2); background: var(--surface-2);
@@ -2044,14 +2052,10 @@ body.jyc-dark { background: #0a111c; }
 .jyc-og-tag.is-on i { background: var(--brand); }
 .jyc-og-tag.is-off { opacity: .7; }
 
-/* 卡片预览：微信 / QQ 风格（图上文下）。不再占独立面板 —— 改为「分享素材」面板标题右侧
-   「预览卡片」按钮的悬停弹层 .jyc-pop-pv（机制同「使用说明」气泡：挂到 .jyc-app + fixed，
-   不被 .jyc-panel 的 overflow:hidden 裁剪）。卡片在弹层内满宽铺陈，下方接标签清单。 */
+/* 卡片预览：微信 / QQ 风格（图上文下），内联在「分享素材」面板（.jyc-pv-wrap），
+   下方接标签清单。 */
 .jyc-pv { border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--surface-2); box-shadow: var(--elev-1); }
 .jyc-pv-side { min-width: 0; }
-.jyc-pop-pv { padding: 12px; }
-.jyc-pop-pv .jyc-pv { box-shadow: none; }
-.jyc-pop-pv .jyc-pv-side .jyc-og-tags-h { margin-top: 14px; }
 .jyc-og-tag-legend { font-size: 11.5px; margin-top: 10px; }
 .jyc-og-pv-note { font-size: 11.5px; line-height: 1.7; margin-top: 8px; }
 .jyc-pv-img { aspect-ratio: 1200 / 630; background: var(--surface-3); display: grid; place-items: center; }
@@ -2314,17 +2318,26 @@ body.jyc-dark { background: #0a111c; }
    纵向下滑动指示器 / 左右箭头无意义，已隐藏；JS 的 scrollNavIntoView 改走原生 scrollIntoView。 */
 @media (min-width: 880px) {
   .jyc-app { height: calc(100vh - var(--wp-admin--admin-bar--height, 32px)); overflow: hidden; }
+  /* 侧栏收放：实测 Chromium 不插值 grid-template-columns（WAAPI 亦瞬跳），
+     唯 width 过渡平滑。故保持 flex 行布局，只过渡 .jyc-topnav 的 width 单属性；
+     contain 把重排隔离在侧栏内部，文字走 opacity/transform 合成层。 */
   .jyc-main { flex-direction: row; align-items: stretch; height: 100%; }
   .jyc-content { flex: 1; min-width: 0; height: 100%; overflow-y: auto; padding: 18px 0 88px; }
   .jyc-topnav {
-    flex: 0 0 248px; width: 248px; align-self: stretch;
+    flex: 0 0 auto; width: 248px; align-self: stretch;
     flex-direction: column; align-items: stretch; gap: 14px;
     position: static;
     height: 100%;
     padding: 18px 13px; border-right: 1px solid var(--line); border-bottom: none;
     overflow: hidden; background: var(--surface);
-    transition: flex-basis .22s var(--ease), width .22s var(--ease);
+    contain: layout paint style;
+    transition: width .26s var(--ease);
   }
+  /* 初始还原折叠态（硬刷）时关闭过渡，避免「先展开再折叠」的入场动画；由 JS 在下一帧移除。 */
+  .jyc-app.jyc-no-anim .jyc-topnav,
+  .jyc-app.jyc-no-anim .jyc-brand-txt,
+  .jyc-app.jyc-no-anim .jyc-nav-item > span,
+  .jyc-app.jyc-no-anim .jyc-rail-toggle svg { transition: none !important; }
   .jyc-nav-wrap { flex-direction: column; flex: 1 1 auto; min-height: 0; gap: 4px; }
   .jyc-nav { flex-direction: column; align-items: stretch; gap: 4px; overflow-y: auto; padding-bottom: 0; }
   /* 激活项在纵向下加左侧色条 + 浅蓝底，比仅换字色更醒目（横排靠底部 indicator，纵排已隐藏） */
@@ -2345,19 +2358,51 @@ body.jyc-dark { background: #0a111c; }
     transition: color .2s var(--ease), border-color .2s var(--ease), background .2s var(--ease);
   }
   .jyc-rail-toggle:hover { color: var(--brand); border-color: var(--brand); background: var(--surface); }
+  .jyc-rail-toggle svg { transition: transform .24s var(--ease); }
+
+  /* 左栏文字：opacity/transform 走合成层；display 用 allow-discrete 离散翻转——
+     折叠过渡全程文字保持渲染（随壳收窄淡出），过渡结束才脱离文档流，图标随即真正居中；
+     展开时由 @starting-style 提供淡入起点，随壳变宽浮现。不支持 allow-discrete 的内核
+     退化为瞬显瞬隐（等同旧表现，功能不变）。 */
+  .jyc-brand-txt,
+  .jyc-nav-item > span {
+    white-space: nowrap; overflow: hidden;
+    opacity: 1; transform: translateX(0);
+    transition: opacity .2s var(--ease), transform .26s var(--ease), display .26s allow-discrete;
+    will-change: opacity, transform;
+  }
+  @starting-style {
+    .jyc-app:not(.jyc-rail-collapsed) .jyc-brand-txt,
+    .jyc-app:not(.jyc-rail-collapsed) .jyc-nav-item > span { opacity: 0; transform: translateX(-10px); }
+  }
 
   /* ---- 折叠态：左栏收窄到图标列 ---- */
-  .jyc-app.jyc-rail-collapsed .jyc-topnav { flex-basis: 62px; width: 62px; padding: 18px 9px; }
+  .jyc-app.jyc-rail-collapsed .jyc-topnav { width: 62px; padding: 18px 9px; }
   .jyc-app.jyc-rail-collapsed .jyc-brand { justify-content: center; }
   .jyc-app.jyc-rail-collapsed .jyc-brand-txt,
-  .jyc-app.jyc-rail-collapsed .jyc-nav-item span { display: none; }
-  .jyc-app.jyc-rail-collapsed .jyc-nav-item { justify-content: center; }
+  .jyc-app.jyc-rail-collapsed .jyc-nav-item > span { opacity: 0; transform: translateX(-10px); display: none; }
+  .jyc-app.jyc-rail-collapsed .jyc-nav-item { justify-content: center; position: relative; }
+  /* 「分区有未保存改动」橙点：折叠态改为绝对定位角标，不占流内宽，不再挤压图标 */
+  .jyc-app.jyc-rail-collapsed .jyc-nav-item.is-modified::after { position: absolute; top: 4px; right: 4px; }
   /* 折叠后只有 44px 可用宽，一行塞不下三个方钮 → 纵向堆叠；且折叠键移到最下（展开键在最底更好点） */
   .jyc-app.jyc-rail-collapsed .jyc-top-actions { flex-direction: column; align-items: center; gap: 8px; }
   .jyc-app.jyc-rail-collapsed .jyc-top-actions > .jyc-btn-icon { order: 2; }
   .jyc-app.jyc-rail-collapsed .jyc-rail-toggle { order: 3; margin-right: 0; }
   .jyc-app.jyc-rail-collapsed .jyc-rail-toggle svg { transform: rotate(180deg); }
 }
+
+/* 侧栏 hover 提示泡（统一样式，替代原生 title 系统气泡）：由 JS 挂在 body 上（position:fixed），
+   避免被 .jyc-topnav 的 overflow:hidden + contain:paint 裁切。触发源见 admin.js 同名段。 */
+.jyc-nav-tip {
+  position: fixed; z-index: 9999; pointer-events: none;
+  max-width: 240px; padding: 6px 10px; border-radius: 8px;
+  background: var(--ink, #1f2430); color: #fff;
+  font-size: 12.5px; font-weight: 600; line-height: 1.3; white-space: nowrap;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .20);
+  opacity: 0; transform: translateY(-50%) translateX(-4px) scale(.97);
+  transition: opacity .13s var(--ease), transform .13s var(--ease);
+}
+.jyc-nav-tip.jyc-show { opacity: 1; transform: translateY(-50%) translateX(0) scale(1); }
 
 /* =====================================================================
    高级质感 + 自适应增强（2026-10-05 追加，全部 additive，不改动既有布局）
@@ -2594,3 +2639,54 @@ body.jyc-dark { background: #0a111c; }
  * 与其他面板一致——否则宽屏下主列/侧栏被压窄、右侧大片留白（2026-10-06 真机踩坑后的二次修正）。 */
 #pane-seo.jyc-shown { display: block; }
 .jyc-seo-bento { grid-column: 1 / -1; }
+
+
+/* ===== 整页缓存状态卡（T2）===== */
+.jyc-cache-stat { margin: 0 0 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px;
+  background: var(--surface); box-shadow: var(--elev-1); }
+.jyc-cache-stat-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.jyc-cache-stat-l { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.jyc-cache-stat-t { font-size: 14px; font-weight: 700; color: var(--ink); }
+.jyc-cache-mode { font-size: 11.5px; font-weight: 600; color: var(--brand-d); background: var(--brand-soft);
+  padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.jyc-cache-stat-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+/* 「重置统计」是轻度破坏性动作，hover 泛红以区别于「刷新」 */
+.jyc-cache-stat-actions #jycCacheReset:hover { color: var(--danger); border-color: #f0c4c4; }
+.jyc-app[data-theme="dark"] .jyc-cache-stat-actions #jycCacheReset:hover { color: #ff9090; border-color: #6b3a3a; }
+/* 固定 3 列：任何卡宽都是整齐的 3+3（不用 auto-fit，避免 5+1 孤行）；本机 Edge v100 不支持容器查询，走 media query */
+.jyc-cache-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 480px) { .jyc-cache-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.jyc-cs-cell { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 10px;
+  background: var(--surface-2); border: 1px solid var(--line); min-width: 0; }
+.jyc-cs-k { font-size: 12px; color: var(--ink-3); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jyc-cs-v { font-size: 17px; font-weight: 800; color: var(--ink); font-family: var(--font-display); }
+/* 命中率来源标签：服务器日志（边缘模式）/ 插件自采（简单模式） */
+.jyc-cs-tag { margin-left: 5px; padding: 1px 5px; border-radius: 5px; font-size: 10px; font-style: normal;
+  font-weight: 600; color: var(--brand-d); background: var(--brand-soft); vertical-align: 1px; }
+
+/* 卡内按钮统一小号收敛 */
+.jyc-cache-stat .jyc-btn, .jyc-cache-stat .jyc-btn-ghost { padding: 8px 14px; font-size: 13px; border-radius: 9px; flex: none; }
+
+/* 操作区：查询行（输入框+主色按钮拼接）/ 清除行（预设钮 | 分隔线 | URL输入+清除拼接） */
+.jyc-cache-ops { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.jyc-cache-lookup { display: flex; align-items: stretch; }
+.jyc-cache-lookup .jyc-inp { flex: 1; min-width: 0; max-width: none; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.jyc-cache-lookup .jyc-btn { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+/* 拼接组内输入框不做全局 hover/focus 位移，避免接缝错位 */
+.jyc-cache-lookup .jyc-inp:hover, .jyc-cache-lookup .jyc-inp:focus,
+.jyc-cache-urlclear .jyc-inp:hover, .jyc-cache-urlclear .jyc-inp:focus { transform: none; }
+.jyc-cache-lu-result { padding: 9px 12px; border-radius: 9px; font-size: 13px; font-weight: 600;
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2); }
+.jyc-cache-clear { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+.jyc-cache-clear .jyc-btn-ghost:hover { color: var(--danger); border-color: #f0c4c4; box-shadow: none; }
+.jyc-cs-div { flex: none; width: 1px; background: var(--line); margin: 3px 4px; }
+.jyc-cache-urlclear { display: flex; align-items: stretch; flex: 1 1 240px; min-width: 220px; }
+.jyc-cache-urlclear .jyc-inp { flex: 1; min-width: 0; width: auto; max-width: none; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.jyc-cache-urlclear .jyc-btn-ghost { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.jyc-lu-ok { color: var(--ok); }
+.jyc-lu-warn { color: var(--warn); }
+.jyc-lu-expired { color: var(--danger); }
+.jyc-app[data-theme="dark"] .jyc-cache-stat { background: var(--surface); }
+.jyc-app[data-theme="dark"] .jyc-cs-cell,
+.jyc-app[data-theme="dark"] .jyc-cache-lu-result { background: rgba(255,255,255,.04); }
+.jyc-app[data-theme="dark"] .jyc-cache-clear .jyc-btn-ghost:hover { color: #ff9090; border-color: #6b3a3a; }

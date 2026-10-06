@@ -84,41 +84,6 @@ function jinyu_get_following_users( int $uid, int $limit = 0 ): array {
     return $out;
 }
 
-/* ----------------------------- 关注：系列 ----------------------------- */
-function jinyu_follow_term( int $uid, int $term_id ): bool {
-    if ( $uid <= 0 || $term_id <= 0 ) {
-		return false;
-    }
-    $terms = jinyu_companion_meta_ids( $uid, 'jinyu_following_terms' );
-    if ( in_array( $term_id, $terms, true ) ) {
-		return true;
-    }
-    $terms[] = $term_id;
-    update_user_meta( $uid, 'jinyu_following_terms', array_values( $terms ) );
-    return true;
-}
-
-function jinyu_unfollow_term( int $uid, int $term_id ): bool {
-    if ( $uid <= 0 || $term_id <= 0 ) {
-		return false;
-    }
-    $terms = jinyu_companion_meta_ids( $uid, 'jinyu_following_terms' );
-    $i = array_search( $term_id, $terms, true );
-    if ( false !== $i ) {
-		array_splice( $terms, $i, 1 );
-    }
-    update_user_meta( $uid, 'jinyu_following_terms', array_values( $terms ) );
-    return true;
-}
-
-function jinyu_is_following_term( int $uid, int $term_id ): bool {
-    if ( $uid <= 0 || $term_id <= 0 ) {
-		return false;
-    }
-    $terms = jinyu_companion_meta_ids( $uid, 'jinyu_following_terms' );
-    return in_array( $term_id, $terms, true );
-}
-
 function jinyu_get_following_terms( int $uid ): array {
     if ( $uid <= 0 ) {
 		return [];
@@ -175,6 +140,7 @@ function jinyu_add_notification( int $user_id, string $type, string $title, stri
     }
     global $wpdb;
     $table = $wpdb->prefix . 'jinyu_notify';
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 自建通知表 CRUD；user_id/id 均为 prepare 占位符，表名经白名单构造
     $wpdb->insert(
         $table,
         [
@@ -200,7 +166,9 @@ function jinyu_get_notifications( int $user_id, int $page = 1, int $per = 20 ): 
     $table = $wpdb->prefix . 'jinyu_notify';
     $page  = max( 1, $page );
     $offset = ( $page - 1 ) * $per;
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 自建通知表 CRUD；user_id/id 均为 prepare 占位符，表名经白名单构造
     return (array) $wpdb->get_results(
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 自建通知表 CRUD；user_id/id 均为 prepare 占位符，表名经白名单构造
         $wpdb->prepare( "SELECT * FROM $table WHERE user_id = %d ORDER BY id DESC LIMIT %d OFFSET %d", $user_id, $per, $offset )
     );
 }
@@ -211,6 +179,7 @@ function jinyu_get_unread_count( int $user_id ): int {
     }
     global $wpdb;
     $table = $wpdb->prefix . 'jinyu_notify';
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 自建通知表 CRUD；user_id/id 均为 prepare 占位符，表名经白名单构造
     return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table WHERE user_id = %d AND is_read = 0", $user_id ) );
 }
 
@@ -221,11 +190,14 @@ function jinyu_mark_read( int $user_id, array $ids = [] ): int {
     global $wpdb;
     $table = $wpdb->prefix . 'jinyu_notify';
     if ( empty( $ids ) ) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 自建通知表 CRUD；user_id/id 均为 prepare 占位符，表名经白名单构造
         return (int) $wpdb->query( $wpdb->prepare( "UPDATE $table SET is_read = 1 WHERE user_id = %d", $user_id ) );
     }
     $ids = array_map( 'intval', $ids );
     $placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 自建通知表 CRUD；user_id/id 均为 prepare 占位符，表名经白名单构造
     return (int) $wpdb->query(
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 自建通知表 CRUD；user_id/id 均为 prepare 占位符，表名经白名单构造
         $wpdb->prepare( "UPDATE $table SET is_read = 1 WHERE user_id = %d AND id IN ($placeholders)", array_merge( [ $user_id ], $ids ) )
     );
 }

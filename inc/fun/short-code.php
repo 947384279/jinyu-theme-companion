@@ -377,12 +377,15 @@ $jinyu_password_read = function ( $atts, $content = '' ) {
 		// 未设置密码则始终可见
 		$unlocked = true;
 	} elseif (
+		// phpcs:ignore WordPress.Security.NonceVerification -- 前台内容密码解锁（公开页面无 nonce），密码经 hash_equals 比较
 		isset( $_POST['jinyu_pwd_key'], $_POST['jinyu_pwd_val'] )
 		// 密码必须 wp_unslash：值里带反斜杠时 md5 永远对不上，用户输了正确密码也进不去，
 		// 且不会有任何提示。$_COOKIE 同样——它由上面的 setcookie 写入，
 		// 若这里不 unslash，读写两侧的编码就不一致。
+		// phpcs:ignore WordPress.Security.NonceVerification -- 前台内容密码解锁（公开页面无 nonce），密码经 hash_equals 比较
 		&& sanitize_text_field( wp_unslash( $_POST['jinyu_pwd_key'] ) ) === $key
 	) {
+		// phpcs:ignore WordPress.Security.NonceVerification -- 前台内容密码解锁（公开页面无 nonce），密码经 hash_equals 比较
 		if ( hash_equals( md5( $a['pass'] ), md5( trim( sanitize_text_field( wp_unslash( $_POST['jinyu_pwd_val'] ) ) ) ) ) ) {
 			$unlocked = true;
 			if ( ! headers_sent() ) {

@@ -31,6 +31,7 @@ if ( ! function_exists( 'jinyu_get_related_post_ids' ) ) {
         $base = [
             'post_type'           => 'post',
             'posts_per_page'      => 200,
+            // phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- 仅排除当前文章一篇，集合大小 1，无性能面
             'post__not_in'        => [ $pid ],
             'ignore_sticky_posts' => true,
             'no_found_rows'       => true,
@@ -42,6 +43,7 @@ if ( ! function_exists( 'jinyu_get_related_post_ids' ) ) {
         if ( 'views' === $type ) {
             // 协同过滤（co-click 近似）：同标签/分类相关，再按浏览量降序——越热门越靠前
             if ( ! empty( $tags ) || ! empty( $cats ) ) {
+                // phpcs:ignore WordPress.DB.SlowDBQuery -- 同系列筛选；查询带 fields=ids + no_found_rows，量级可控
                 $args['tax_query'] = [ 'relation' => 'OR' ];
                 if ( ! empty( $tags ) ) {
 					$args['tax_query'][] = [
@@ -107,6 +109,7 @@ if ( ! function_exists( 'jinyu_get_related_posts' ) ) {
 				'post_type'           => 'post',
 				'post__in'            => $ids,
 				'orderby'             => 'post__in',
+				// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- 仅排除当前文章一篇，集合大小 1，无性能面
 				'post__not_in'        => [ $pid ],
 				'ignore_sticky_posts' => true,
 				'no_found_rows'       => true,
@@ -149,6 +152,7 @@ if ( ! function_exists( 'jinyu_get_hot_posts' ) ) {
 				'ignore_sticky_posts'    => true,
 				'no_found_rows'          => true,
 				'update_post_term_cache' => false,
+				// phpcs:ignore WordPress.DB.SlowDBQuery -- 站点自有计数键 jinyu_views（插件自写自读），站点规模内可控
 				'meta_key'               => 'jinyu_views',
 				'orderby'                => [
 					'meta_value_num' => 'DESC',
@@ -165,6 +169,7 @@ if ( ! function_exists( 'jinyu_get_hot_posts' ) ) {
                 [
 					'post_type'              => 'post',
 					'posts_per_page'         => $num - count( $posts ),
+					// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- 排除已取文章的补位查询，集合为已取页大小，量级可控
 					'post__not_in'           => $posts ? wp_list_pluck( $posts, 'ID' ) : [ 0 ],
 					'ignore_sticky_posts'    => true,
 					'no_found_rows'          => true,

@@ -84,6 +84,7 @@ function jinyu_companion_wm_start( array $ids, string $mode = 'apply' ): array {
 		global $wpdb;
 		$ids = array_map(
 			'intval',
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 批量水印任务对自建备份表/附件元数据的定向操作，管理端手动触发，无需缓存
 			$wpdb->get_col(
 				$wpdb->prepare(
 					"SELECT ID FROM $wpdb->posts WHERE post_type = 'attachment'
@@ -109,6 +110,7 @@ function jinyu_companion_wm_start( array $ids, string $mode = 'apply' ): array {
 		global $wpdb;
 		$ids = array_map(
 			'intval',
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 批量水印任务对自建备份表/附件元数据的定向操作，管理端手动触发，无需缓存
 			(array) $wpdb->get_col(
 				$wpdb->prepare( "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = %s", Jinyu_Watermark::META )
 			)
@@ -278,7 +280,8 @@ function jinyu_companion_wm_stats(): array {
 	$mimes = array( 'image/jpeg', 'image/png', 'image/webp' );
 	$place = implode( ',', array_fill( 0, count( $mimes ), '%s' ) );
 	$where = "post_type = 'attachment' AND post_status = 'inherit' AND post_mime_type IN ($place)";
-	$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->posts WHERE $where", ...$mimes ) ); // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- 占位符由 $place 拼进 $where 后整段进 SQL，静态分析看不见内层 %s，运行时 prepare 有效
+	$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $wpdb->posts WHERE $where", ...$mimes ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- 占位符由 $place 拼进 $where 后整段进 SQL，静态分析看不见内层 %s，运行时 prepare 有效
+	/* phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 批量水印任务对附件元数据的定向统计，管理端手动触发，无需缓存；多行 SQL 整句豁免 */
 	$done  = (int) $wpdb->get_var(
 		$wpdb->prepare(
 			"SELECT COUNT(*) FROM $wpdb->posts p
@@ -287,6 +290,7 @@ function jinyu_companion_wm_stats(): array {
 			...array_merge( array( Jinyu_Watermark::META ), $mimes )
 		)
 	);
+	// phpcs:enable
 	return array(
 		'total'   => $total,
 		'done'    => $done,
@@ -303,6 +307,7 @@ add_action(
 	'wp_ajax_jinyu_companion_wm_start',
 	function () {
 		jinyu_companion_guard( 'jinyu_companion_settings', 'jinyu_companion_nonce' );
+		// phpcs:ignore WordPress.Security.NonceVerification -- nonce 已在入口经 jinyu_companion_guard() 校验
 		$mode = isset( $_POST['mode'] ) && 'remove' === $_POST['mode'] ? 'remove' : 'apply';
 		// 还原只是把 -jywmo 备份 rename 回原路径，用不到水印开关，也用不到图像编辑器。
 		// 若沿用 is_enabled 拦截，用户一关掉「启用图片水印」就再也还原不了历史图——
@@ -316,8 +321,9 @@ add_action(
 		// ids 允许两种形态：数组（ids[]=1&ids[]=2）与逗号/空格分隔的字符串（ids=1,2）。
 		// 面板前端走字符串形态，这里必须两种都认——否则 is_array 对字符串恒 false，
 		// 用户填的 ID 会被当成「没填」，静默回落全库扫描（上限 5000 张）批量改写。
+		// phpcs:ignore WordPress.Security.NonceVerification -- nonce 已在入口经 jinyu_companion_guard() 校验
 		$scope = isset( $_POST['scope'] ) ? sanitize_key( wp_unslash( $_POST['scope'] ) ) : '';
-		$ids   = jinyu_companion_wm_parse_ids( wp_unslash( $_POST['ids'] ?? array() ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- parse_ids 内部逐项 absint + 去重 + 剔 0，非字符串无法通过
+		$ids   = jinyu_companion_wm_parse_ids( wp_unslash( $_POST['ids'] ?? array() ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification -- parse_ids 内部逐项 absint + 去重 + 剔 0，非字符串无法通过
 		if ( 'ids' === $scope && empty( $ids ) ) {
 			// 用户明确选了「只处理指定 ID」，却一个都没解析出来：必须报错，
 			// 绝不能让它掉进全库分支——那会把整站媒体库重写一遍且界面毫无提示。
@@ -371,7 +377,9 @@ add_action(
 	'wp_ajax_jinyu_companion_wm_worker',
 	function () {
 		jinyu_companion_guard( 'jinyu_companion_wm', 'nonce' );
+		// phpcs:ignore WordPress.Security.NonceVerification -- nonce 已在入口经 jinyu_companion_guard() 校验
 		$id   = absint( wp_unslash( $_POST['id'] ?? 0 ) );
+		// phpcs:ignore WordPress.Security.NonceVerification -- nonce 已在入口经 jinyu_companion_guard() 校验
 		$mode = isset( $_POST['mode'] ) && 'remove' === $_POST['mode'] ? 'remove' : 'apply';
 		if ( $id <= 0 ) {
 			wp_send_json_error( array( 'ok' => false ) );

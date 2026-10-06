@@ -25,7 +25,7 @@ if ( ! function_exists( 'jinyu_companion_io_spec' ) ) {
 	 * 可导入的设置键与类型规格（唯一事实源）。
 	 *
 	 * bool 只接受 '1'/'0'（与其它模块 jinyu_companion_is_checked 的判定口径一致）；
-	 * int  落库前强制取整；url 走 esc_url_raw；text 走 sanitize_textarea_field
+	 * int  落库前强制取整；float 强转浮点；url 走 esc_url_raw；text 走 sanitize_textarea_field
 	 * （textarea 版对换行友好，短文本同样安全）。
 	 *
 	 * @return array<string,string> key => bool|int|text|url
@@ -42,15 +42,42 @@ if ( ! function_exists( 'jinyu_companion_io_spec' ) ) {
 			'auto_link_enable'        => 'bool',
 			'auto_link_limit'         => 'int',
 			'indexnow_enable'         => 'bool',
+			'seo_keywords_enable'     => 'bool',
+			'sitemap_enable'          => 'bool',
+			'sitemap_exclude_ids'     => 'text',
+			// GEO / 瘦归档
+			'thin_archive_noindex_enable' => 'bool',
+			'thin_archive_keep_term_ids'  => 'text',
+			'geo_signals_enable'      => 'bool',
+			'geo_speakable_selector'  => 'text',
+			'geo_speakable_min_length' => 'int',
 			// 前台加速
 			'page_cache_enable'       => 'bool',
 			'page_cache_ttl'          => 'int',
 			'page_cache_exclude_paths'   => 'text',
 			'page_cache_ignore_params'   => 'text',
 			'page_cache_exclude_params'  => 'text',
+			'page_cache_mode'         => 'text',
+			'page_cache_edge_server'  => 'text',
+			'page_cache_edge_path'    => 'text',
 			'speculation_enable'      => 'bool',
 			'speculation_mode'        => 'text',
 			'speculation_eagerness'   => 'text',
+			// 图片水印
+			'img_wm_enable'           => 'bool',
+			'img_wm_on_upload'        => 'bool',
+			'img_wm_text'             => 'text',
+			'img_wm_logo'             => 'url',
+			'img_wm_size'             => 'int',
+			'img_wm_color'            => 'text',
+			'img_wm_margin'           => 'float',
+			'img_wm_opacity'          => 'int',
+			'img_wm_quality'          => 'int',
+			'img_wm_min_w'            => 'int',
+			'img_wm_max_px'           => 'int',
+			'img_wm_max_bytes'        => 'int',
+			'img_wm_pos'              => 'int',
+			'img_wm_concurrency'      => 'int',
 			// SEO / 社交文本
 			'og_image'                => 'url',
 			'og_site_name'            => 'text',
@@ -364,6 +391,8 @@ if ( ! function_exists( 'jinyu_companion_import_apply' ) ) {
 				$cleaned = ( '1' === (string) $value || true === $value || 1 === $value ) ? '1' : '0';
 			} elseif ( 'int' === $type ) {
 				$cleaned = (int) $value;
+			} elseif ( 'float' === $type ) {
+				$cleaned = (float) $value;
 			} elseif ( 'url' === $type ) {
 				$cleaned = is_string( $value ) ? esc_url_raw( trim( wp_unslash( $value ) ) ) : '';
 			} else {
@@ -580,6 +609,7 @@ if ( ! function_exists( 'jinyu_companion_handle_import' ) ) {
 	 */
 	function jinyu_companion_handle_import(): void {
 		// 覆盖确认：误点「导入」不该静默改配置，必须显式勾选。
+		// phpcs:ignore WordPress.Security.NonceVerification -- 调用方（设置保存入口）已校验 nonce 与权限
 		if ( empty( $_POST['jinyu_import_confirm'] ) ) {
 			jinyu_companion_import_result(
 				array(
@@ -593,8 +623,9 @@ if ( ! function_exists( 'jinyu_companion_handle_import' ) ) {
 		$raw = '';
 
 		// 优先文件：仅接受 .json，体积超限直接拒绝（不进解析阶段）。
+		// phpcs:ignore WordPress.Security.NonceVerification -- 调用方（设置保存入口）已校验 nonce 与权限
 		if ( isset( $_FILES['jinyu_import_file'] ) && ! empty( $_FILES['jinyu_import_file']['tmp_name'] ) ) {
-			$file = wp_unslash( $_FILES['jinyu_import_file'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- $_FILES 由 PHP 自身填充，非用户可控；tmp_name 另经 realpath + is_uploaded_file 校验，文件名经 wp_check_filetype 限 .json
+			$file = wp_unslash( $_FILES['jinyu_import_file'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification -- $_FILES 由 PHP 自身填充，非用户可控；tmp_name 另经 realpath + is_uploaded_file 校验，文件名经 wp_check_filetype 限 .json
 			$type = wp_check_filetype( $file['name'], array( 'json' => 'application/json' ) );
 			if ( 'json' !== $type['ext'] ) {
 				jinyu_companion_import_result(
@@ -621,7 +652,9 @@ if ( ! function_exists( 'jinyu_companion_handle_import' ) ) {
 			}
 			$raw = (string) file_get_contents( $file['tmp_name'] ); // phpcs:ignore WordPress.WP.AlternativeFunctions -- 本地临时文件，无远程调用。
 			@wp_delete_file( $file['tmp_name'] );
+		// phpcs:ignore WordPress.Security.NonceVerification -- 调用方（设置保存入口）已校验 nonce 与权限
 		} elseif ( ! empty( $_POST['jinyu_import_text'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification -- 调用方（设置保存入口）已校验 nonce 与权限
 			$raw = sanitize_textarea_field( wp_unslash( $_POST['jinyu_import_text'] ) );
 		}
 
