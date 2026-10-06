@@ -179,6 +179,8 @@
 @media (hover: hover) {
   .jyc-theme-tog:hover svg { transform: rotate(-12deg); }
 }
+/* 折叠侧栏按钮：仅在桌面左栏模式下出现（移动端横排顶栏无意义，默认隐藏） */
+.jyc-rail-toggle { display: none; }
 
 /* 底部留白须容纳悬浮保存浮条（约 56px + 24px 外距），否则最后一行可见字段被浮条压住 */
 .jyc-content { flex: 1; padding: 28px 30px 96px; width: 100%; }
@@ -192,6 +194,14 @@
   transition: transform .15s var(--spring), box-shadow .2s var(--ease), filter .2s var(--ease);
 }
 .jyc-btn:active { transform: scale(.96); }
+.jyc-btn:disabled,
+.jyc-btn[disabled] {
+  cursor: not-allowed; filter: none !important; transform: none !important;
+  background: var(--line-2, #eef0f4); color: var(--ink-3, #9aa3b2);
+  box-shadow: none; opacity: 1;
+}
+.jyc-btn:disabled::after,
+.jyc-btn[disabled]::after { display: none; }
 .jyc-btn-primary {
   background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; box-shadow: var(--elev-1);
   position: relative; overflow: hidden;
@@ -292,7 +302,10 @@
 /* 分区面板：显隐由 .jyc-shown 类控制，不用内联 display。
    原因：内联 display 会盖过下方 ≥1280px 的 display:grid 规则（内联优先于样式表），
    网格失效但 #pane-* > .jyc-panel { margin-bottom:0 } 仍命中 → 卡片彼此贴死、无缝隙。 */
-.jyc-pane { display: none; }
+/* 内容区限宽：原为固定 1180px，在左侧栏（含 248px 展开态）占位后，宽屏两侧会空出大段留白。
+   改为「填满可用宽度，仅超宽屏才封顶」——1760px 上限只在 >1760 可用宽时才生效，
+   1920 及以下（含侧栏占用后的实际宽度）一律铺满。 */
+.jyc-pane { display: none; max-width: min(100%, 1760px); margin-inline: auto; padding-inline: 18px; }
 /* backwards（而非 both）：both 会让动画结束后仍保留 to 的 transform 计算值
    （identity matrix），元素永久成为内部 fixed 元素的包含块 —— 浮层坐标被当成祖先坐标。
    backwards 只在动画开始前应用 from，结束后干净地交还给静态样式。 */
@@ -301,7 +314,7 @@
 @keyframes jycPaneIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
 /* ===================== Hero (liquid glass + aurora) ===================== */
-.jyc-hero { position: relative; border-radius: var(--r-xl); overflow: hidden; padding: 0; margin-bottom: 24px; }
+.jyc-hero { position: relative; border-radius: var(--r-xl); overflow: hidden; padding: 0; margin-bottom: 18px; }
 .jyc-hero .jyc-aurora { position: absolute; inset: 0; }
 .jyc-hero .jyc-aurora::before, .jyc-hero .jyc-aurora::after, .jyc-hero .jyc-aurora i {
   content: ""; position: absolute; border-radius: 50%; filter: blur(55px); opacity: .55; mix-blend-mode: screen;
@@ -312,20 +325,20 @@
 @keyframes jyc-drift1 { to { transform: translate(-50px,40px) scale(1.12); } }
 @keyframes jyc-drift2 { to { transform: translate(60px,-40px) scale(1.18); } }
 @keyframes jyc-drift3 { to { transform: translate(-40px,-30px) scale(1.1); } }
-.jyc-hero-inner { position: relative; z-index: 1; padding: 32px; border-radius: var(--r-xl);
+.jyc-hero-inner { position: relative; z-index: 1; padding: 26px 28px; border-radius: var(--r-xl);
   background: linear-gradient(135deg, #1C60F3, #1746c4 55%, #3b82f6); }
 .jyc-app[data-theme="dark"] .jyc-hero-inner { background: linear-gradient(135deg, #1b3a8f, #14306e 55%, #2d5bd0); }
-.jyc-hero-inner h1 { font-size: 27px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 9px; font-family: var(--font-display); color: #fff; }
-.jyc-hero-inner p { margin: 0; font-size: 13.5px; color: rgba(255,255,255,.85); max-width: 640px; }
-.jyc-hero-stats { display: flex; gap: 30px; margin-top: 22px; flex-wrap: wrap; }
+.jyc-hero-inner h1 { font-size: 23px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 7px; font-family: var(--font-display); color: #fff; }
+.jyc-hero-inner p { margin: 0; font-size: 13px; color: rgba(255,255,255,.85); max-width: 620px; }
+.jyc-hero-stats { display: flex; gap: 26px; margin-top: 18px; flex-wrap: wrap; }
 .jyc-hero .jyc-hs { display: flex; flex-direction: column; }
 .jyc-hero .jyc-hs .jyc-v { font-size: 30px; font-weight: 800; font-family: var(--font-display); letter-spacing: -.02em; line-height: 1; color: #fff; }
 .jyc-hero .jyc-hs .jyc-k { font-size: 12px; color: rgba(255,255,255,.78); margin-top: 6px; }
 
 /* ===================== Bento grid ===================== */
-.jyc-bento { display: grid; grid-template-columns: repeat(4,1fr); grid-auto-rows: minmax(96px,auto); gap: 14px; margin-bottom: 22px; }
+.jyc-bento { display: grid; grid-template-columns: repeat(4,1fr); grid-auto-rows: minmax(82px,auto); gap: 12px; margin-bottom: 18px; }
 .jyc-bento .jyc-tile {
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 17px 18px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 13px 14px;
   box-shadow: var(--elev-1); position: relative; overflow: hidden;
   transition: box-shadow .25s var(--ease), transform .25s var(--ease);
 }
@@ -333,7 +346,7 @@
 .jyc-bento .jyc-tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(var(--brand), var(--brand-2)); }
 .jyc-bento .jyc-k { font-size: 12px; color: var(--ink-3); display: flex; align-items: center; gap: 7px; }
 .jyc-bento .jyc-k i { width: 8px; height: 8px; border-radius: 3px; display: inline-block; }
-.jyc-bento .jyc-v { font-size: 26px; font-weight: 800; letter-spacing: -.02em; margin-top: 8px; font-family: var(--font-display); }
+.jyc-bento .jyc-v { font-size: 22px; font-weight: 800; letter-spacing: -.02em; margin-top: 6px; font-family: var(--font-display); }
 .jyc-bento .jyc-n { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
 /* 可跳转磁贴：整卡为按钮（div[role=button]，避免块级内容塞进 <button> 的非法嵌套），
    右上角箭头给出「可点」的可供性，键盘可聚焦。 */
@@ -342,6 +355,39 @@
 .jyc-bento .jyc-goto { position: absolute; top: 13px; right: 13px; width: 15px; height: 15px; color: var(--ink-3); opacity: .5; transition: opacity .2s var(--ease), transform .2s var(--ease), color .2s var(--ease); }
 .jyc-bento .jyc-goto svg { display: block; width: 15px; height: 15px; }
 .jyc-bento .jyc-tile-link:hover .jyc-goto { opacity: 1; color: var(--brand); transform: translate(1px,-1px); }
+
+/* ---- 站点监控分组：分区头 + 巡检按钮 + 磁贴内 mini 三联 + sparkline ---- */
+.jyc-sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 11px; }
+.jyc-sec-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.jyc-sec-title h2 { font-size: 17px; font-weight: 800; letter-spacing: -.01em; margin: 0; font-family: var(--font-display); color: var(--ink); }
+.jyc-sec-upd { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.jyc-sec-head .jyc-btn { flex: 0 0 auto; }
+.jyc-bento .jyc-unit { font-size: 12px; font-weight: 600; color: var(--ink-3); margin-left: 2px; }
+.jyc-bento .jyc-spark { display: block; width: 100%; height: 26px; margin-top: 8px; opacity: .8; }
+.jyc-bento .jyc-mini { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+.jyc-bento .jyc-mini b { font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.jyc-bento .jyc-tile { display: flex; flex-direction: column; }
+.jyc-bento .jyc-tile .jyc-v { margin-top: 6px; }
+
+/* ---- 站点监控：紧凑状态条（替代大磁贴，提升密度） ---- */
+.jyc-strip { display: grid; grid-template-columns: repeat(4,1fr); gap: 2px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--elev-1); padding: 6px 8px; margin-bottom: 18px; }
+.jyc-stat { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 11px; min-width: 0; }
+.jyc-stat:hover { background: var(--surface-3); }
+.jyc-stat .jyc-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; box-shadow: 0 0 0 3px rgba(16,24,40,.04); }
+.jyc-stat-body { min-width: 0; display: flex; flex-direction: column; }
+.jyc-stat .jyc-sk { font-size: 11.5px; color: var(--ink-3); line-height: 1.3; }
+.jyc-stat .jyc-sv { font-size: 14.5px; font-weight: 800; color: var(--ink); margin-top: 1px; font-family: var(--font-display);
+  letter-spacing: -.01em; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.jyc-stat .jyc-ss { font-size: 11px; color: var(--ink-3); margin-top: 2px; line-height: 1.35;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 880px) { .jyc-strip { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 520px) { .jyc-strip { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+	.jyc-sec-head { flex-wrap: wrap; }
+	.jyc-sec-title { flex: 1 1 100%; }
+	.jyc-sec-head .jyc-btn { width: 100%; }
+}
 
 /* ===================== Progress card (扁平分析风) ===================== */
 .jyc-progress-card {
@@ -418,6 +464,56 @@
   color: var(--ink-3);
   margin: 0 0 22px;
 }
+/* 分组进度概览（自适应横排） */
+.jyc-grp-row { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.jyc-grp { flex: 1 1 160px; min-width: 0; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 12px; }
+.jyc-grp-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+.jyc-grp-name { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.jyc-grp-cnt { font-size: 11px; font-weight: 600; color: var(--ink-3); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.jyc-grp-bar { height: 6px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+.jyc-grp-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); }
+
+/* 自适应药丸墙（替代原大列表） */
+.jyc-pillwall { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+.jyc-stat-pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 99px; font-size: 13px; color: var(--ink-2); background: var(--surface); cursor: pointer; transition: background .15s var(--ease), border-color .15s var(--ease), transform .15s var(--ease); outline: none; }
+.jyc-stat-pill:hover { background: var(--surface-2); border-color: var(--brand-2); transform: translateY(-1px); }
+.jyc-stat-pill:focus-visible { box-shadow: 0 0 0 2px var(--brand-soft); }
+.jyc-stat-pill .dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.jyc-stat-pill.on .dot { background: var(--ok); }
+.jyc-stat-pill.off .dot { background: var(--ink-3); }
+.jyc-stat-pill.off { color: var(--ink-3); }
+.jyc-stat-pill .arrow { width: 13px; height: 13px; color: var(--ink-3); flex: 0 0 auto; }
+.jyc-pc-head .jyc-pc-pill { margin-top: 0; align-self: center; }
+@media (max-width: 520px) {
+  .jyc-grp { flex: 1 1 100%; }
+  .jyc-stat-pill { flex: 1 1 calc(50% - 8px); justify-content: flex-start; }
+}
+
+/* 分组进度概览（自适应横排） */
+.jyc-grp-row { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.jyc-grp { flex: 1 1 160px; min-width: 0; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 12px; }
+.jyc-grp-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+.jyc-grp-name { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.jyc-grp-cnt { font-size: 11px; font-weight: 600; color: var(--ink-3); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.jyc-grp-bar { height: 6px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+.jyc-grp-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--brand), var(--brand-2)); }
+
+/* 自适应药丸墙（替代原大列表） */
+.jyc-pillwall { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+.jyc-stat-pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 99px; font-size: 13px; color: var(--ink-2); background: var(--surface); cursor: pointer; transition: background .15s var(--ease), border-color .15s var(--ease), transform .15s var(--ease); outline: none; }
+.jyc-stat-pill:hover { background: var(--surface-2); border-color: var(--brand-2); transform: translateY(-1px); }
+.jyc-stat-pill:focus-visible { box-shadow: 0 0 0 2px var(--brand-soft); }
+.jyc-stat-pill .dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.jyc-stat-pill.on .dot { background: var(--ok); }
+.jyc-stat-pill.off .dot { background: var(--ink-3); }
+.jyc-stat-pill.off { color: var(--ink-3); }
+.jyc-stat-pill .arrow { width: 13px; height: 13px; color: var(--ink-3); flex: 0 0 auto; }
+.jyc-pc-head .jyc-pc-pill { margin-top: 0; align-self: center; }
+@media (max-width: 520px) {
+  .jyc-grp { flex: 1 1 100%; }
+  .jyc-stat-pill { flex: 1 1 calc(50% - 8px); justify-content: flex-start; }
+}
+
 
 /* 分组列表 */
 .jyc-checks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px 30px; margin-top: 22px; }
@@ -513,8 +609,14 @@
 .jyc-switch input:checked + .jyc-track { background: linear-gradient(135deg, var(--brand), var(--brand-2)); }
 .jyc-switch input:checked + .jyc-track::after { transform: translateX(20px); }
 .jyc-switch input:focus-visible + .jyc-track { box-shadow: 0 0 0 3px var(--ring); }
-.jyc-app[data-theme="dark"] .jyc-switch .jyc-track { background: #41527c; box-shadow: inset 0 0 0 1px #5f73a0, inset 0 1px 3px rgba(0,0,0,.4); }
-.jyc-app[data-theme="dark"] .jyc-switch .jyc-track::after { background: #f4f7fd; box-shadow: 0 1px 4px rgba(0,0,0,.55); }
+/* 深色开关：关 = 中性深灰轨（与品牌蓝明确区分）；开 = 品牌蓝发光轨 + 纯白滑块。
+   注意：下面的 checked 深色规则必须带 .jyc-app[data-theme="dark"] 前缀，优先级才高于同区块的
+   基础深色轨规则，否则选中态品牌色会被覆盖 —— 历史 bug：深色下开/关轨道同色、滑块同为白，仅靠
+   滑块位移区分，状态几乎不可辨（截图即此症状）。 */
+.jyc-app[data-theme="dark"] .jyc-switch .jyc-track { background: #34415b; box-shadow: inset 0 0 0 1px #46536f, inset 0 1px 3px rgba(0,0,0,.35); }
+.jyc-app[data-theme="dark"] .jyc-switch .jyc-track::after { background: #aab6ca; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
+.jyc-app[data-theme="dark"] .jyc-switch input:checked + .jyc-track { background: linear-gradient(135deg, var(--brand), var(--brand-2)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.16), 0 2px 9px rgba(91,140,255,.42); }
+.jyc-app[data-theme="dark"] .jyc-switch input:checked + .jyc-track::after { background: #ffffff; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
 .jyc-app[data-theme="dark"] .jyc-color-row input[type=color] { background-color: #111a2c; border-color: #4a5a80; }
 .jyc-fl { font-size: 12.5px; color: var(--ink-2); font-weight: 500; display: flex; flex-direction: column; gap: 6px; margin-bottom: 11px; }
 .jyc-fl:last-child { margin-bottom: 0; }
@@ -526,6 +628,9 @@
   background: var(--surface); color: var(--ink); width: 100%; box-shadow: inset 0 1px 2px rgba(16,24,40,.04); min-height: 0;
   transition: border-color .18s var(--ease), box-shadow .18s var(--ease), transform .15s var(--spring);
 }
+/* 面板体已铺满可用宽度；单行输入（URL / 验证码等）单独限宽，避免拉到极宽难以阅读。
+   textarea / 代码预览（.jyc-code）不在此列，保持铺满。 */
+input.jyc-inp { max-width: 640px; }
 .jyc-app .jyc-inp:hover { border-color: #c6cede; box-shadow: inset 0 1px 2px rgba(16,24,40,.04), var(--elev-1); }
 /* 深色输入框：底色比面板 surface(#1a2438) 深一档成「凹槽」，边框提亮两档，与卡片底明显区分 */
 .jyc-app[data-theme="dark"] .jyc-inp {
@@ -819,6 +924,7 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
   .jyc-mod-head h1 { font-size: 20px; }
   .jyc-mod-head { margin-bottom: 16px; }
   .jyc-panel-h { padding: 15px 16px 13px; }
+  .jyc-panel-h .jyc-hint { display: none; } /* 窄屏隐藏辅助说明，避免长 hint 挤压标题与新增函数按钮（如预览卡片） */
   .jyc-panel-b { padding: 16px; }
   .jyc-frow { gap: 12px; }
   /* 行尾字段窄屏换行铺满：iOS 式「标签居左、输入框居右」，缩进对齐上方文字列（开关 46px + 间距 12px） */
@@ -1116,26 +1222,40 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 }
 
 /* 标题行右侧组件（状态胶囊 + 紧凑刷新按钮，与 pane h1 同行） */
-.jperf-headside{display:inline-flex;align-items:stretch;gap:8px;margin-left:12px;vertical-align:middle;position:relative;top:4px}
+.jperf-headside{display:inline-flex;align-items:stretch;gap:8px;margin-left:auto;vertical-align:middle;position:relative;top:4px}
 .jperf-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--j-ink2);
 	background:#fff;border:1px solid #cbd5e1;border-radius:999px;padding:4px 11px;white-space:nowrap;
 	box-shadow:0 1px 3px rgba(15,23,42,.08)}
 .jperf-dot{width:8px;height:8px;border-radius:50%;background:var(--j-ok);animation:jperfPulse 1.8s ease-out infinite}
 .jperf-dot.off{animation:none;background:var(--j-muted)}
-.jperf-refresh-mini{width:36px;align-self:stretch;flex:none;display:inline-flex;align-items:center;justify-content:center;
-	background:#fff;border:1px solid #cbd5e1;border-radius:999px;cursor:pointer;transition:.15s;
-	vertical-align:middle;box-shadow:0 1px 3px rgba(15,23,42,.10)}
-.jperf-refresh-mini svg{width:15px;height:15px;stroke:#475569;stroke-width:2;fill:none;transition:.3s}
-.jperf-refresh-mini:hover{border-color:var(--j-accent);box-shadow:0 3px 10px -4px var(--ring)}
-.jperf-refresh-mini:hover svg{stroke:var(--j-accent);transform:rotate(80deg)}
+/* 圆钮已移出 .jperf-wrap/.jperf-headside，二者定义的 --j-* 拿不到；需自带 --j-accent 桥接，
+   否则 hover 的 border-color/stroke 因 var 未定义而回退（边框变 currentColor 深色、图标 stroke:none 消失） */
+.jperf-refresh-mini{--j-accent:var(--brand);--ring:rgba(28,96,243,.30);
+	width:24px;height:24px;box-sizing:border-box;align-self:center;flex:none;margin-left:8px;position:relative;top:2px;display:inline-flex;align-items:center;justify-content:center;
+	background:#fff;border:1px solid #cbd5e1;border-radius:50%;cursor:pointer;transition:border-color .15s,box-shadow .15s;
+	box-shadow:0 1px 2px rgba(15,23,42,.06)}
+.jperf-refresh-mini svg{width:12px;height:12px;stroke:#475569;stroke-width:2;fill:none;transition:stroke .15s}
+.jperf-refresh-mini:hover{border-color:var(--j-accent);box-shadow:0 2px 7px -3px var(--ring)}
+.jperf-refresh-mini:hover svg{stroke:var(--j-accent)}
 .jperf-refresh-mini:disabled{opacity:.5;cursor:default}
 /* 深色下 surface/line 与 canvas 对比度过低：胶囊与圆钮会"隐形"，提亮一档 */
 .jyc-app[data-theme="dark"] .jperf-pill{background:var(--surface-3);border-color:#3e4e70;color:#c9d4e8}
 .jyc-app[data-theme="dark"] .jperf-refresh-mini{background:var(--surface-3);border-color:#475878;box-shadow:none}.jyc-app[data-theme="dark"] .jperf-refresh-mini svg{stroke:#c9d4e8}
-.jperf-ts{font-size:11.5px;color:var(--j-muted);font-variant-numeric:tabular-nums}
+.jyc-app[data-theme="dark"] .jperf-refresh-mini:hover{border-color:var(--brand-on-dark);box-shadow:0 2px 7px -3px rgba(91,140,255,.4)}
+.jyc-app[data-theme="dark"] .jperf-refresh-mini:hover svg{stroke:var(--brand-on-dark)}
+.jperf-ts{font-size:11.5px;color:var(--j-muted);font-variant-numeric:tabular-nums;margin-left:8px}
+/* 标题行右上角的缓存清理按钮：与状态胶囊同高，紧凑规格，悬停不上移（保持与标题行对齐稳定） */
+.jperf-headside .jperf-btn{padding:5px 12px;font-size:12.5px;border-radius:999px;gap:5px}
+.jperf-headside .jperf-btn svg{width:13px;height:13px}
+.jperf-headside .jperf-btn:hover{transform:none}
+/* 清理结果：从右上角浮出（绝对定位，不占标题行布局），10 秒后自动收起 */
+.jperf-headside #jperf-cache-result{position:absolute;top:calc(100% + 10px);right:0;margin-top:0;
+	width:max-content;max-width:min(420px,84vw);text-align:left;z-index:30;
+	background:var(--j-bg);border:1px solid var(--j-line);border-radius:12px;padding:11px 14px;
+	box-shadow:0 14px 32px -14px rgba(15,23,42,.32)}
 /* 标题行 flex 上下文（仅性能中心 pane 使用） */
 .jyc-mod-flex .jyc-mod-title{display:flex;align-items:center;flex-wrap:wrap;gap:2px 0}
-.jyc-mod-flex .jyc-mod-title h1{margin:0}
+.jyc-mod-flex .jyc-mod-title h1{margin:0;line-height:1}
 
 /* 指标条 */
 .jperf-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:24px;
@@ -1156,13 +1276,25 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 @media(max-width:760px){.jperf-panels{grid-template-columns:1fr}}
 .jperf-panel{position:relative;overflow:hidden;background:var(--j-bg);border:1px solid var(--j-line);border-radius:16px;
 	box-shadow:0 1px 2px rgba(24,24,27,.04),inset 0 1px 0 rgba(255,255,255,.65);padding:18px}
-.jperf-panel-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;position:relative}
+.jperf-panel-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;position:relative;flex-wrap:wrap}
 .jperf-panel-ico{width:30px;height:30px;border-radius:9px;flex:none;display:grid;place-items:center;color:var(--j-accent);
 	background:var(--j-accent-soft)}
 .jperf-panel-head svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.8;fill:none}
 .jperf-panel-head h3{font-size:14px;font-weight:650;letter-spacing:-.01em;margin:0}
 .jperf-tag{margin-left:auto;font-size:11px;font-weight:600;color:var(--j-accent);letter-spacing:.01em;
 	border:none;border-radius:999px;padding:3px 10px;background:var(--j-accent-soft)}
+/* 面板标题行内的操作按钮（「清除 OPcache」/「清除 Memcached」）：靠右，紧贴版本标签左侧。
+ * 外形对齐同行 .jperf-tag（PHP 8.5 / v1.6.39）——无边框淡蓝药丸 + 蓝字，让标题行视觉同族；
+ * 仍保留 hover/active 反馈（微亮/微缩），避免被误当成纯装饰标签。 */
+.jperf-panel-act{flex:none;display:flex;align-items:center;margin-left:auto}
+.jperf-panel-act + .jperf-tag{margin-left:0}
+.jperf-panel-act .jperf-btn{padding:4px 12px;font-size:12px;font-weight:600;letter-spacing:.01em;gap:5px;
+	border:none;border-radius:999px;background:#fdecec;color:#d23f3f;
+	transition:filter .15s,background .15s,color .15s,transform .15s}
+.jperf-panel-act .jperf-btn svg{width:13px;height:13px;stroke:#d23f3f}
+.jperf-panel-act .jperf-btn:hover{border:none;background:#fdecec;color:#d23f3f;
+	transform:none;box-shadow:none;filter:brightness(.96)}
+.jperf-panel-act .jperf-btn:active{transform:scale(.97);filter:brightness(.92)}
 .jyc-app[data-theme="dark"] .jperf-panel{box-shadow:0 1px 2px rgba(0,0,0,.45),0 18px 44px -26px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.04)}
 
 /* 环形图 */
@@ -1216,17 +1348,11 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 /* 区块 + 开关列表 */
 .jperf-block{margin-bottom:24px}
 .jperf-block-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px}
-/* 底部操作卡片区（缓存管理 / 体验数据） */
-.jperf-grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-bottom:24px}
-@media(max-width:900px){.jperf-grid2{grid-template-columns:1fr}}
-.jperf-card{background:var(--j-bg);border:1px solid var(--j-line);border-radius:var(--j-r);
-	box-shadow:0 1px 2px rgba(24,24,27,.04);padding:16px 18px}
-.jperf-card-head{display:flex;align-items:flex-start;gap:11px;margin-bottom:13px}
-.jperf-card-ico{width:30px;height:30px;border-radius:9px;background:var(--j-accent-soft);
-	color:var(--j-accent);display:flex;align-items:center;justify-content:center;flex:none}
-.jperf-card-ico svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.8;fill:none}
-.jperf-card-tt h3{font-size:13.5px;font-weight:600;letter-spacing:-.01em;margin:0}
-.jperf-card-tt p{font-size:11.5px;color:var(--j-muted);margin:3px 0 0;line-height:1.5}
+/* 缓存操作：嵌进对应状态面板 / 缓存面板区底部（不再单独甩在页面最底） */
+.jperf-wv-foot{grid-column:1/-1;margin-top:16px;padding-top:14px;border-top:1px solid var(--j-line);
+	display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.jperf-wv-foot .jperf-result{width:100%;margin-top:4px}
+.jperf-foot-label{font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--j-muted);margin-right:2px}
 .jperf-block-head .jperf-hint{font-size:12px;color:var(--j-muted)}
 /* 开关区：分组双栏卡片 */
 .jgroup{margin-bottom:14px}
@@ -1279,6 +1405,13 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 .jyc-app[data-theme="dark"] .jperf-btn:hover,
 .jyc-app[data-theme="dark"] .jcard:hover{border-color:#475878;box-shadow:0 6px 16px -10px rgba(0,0,0,.6)}
 .jyc-app[data-theme="dark"] .jperf-btn-danger:hover{border-color:#7f2c2c;background:#371d1d;box-shadow:0 6px 14px -8px rgba(220,38,38,.3)}
+/* 面板标题行药丸按钮：深色下维持淡蓝药丸，不被上面通用 .jperf-btn:hover 的描边/底色覆盖 */
+.jyc-app[data-theme="dark"] .jperf-panel-act .jperf-btn{background:#3a1d22;color:#ff9aa6}
+.jyc-app[data-theme="dark"] .jperf-panel-act .jperf-btn svg{stroke:#ff9aa6}
+.jyc-app[data-theme="dark"] .jperf-panel-act .jperf-btn:hover{border:none;background:#3a1d22;
+	color:#ff9aa6;box-shadow:none;filter:brightness(1.15)}
+/* 标题行清理按钮：深色下 hover 的写死浅色底会反白，改用深色 surface */
+.jyc-app[data-theme="dark"] .jperf-headside .jperf-btn:hover{background:var(--surface-3);border-color:#475878}
 .jyc-app[data-theme="dark"] .jperf-wv-badge{background:rgba(74,222,128,.14)}
 .jyc-app[data-theme="dark"] .jperf-wv-chip.rate-mid .jperf-wv-badge{background:rgba(251,191,36,.15)}
 .jyc-app[data-theme="dark"] .jperf-wv-chip.rate-poor .jperf-wv-badge{background:rgba(248,113,113,.15)}
@@ -1326,42 +1459,6 @@ textarea.jyc-inp{font-weight:400}
 .jperf-result.show{display:block;animation:rise .3s ease}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-/* 缓存预热区域：补齐 .jperf-field / .jperf-warmup 样式（此前缺失导致控件裸奔） */
-.jperf-warmup{display:flex;flex-direction:column;gap:12px;padding:14px;
-	background:var(--j-bg);border:1px solid var(--j-line);border-radius:var(--j-r)}
-.jperf-field{display:flex;flex-direction:column;gap:6px}
-.jperf-field > span{font-size:12.5px;font-weight:600;color:var(--j-ink);letter-spacing:-.01em}
-.jperf-field select,
-.jperf-field textarea{width:100%;margin:0;font:inherit;font-size:13px;color:var(--j-ink);
-	background:var(--j-bg);border:1px solid var(--j-line);border-radius:calc(var(--j-r) - 4px);
-	padding:9px 11px;transition:border-color .15s,box-shadow .15s,transform .15s}
-.jperf-field textarea{resize:vertical;line-height:1.55;min-height:88px}
-.jperf-field select{appearance:none;-webkit-appearance:none;cursor:pointer;font-weight:500;
-	background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-	background-repeat:no-repeat;background-position:right 11px center;padding-right:30px}
-.jperf-field select:hover,
-.jperf-field textarea:hover{border-color:#c6cede}
-.jperf-field select:focus,
-.jperf-field textarea:focus{outline:none;border-color:var(--j-accent);
-	box-shadow:0 0 0 3px var(--ring);transform:translateY(-1px)}
-.jperf-field select option{background:var(--j-bg);color:var(--j-ink);padding:10px 12px}
-.jyc-app[data-theme="dark"] .jperf-field select:hover,
-.jyc-app[data-theme="dark"] .jperf-field textarea:hover{border-color:#475878}
-/* 预热频率下拉走自绘组件（admin.js 对 select.jyc-inp 增强，弹层可完全样式化），按钮对齐 jperf 输入控件质感 */
-.jperf-field .jyc-select-btn{font-size:13px;border-radius:calc(var(--j-r) - 4px);
-	padding:9px 11px;background:var(--j-bg);color:var(--j-ink)}
-.jperf-field .jyc-select-btn:hover{border-color:#c6cede}
-.jperf-field .jyc-select-btn:focus-visible{outline:none;border-color:var(--j-accent);box-shadow:0 0 0 3px var(--ring);transform:none}
-.jyc-app[data-theme="dark"] .jperf-field .jyc-select-btn:hover{border-color:#475878}
-
-/* 保存成功浮层：顶部居中胶囊，蓝底白字大字号，比内联结果区显眼（3.2s 自动消失） */
-#jperf-toast{position:fixed;top:48px;left:50%;z-index:99999;max-width:min(86vw,560px);
-	display:flex;align-items:center;gap:9px;padding:12px 22px;border-radius:999px;
-	background:#1c60f3;color:#fff;font-size:14px;font-weight:600;letter-spacing:.2px;line-height:1.5;
-	box-shadow:0 14px 34px -12px rgba(28,96,243,.65);
-	opacity:0;visibility:hidden;pointer-events:none;
-	transform:translate(-50%,-14px);transition:opacity .3s ease,transform .3s ease,visibility .3s}
-#jperf-toast.show{opacity:1;visibility:visible;transform:translate(-50%,0)}
 
 .jperf-btnrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;
 	border-top:1px solid var(--j-line);margin-top:14px;padding-top:12px}
@@ -1411,10 +1508,26 @@ textarea.jyc-inp{font-weight:400}
 	.jperf-floatsave{left:12px;right:12px;transform:translateY(12px);border-radius:18px;padding-left:16px}
 	.jperf-floatsave.show{transform:translateY(0)}
 	.jperf-floatsave-act{margin-left:auto}
+	/* 标题行右上组件（状态胶囊 + 清除缓存按钮）：窄屏改为整行换行，各组件整体不折行、垂直居中 */
+	.jyc-mod-flex .jyc-mod-title{row-gap:10px}
+	.jperf-headside{width:100%;margin-left:0;top:0;flex-wrap:nowrap;align-items:center;gap:6px;overflow-x:auto}
+	.jperf-headside .jperf-btn{padding:4px 10px;font-size:12px;white-space:nowrap;flex:none}
+	.jperf-pill{font-size:11px;padding:3px 9px;flex:none}
+}
+/* 手机窄屏（对齐 WP 后台自身的 782px 移动断点）：胶囊与两个清除按钮只保留图标，
+   避免文字折行/横向溢出。按钮文字以 title/aria-label 兜底；胶囊文字改 sr-only 仍可被读屏读出。 */
+@media (max-width: 782px){
+	/* 图标模式下：取消整行展开，胶囊+两个清缓存按钮推到标题行最右，整体下移 3px 与刷新圆钮错开一点 */
+	.jperf-headside{width:auto;margin-left:auto;position:relative;top:3px;overflow:visible;flex:none}
+	.jperf-headside .jperf-pill{width:28px;height:28px;box-sizing:border-box;padding:0;justify-content:center;gap:0}
+	.jperf-headside .jperf-pill-txt{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+	.jperf-headside .jperf-btn{width:28px;height:28px;box-sizing:border-box;padding:0;justify-content:center;gap:0;border-radius:50%}
+	.jperf-headside .jperf-btn span{display:none}
+	.jperf-headside .jperf-btn svg{width:15px;height:15px}
 }
 @keyframes jperfIn{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
 @keyframes jperfPulse{0%{box-shadow:0 0 0 0 var(--j-dot-glow);transform:scale(1)}60%{box-shadow:0 0 0 9px transparent;transform:scale(1.15)}100%{box-shadow:0 0 0 0 transparent;transform:scale(1)}}
-.jperf-stat,.jperf-panel,.jperf-block,.jperf-wv-chip,.jperf-card{animation:jperfIn .55s cubic-bezier(.22,1,.36,1) both}
+.jperf-stat,.jperf-panel,.jperf-block,.jperf-wv-chip{animation:jperfIn .55s cubic-bezier(.22,1,.36,1) both}
 .jperf-stats .jperf-stat:nth-child(1){animation-delay:.03s}
 .jperf-stats .jperf-stat:nth-child(2){animation-delay:.07s}
 .jperf-stats .jperf-stat:nth-child(3){animation-delay:.11s}
@@ -1533,9 +1646,14 @@ textarea.jyc-inp{font-weight:400}
 /* 最慢路径 */
 .jperf-slow{grid-column:1/-1;min-width:0;margin-top:16px;background:var(--j-bg);border:1px solid var(--j-line);border-radius:var(--j-r);
 	padding:15px 18px;box-shadow:0 1px 2px rgba(24,24,27,.04)}
-.jperf-slow-head{display:flex;align-items:baseline;gap:10px;margin-bottom:11px;flex-wrap:wrap}
+.jperf-slow-head{display:flex;align-items:center;gap:10px;margin-bottom:11px;flex-wrap:wrap}
 .jperf-slow-t{font-size:12.5px;font-weight:600;color:var(--j-ink)}
 .jperf-slow-hint{font-size:11px;color:var(--j-muted)}
+/* 清空体验数据：挂「最慢路径」标题行最右端，与数据同卡同视区 */
+.jperf-slow-act{margin-left:auto;display:flex;align-items:center;flex:none}
+.jperf-slow-act .jperf-btn{padding:6px 11px;font-size:12.5px}
+.jperf-slow-act .jperf-btn svg{width:13px;height:13px}
+.jperf-slow .jperf-result{margin-top:0;margin-bottom:8px}
 .jperf-slow-list{display:flex;flex-direction:column}
 .jperf-slow-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--j-line2)}
 .jperf-slow-row:last-child{border-bottom:none}
@@ -1597,12 +1715,10 @@ textarea.jyc-inp{font-weight:400}
   .jperf-stat .jperf-d{font-size:10.5px;margin-top:3px}
   /* 区块间距按移动端节奏收缩 */
   .jperf-panels{gap:14px;margin-bottom:24px}
-  .jperf-grid2{margin-bottom:24px}
   .jperf-block{margin-bottom:24px}
   /* 长数值/URL 安全换行（原仅 ≤480px，放宽到全部小屏） */
   .jperf-cval{overflow-wrap:anywhere}
   .jperf-result{font-size:12.5px}
-  .jperf-card{padding:16px}
 }
 @media(max-width:400px){
   .jperf-stat .jperf-v{font-size:19px}
@@ -1874,13 +1990,16 @@ body.jyc-dark { background: #0a111c; }
 .jyc-og-tag.is-on i { background: var(--brand); }
 .jyc-og-tag.is-off { opacity: .7; }
 
-/* 卡片预览：微信 / QQ 风格（图上文下）。左窄右宽 —— 卡片固定 340px 保持手机卡片比例，
-   右侧放标签清单；两者并排可压平卡片总高，避免与同排卡片高度失衡（≥1280px 时同排等高）。 */
-.jyc-pv-wrap { display: flex; align-items: flex-start; gap: 22px; }
-.jyc-pv { flex: 0 0 340px; max-width: 340px; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--surface-2); box-shadow: var(--elev-1); }
-.jyc-pv-side { flex: 1 1 auto; min-width: 0; }
-.jyc-pv-side .jyc-og-tags-h { margin-top: 16px; }
+/* 卡片预览：微信 / QQ 风格（图上文下）。不再占独立面板 —— 改为「分享素材」面板标题右侧
+   「预览卡片」按钮的悬停弹层 .jyc-pop-pv（机制同「使用说明」气泡：挂到 .jyc-app + fixed，
+   不被 .jyc-panel 的 overflow:hidden 裁剪）。卡片在弹层内满宽铺陈，下方接标签清单。 */
+.jyc-pv { border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--surface-2); box-shadow: var(--elev-1); }
+.jyc-pv-side { min-width: 0; }
+.jyc-pop-pv { padding: 12px; }
+.jyc-pop-pv .jyc-pv { box-shadow: none; }
+.jyc-pop-pv .jyc-pv-side .jyc-og-tags-h { margin-top: 14px; }
 .jyc-og-tag-legend { font-size: 11.5px; margin-top: 10px; }
+.jyc-og-pv-note { font-size: 11.5px; line-height: 1.7; margin-top: 8px; }
 .jyc-pv-img { aspect-ratio: 1200 / 630; background: var(--surface-3); display: grid; place-items: center; }
 .jyc-pv-img img { width: 100%; height: 100%; object-fit: cover; display: none; }
 .jyc-pv-img.has-img img { display: block; }
@@ -1895,12 +2014,6 @@ body.jyc-dark { background: #0a111c; }
 .jyc-pv-site { display: flex; align-items: center; gap: 7px; margin-top: 11px; font-size: 11.5px; color: var(--ink-3); }
 .jyc-pv-dot { width: 14px; height: 14px; border-radius: 4px; background: var(--brand-soft); border: 1px solid rgba(28,96,243,.22); flex-shrink: 0; }
 
-@media (max-width: 900px) {
-  /* 窄屏：预览卡与标签清单改为上下排（并排会把标签压成极窄的多行碎块） */
-  .jyc-pv-wrap { flex-direction: column; gap: 16px; }
-  .jyc-pv { flex: 0 0 auto; width: 100%; max-width: 360px; }
-  .jyc-pv-side .jyc-og-tags-h { margin-top: 0; }
-}
 @media (max-width: 560px) {
   .jyc-og-img { flex-direction: column; gap: 12px; }
   .jyc-og-thumb { flex: 0 0 auto; width: 100%; }
@@ -2052,4 +2165,327 @@ body.jyc-dark { background: #0a111c; }
 }
 @media (max-width: 400px) {
   .jyc-csect-meta { display: none; }
+}
+
+/* ===================== 深色模式补丁：补齐个别写死浅色的 hover / 状态态 =====================
+ * 以下基类用了写死的浅色（灰边框 / 近白底 / 浅灰点），浅色下看不出、深色下会"反白"或发飘。
+ * 统一在此补齐深色变体，保持与 token 体系一致（边框用 #475878 这一档、底色用 surface-3）。 */
+.jyc-app[data-theme="dark"] .jyc-btn-ghost:hover { border-color: #475878; }
+.jyc-app[data-theme="dark"] .jyc-wm-color:hover,
+.jyc-app[data-theme="dark"] .jyc-wm-cell:hover { border-color: #475878; }
+.jyc-app[data-theme="dark"] .jyc-mode-card:hover { border-color: #475878; }
+.jyc-app[data-theme="dark"] .jperf-btn:hover { border-color: #475878; background: var(--surface-3);
+  box-shadow: 0 6px 14px -8px rgba(0,0,0,.6); }
+.jyc-app[data-theme="dark"] .jyc-og-tag i { background: #5a6b85; }
+/* danger 语义按钮：浅色为浅粉底，深色下改暗红底，避免整块反白（icon-danger 基态无实底，深底可读，不补） */
+.jyc-app[data-theme="dark"] .jyc-btn-danger,
+.jyc-app[data-theme="dark"] .jyc-export-full-mode { background: #3a1d22; color: #ff9aa6; border-color: #5e2a30; }
+
+/* ===================== 轻量化样式：说明提示条 / 只读面板弱化 / 窄屏长描述截断 ===================== */
+
+/* overview「内置恒启能力」：由独立 panel 降级为轻量提示条，减少视觉空旷 */
+.jyc-ability-note {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 14px 16px; margin-top: 18px;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md);
+  border-left: 3px solid var(--brand);
+}
+.jyc-ability-ico { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 1px; color: var(--brand); }
+.jyc-ability-body { min-width: 0; }
+.jyc-ability-t { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+.jyc-ability-d { font-size: 12.5px; line-height: 1.7; color: var(--ink-2); }
+
+/* 只读面板（爬虫放行清单 / SEO 诊断）弱化：去阴影与实边框，与可配置面板拉开层级 */
+.jyc-panel--lite {
+  background: var(--surface-2);
+  border-style: dashed;
+  box-shadow: none;
+}
+.jyc-panel--lite .jyc-panel-h { border-bottom-color: transparent; }
+.jyc-panel--lite .jyc-panel-h h2 { font-size: 14px; color: var(--ink-2); }
+
+/* 窄屏：超长字段描述限制行数，避免整页被说明文本占满（要点仍可一眼看完，桌面端保持完整） */
+@media (max-width: 560px) {
+  .jyc-fdesc {
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* 深色：轻量提示条 / 只读面板补深色变体 */
+.jyc-app[data-theme="dark"] .jyc-ability-note { background: var(--surface-2); border-left-color: var(--brand); }
+.jyc-app[data-theme="dark"] .jyc-panel--lite { background: var(--surface-2); border-color: var(--line); }
+
+/* ===================== 左侧导航（桌面 ≥880px） ===================== */
+/* 固定壳布局：.jyc-app 占满「视口高 − 管理栏」，overflow 收口；.jyc-content 内部滚动，
+   左栏 .jyc-topnav 是静态 flex 兄弟（position:static），永远不被滚动带跑。
+   窄屏（≤879px）保持原有横向滚动顶栏 + 窗口滚动，不受影响。
+   注：断点从 1080 降到 880，覆盖缩放后的笔记本（1366@150%≈911、1536@150%≈1024 等），
+   这些宽度 CSS px 原低于 1080 导致左栏固定不住、随页面滚动。
+   纵向下滑动指示器 / 左右箭头无意义，已隐藏；JS 的 scrollNavIntoView 改走原生 scrollIntoView。 */
+@media (min-width: 880px) {
+  .jyc-app { height: calc(100vh - var(--wp-admin--admin-bar--height, 32px)); overflow: hidden; }
+  .jyc-main { flex-direction: row; align-items: stretch; height: 100%; }
+  .jyc-content { flex: 1; min-width: 0; height: 100%; overflow-y: auto; padding: 18px 0 88px; }
+  .jyc-topnav {
+    flex: 0 0 248px; width: 248px; align-self: stretch;
+    flex-direction: column; align-items: stretch; gap: 14px;
+    position: static;
+    height: 100%;
+    padding: 18px 13px; border-right: 1px solid var(--line); border-bottom: none;
+    overflow: hidden; background: var(--surface);
+    transition: flex-basis .22s var(--ease), width .22s var(--ease);
+  }
+  .jyc-nav-wrap { flex-direction: column; flex: 1 1 auto; min-height: 0; gap: 4px; }
+  .jyc-nav { flex-direction: column; align-items: stretch; gap: 4px; overflow-y: auto; padding-bottom: 0; }
+  /* 激活项在纵向下加左侧色条 + 浅蓝底，比仅换字色更醒目（横排靠底部 indicator，纵排已隐藏） */
+  .jyc-nav-item { width: 100%; justify-content: flex-start; border-radius: 10px; }
+  .jyc-nav-item.jyc-active { background: var(--brand-soft); box-shadow: inset 3px 0 0 var(--brand); }
+  .jyc-nav-edge { display: none !important; }
+  .jyc-nav-indicator { display: none; }
+  /* 底栏一行：折叠键靠最左，主题 / 保存靠最右（靠 rail-toggle 的 margin-right:auto 撑开） */
+  .jyc-top-actions {
+    margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line);
+    justify-content: flex-start; align-items: center; flex-shrink: 0; flex-wrap: nowrap; gap: 10px;
+  }
+  .jyc-rail-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 auto; width: 38px; height: 38px; padding: 0; margin-right: auto;
+    border-radius: 11px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2);
+    transition: color .2s var(--ease), border-color .2s var(--ease), background .2s var(--ease);
+  }
+  .jyc-rail-toggle:hover { color: var(--brand); border-color: var(--brand); background: var(--surface); }
+
+  /* ---- 折叠态：左栏收窄到图标列 ---- */
+  .jyc-app.jyc-rail-collapsed .jyc-topnav { flex-basis: 62px; width: 62px; padding: 18px 9px; }
+  .jyc-app.jyc-rail-collapsed .jyc-brand { justify-content: center; }
+  .jyc-app.jyc-rail-collapsed .jyc-brand-txt,
+  .jyc-app.jyc-rail-collapsed .jyc-nav-item span { display: none; }
+  .jyc-app.jyc-rail-collapsed .jyc-nav-item { justify-content: center; }
+  /* 折叠后只有 44px 可用宽，一行塞不下三个方钮 → 纵向堆叠；且折叠键移到最下（展开键在最底更好点） */
+  .jyc-app.jyc-rail-collapsed .jyc-top-actions { flex-direction: column; align-items: center; gap: 8px; }
+  .jyc-app.jyc-rail-collapsed .jyc-top-actions > .jyc-btn-icon { order: 2; }
+  .jyc-app.jyc-rail-collapsed .jyc-rail-toggle { order: 3; margin-right: 0; }
+  .jyc-app.jyc-rail-collapsed .jyc-rail-toggle svg { transform: rotate(180deg); }
+}
+
+/* =====================================================================
+   高级质感 + 自适应增强（2026-10-05 追加，全部 additive，不改动既有布局）
+   ===================================================================== */
+
+/* ---- 1. 焦点可见性：键盘可达 = 高级感的一部分 ---- */
+.jyc-app :focus-visible {
+	outline: 2px solid var(--brand);
+	outline-offset: 2px;
+	border-radius: var(--r-sm, 8px);
+}
+.jyc-app .jyc-switch input:focus-visible + .jyc-track { box-shadow: 0 0 0 3px var(--brand-soft); }
+
+/* ---- 2. 面板卡片：渐变描边 + 悬浮抬升（玻璃质感强化） ---- */
+.jyc-panel {
+	position: relative;
+	transition: box-shadow .25s var(--ease), transform .2s var(--spring, ease), border-color .2s var(--ease);
+}
+.jyc-panel::after {
+	content: "";
+	position: absolute; inset: 0;
+	border-radius: inherit;
+	padding: 1px;
+	background: linear-gradient(135deg, color-mix(in srgb, var(--brand) 22%, transparent), transparent 42%);
+	-webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+	-webkit-mask-composite: xor; mask-composite: exclude;
+	opacity: 0; transition: opacity .25s var(--ease);
+	pointer-events: none;
+}
+.jyc-panel:hover::after { opacity: 1; }
+.jyc-panel:hover { box-shadow: var(--elev-3, 0 18px 40px -22px rgba(15,23,42,.28)); }
+
+/* ---- 3. 分区头粘性 + 模糊背景（仅纵向滚动布局 ≥880px，避免窄屏顶栏重叠） ---- */
+@media (min-width: 880px) {
+	.jyc-content { scroll-behavior: smooth; }
+	.jyc-panel-h {
+		position: sticky; top: 0; z-index: 5;
+		background: color-mix(in srgb, var(--surface) 82%, transparent);
+		-webkit-backdrop-filter: saturate(150%) blur(10px); backdrop-filter: saturate(150%) blur(10px);
+		margin: 0 -2px 0; padding-left: 18px; padding-right: 18px;
+		border-radius: 0 0 var(--r-md, 14px) var(--r-md, 14px);
+	}
+	/* 锚点跳转时给分区头留出顶部空间 */
+	.jyc-panel { scroll-margin-top: 12px; }
+}
+
+/* ---- 4. pane 进场动画（更顺滑的切换体感） ---- */
+@keyframes jycPaneIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.jyc-pane.jyc-shown { animation: jycPaneIn .32s var(--spring, cubic-bezier(.2,.8,.2,1)) both; }
+
+/* ---- 5. 计划任务面板：卡片式列表 + 徽章 + 相对时间 ---- */
+.jyc-cron-legend { font-size: 12px; line-height: 1.6; margin: 10px 0 0; }
+
+.jyc-cron-tablewrap {
+	background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+	box-shadow: var(--elev-1); overflow: hidden; margin-top: 12px;
+}
+.jyc-cron-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.jyc-cron-table thead th {
+	padding: 10px 16px; text-align: left; white-space: nowrap;
+	font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+	color: var(--ink-3); background: var(--surface-2); border-bottom: 1px solid var(--line);
+}
+.jyc-cron-table tbody td {
+	padding: 11px 16px; border-bottom: 1px solid var(--line-2);
+	vertical-align: middle; color: var(--ink-2);
+}
+.jyc-cron-table tbody tr:last-child td { border-bottom: none; }
+.jyc-cron-table tbody tr { transition: background .15s var(--ease); }
+.jyc-cron-table tbody tr:hover { background: var(--surface-2); }
+.jyc-cron-table tr.jyc-paused { opacity: .5; }
+.jyc-cron-table tr.jyc-paused td > code { text-decoration: line-through; }
+.jyc-cron-table th[title] { cursor: help; }
+
+/* Hook 名：等宽胶囊 */
+.jyc-cron-table td > code {
+	display: inline-block; padding: 2px 8px;
+	background: var(--surface-3); border: 1px solid var(--line-2); border-radius: 7px;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 12px; color: var(--ink); white-space: nowrap; max-width: 100%;
+	overflow: hidden; text-overflow: ellipsis; vertical-align: middle;
+}
+.jyc-cron-hook-desc { display: block; margin-top: 4px; font-size: 12px; line-height: 1.5; color: var(--ink-3); }
+
+/* 计划徽章 */
+.jyc-cron-badge {
+	display: inline-block; padding: 3px 10px; border-radius: 999px; white-space: nowrap;
+	font-size: 11.5px; font-weight: 600; line-height: 1.5;
+	background: var(--brand-soft); color: var(--brand-d); cursor: help;
+}
+.jyc-cron-badge.is-single { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
+
+/* 下次执行：相对时间 + 绝对时间 */
+.jyc-cron-next { display: block; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.jyc-cron-next-abs { display: block; margin-top: 1px; font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+/* 操作按钮：小号幽灵，删除悬停转红 */
+.jyc-btn-xs { padding: 5px 12px; font-size: 12px; border-radius: 9px; }
+.jyc-cron-act { white-space: nowrap; }
+.jyc-cron-act .jyc-btn { gap: 0; }
+.jyc-cron-act .jyc-cron-del:hover {
+	color: var(--danger); border-color: var(--danger);
+	background: color-mix(in srgb, var(--danger) 8%, transparent);
+	filter: none;
+}
+
+/* 窄屏 tips 按钮 + 气泡 */
+.jyc-cron-tip { display: none; width: 18px; height: 18px; margin-left: 8px; padding: 0; border: 1px solid var(--line, #d8dee9); border-radius: 50%; background: var(--surface-2, #f1f4f9); color: var(--ink-2); font-size: 11px; font-weight: 700; line-height: 1; align-items: center; justify-content: center; cursor: help; vertical-align: middle; }
+.jyc-cron-tip:hover { border-color: var(--brand); color: var(--brand); }
+.jyc-cron-tippop { position: fixed; z-index: 9999; max-width: 280px; padding: 10px 12px; font-size: 12.5px; line-height: 1.55; color: var(--ink); background: var(--surface, #fff); border: 1px solid var(--line, #d8dee9); border-radius: 10px; box-shadow: 0 10px 30px -8px rgba(15,23,42,.25); }
+.jyc-cron-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+
+/* 窄屏（≤640px）：整表折叠为堆叠卡片，操作按钮均分整行 */
+@media (max-width: 640px) {
+	.jyc-cron-hook-desc { display: none; }
+	.jyc-cron-tip { display: inline-flex; }
+	.jyc-cron-tablewrap { background: transparent; border: none; box-shadow: none; overflow: visible; }
+	.jyc-cron-table, .jyc-cron-table tbody, .jyc-cron-row, .jyc-cron-table td { display: block; width: 100%; }
+	.jyc-cron-table thead { display: none; }
+	.jyc-cron-row {
+		background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+		box-shadow: var(--elev-1); padding: 12px 14px; margin-bottom: 10px;
+	}
+	.jyc-cron-row:last-child { margin-bottom: 0; }
+	.jyc-cron-table tbody td { border: none; padding: 6px 0; }
+	.jyc-cron-cell-hk { margin-bottom: 2px; }
+	/* 计划 / 下次执行 / 操作：小标签 + 内容两行排布 */
+	.jyc-cron-table td[data-label] { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+	.jyc-cron-table td[data-label]::before {
+		content: attr(data-label);
+		flex: 0 0 64px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+		text-transform: uppercase; color: var(--ink-3);
+	}
+	.jyc-cron-table td > code { max-width: 100%; }
+	.jyc-cron-act { margin-top: 2px; }
+	.jyc-cron-act .jyc-btn { flex: 1 1 0; justify-content: center; }
+}
+.jyc-cron-add .jyc-inp { flex: 1 1 160px; min-width: 0; }
+.jyc-cron-add .jyc-btn { flex: 0 0 auto; }
+.jyc-cron-cmd {
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 12.5px; line-height: 1.6;
+	background: var(--surface-3); border: 1px solid var(--line-2);
+	border-radius: var(--r-sm, 8px); padding: 10px 12px; margin-top: 10px;
+	color: var(--ink-2); overflow-x: auto;
+}
+
+/* ---- 6. 移动端自适应强化 ---- */
+@media (max-width: 640px) {
+	/* 控件行：开关在左、文字在下，纵向堆叠避免挤压 */
+	.jyc-frow { flex-direction: column; align-items: flex-start; gap: 6px; }
+	.jyc-frow .jyc-grow { flex-basis: 100%; width: 100%; }
+	.jyc-fdesc { max-width: 100%; }
+	/* 输入控件与文本域铺满，触控目标更大 */
+	.jyc-inp, textarea.jyc-inp, select.jyc-inp { width: 100%; max-width: 100%; }
+	/* 新增事件表单：Hook 名整行，间隔(秒)与按钮同行（按钮在右、占满余宽） */
+	.jyc-cron-add { flex-direction: row; flex-wrap: wrap; }
+	.jyc-cron-add .jyc-inp { flex: 0 0 auto; width: 100%; }
+	.jyc-cron-add #jyc-cronAdd { flex: 1 1 auto; width: auto; justify-content: center; }
+	/* 分区头粘性在窄屏关闭（窗口滚动，顶栏非 fixed，避免遮挡） */
+	.jyc-panel-h { position: static; backdrop-filter: none; -webkit-backdrop-filter: none; background: transparent; margin: 0; padding-left: 16px; padding-right: 16px; }
+	/* 统计磁贴单列、间距收紧 */
+	.jyc-hero-stats { gap: 14px 20px; }
+}
+/* 超窄屏（≤380px）：面板内边距再收一档 */
+@media (max-width: 380px) {
+	.jyc-panel-b { padding: 14px 13px; }
+	.jyc-content { padding: 12px 0 80px; }
+}
+
+/* ---- 7. 深色模式：面板描边与悬浮更克制 ---- */
+.jyc-app[data-theme="dark"] .jyc-panel:hover { box-shadow: 0 18px 44px -24px rgba(0,0,0,.6); }
+
+/* ===================== SEO 面板：两栏 Bento 紧凑布局 =====================
+ * 主列放「呈现与抓取 / 分享素材 / 默认值 / 验证 / 图片&结构化」，侧栏（粘性）放
+ * 「分享预览 / 爬虫放行 / 诊断」。开关压成 2 列紧凑网格，冷门项收进高级折叠。 */
+.jyc-seo-bento { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 18px; align-items: start; }
+.jyc-seo-main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.jyc-seo-side { display: flex; flex-direction: column; gap: 18px; min-width: 0; position: sticky; top: 16px; }
+
+/* 紧凑开关网格：2 列，开关列固定宽度左对齐，文本左缘对齐 */
+.jyc-tog-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 22px; }
+.jyc-tog { display: flex; align-items: flex-start; gap: 11px; padding: 9px 0; border-top: 1px solid var(--line-2); }
+.jyc-tog:first-child, .jyc-tog:nth-child(2) { border-top: none; }
+.jyc-tog .jyc-switch { margin-top: 1px; flex: 0 0 auto; }
+.jyc-tog-txt { min-width: 0; }
+.jyc-tog-name { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.35; }
+.jyc-tog-desc { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; line-height: 1.5; }
+
+/* 高级抓取选项：details 折叠，默认收起，避免主列过长 */
+.jyc-adv { margin-top: 14px; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--surface-2); }
+.jyc-adv > summary { cursor: pointer; list-style: none; padding: 11px 14px; font-size: 13px; font-weight: 600; color: var(--ink);
+  display: flex; align-items: center; gap: 8px; user-select: none; transition: background .18s var(--ease); }
+.jyc-adv > summary::-webkit-details-marker { display: none; }
+.jyc-adv > summary:hover { background: var(--surface-3); }
+.jyc-adv-ico { width: 14px; height: 14px; flex-shrink: 0; fill: none; stroke: var(--ink-3); stroke-width: 2.4;
+  stroke-linecap: round; stroke-linejoin: round; transition: transform .22s var(--ease); }
+.jyc-adv[open] > summary .jyc-adv-ico { transform: rotate(90deg); stroke: var(--brand); }
+.jyc-adv-b { padding: 4px 14px 14px; }
+
+/* bento 内面板体略收紧，整体更紧凑 */
+.jyc-seo-bento .jyc-panel-b { padding: 16px 18px; }
+
+/* 侧栏预览卡：pv-wrap 纵向排列图卡与标签区 */
+.jyc-seo-pv .jyc-panel-b { display: flex; flex-direction: column; gap: 14px; }
+.jyc-pv-wrap { display: flex; flex-direction: column; gap: 12px; }
+.jyc-seo-pv .jyc-pv-side { margin-top: 0; }
+.jyc-seo-pv .jyc-pv { box-shadow: none; }
+
+/* 响应式：≤1080 转单栏，侧栏取消粘性；≤640 开关网格转单列并再收紧 */
+@media (max-width: 1080px) {
+  .jyc-seo-bento { grid-template-columns: 1fr; }
+  .jyc-seo-side { position: static; }
+}
+@media (max-width: 640px) {
+  .jyc-tog-grid { grid-template-columns: 1fr; }
+  .jyc-seo-bento, .jyc-seo-main, .jyc-seo-side { gap: 14px; }
+  .jyc-seo-bento .jyc-panel-b { padding: 14px 13px; }
+  .jyc-tog { padding: 8px 0; }
 }
