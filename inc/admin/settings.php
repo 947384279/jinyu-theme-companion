@@ -859,12 +859,12 @@ function jinyu_companion_settings_page_html(): void {
 											<div class="jyc-fdesc"><?php echo esc_html__( '填 Logo 图片绝对地址（建议 600×60 以上）。留空则依次回退「主题自定义 Logo」与「站点图标」，三者皆空则不输出，避免出现空的 logo 字段。', 'jinyu-theme-companion' ); ?></div></div>
 										</div>
 										<div class="jyc-frow">
-											<label class="jyc-fl" style="flex:1 1 320px"><?php echo esc_html__( 'Logo URL', 'jinyu-theme-companion' ); ?>
+											<label class="jyc-fl jyc-fl--wide"><?php echo esc_html__( 'Logo URL', 'jinyu-theme-companion' ); ?>
 												<input class="jyc-inp" type="url" name="org_logo_url" value="<?php echo esc_attr( $org_logo_url ); ?>" placeholder="https://example.com/logo.png" inputmode="url">
 											</label>
 										</div>
 										<div class="jyc-frow">
-											<label class="jyc-fl" style="flex:1 1 320px"><?php echo esc_html__( '作者身份档案（每行一个 URL）', 'jinyu-theme-companion' ); ?>
+											<label class="jyc-fl jyc-fl--wide"><?php echo esc_html__( '作者身份档案（每行一个 URL）', 'jinyu-theme-companion' ); ?>
 												<textarea class="jyc-inp" name="author_sameas" rows="3" placeholder="https://github.com/yourname&#10;https://www.zhihu.com/people/yourname"><?php echo esc_textarea( $author_sameas ); ?></textarea>
 											</label>
 										</div>

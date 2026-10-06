@@ -621,6 +621,11 @@
 .jyc-app[data-theme="dark"] .jyc-color-row input[type=color] { background-color: #111a2c; border-color: #4a5a80; }
 .jyc-fl { font-size: 12.5px; color: var(--ink-2); font-weight: 500; display: flex; flex-direction: column; gap: 6px; margin-bottom: 11px; }
 .jyc-fl:last-child { margin-bottom: 0; }
+/* 字段行里的「整宽字段」：桌面用 flex-basis 把输入框撑到 320px 起，便于填 URL。
+   ⚠️ 不要写成行内 style="flex:1 1 320px"：≤640px 时 .jyc-frow 曾切到 column，
+   行内 basis 会变成「320px 定高」，在卡片里撑出近 250px 的大片空白（2026-10-06 手机端截图 bug）；
+   改由本类 + 下方 ≤640 规则接管，样式集中可覆盖。 */
+.jyc-fl--wide { flex: 1 1 320px; min-width: 0; }
 /* 注意：WP 后台 forms.min.css 的 input[type=text/url/number/password/email],select,textarea
    组规则（background:#fff 等，特异性 0,1,1）会压过裸 .jyc-inp（0,1,0）——浅色下白底恰好看不出，
    深色下输入框全变白底。统一加 .jyc-app 前缀提到 0,2,0 以上。 */
@@ -2502,9 +2507,14 @@ body.jyc-dark { background: #0a111c; }
 
 /* ---- 6. 移动端自适应强化 ---- */
 @media (max-width: 640px) {
-	/* 控件行：开关在左、文字在下，纵向堆叠避免挤压 */
-	.jyc-frow { flex-direction: column; align-items: flex-start; gap: 6px; }
-	.jyc-frow .jyc-grow { flex-basis: 100%; width: 100%; }
+	/* 控件行：开关保持「开关在左、说明在右」横排。旧规则整体切 column，会让 46px 的开关
+	   孤立占一整行（2026-10-06 手机端截图问题）；真正的窄屏挤压只需靠 flex-wrap 兜底：
+	   放不下时自动折行退化为堆叠，不会溢出。 */
+	.jyc-frow { flex-direction: row; align-items: flex-start; gap: 10px; }
+	.jyc-frow .jyc-grow { flex: 1 1 200px; width: auto; }
+	/* 字段行：整行铺满卡片内容宽。否则 .jyc-fl 在 column + align-items:flex-start 下
+	   shrink-to-fit，输入框只剩元素固有宽度（实测 196px）把长长的 URL 挤断。 */
+	.jyc-frow > .jyc-fl { flex: 1 1 100%; width: 100%; min-width: 0; }
 	.jyc-fdesc { max-width: 100%; }
 	/* 输入控件与文本域铺满，触控目标更大 */
 	.jyc-inp, textarea.jyc-inp, select.jyc-inp { width: 100%; max-width: 100%; }
