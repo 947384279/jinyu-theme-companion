@@ -104,6 +104,21 @@ function jinyu_ai_crawl_count( string $crawler ): void {
 	// 节流：60 秒窗口内只允许一次真实落盘，计数累加在缓存副本上。
 	$cache_stamp = wp_cache_get( 'jinyu_ai_crawl_flush_ts', 'jinyu_tc' );
 	if ( false === $cache_stamp || ( time() - (int) $cache_stamp ) >= 60 ) {
+		// 落盘前先把窗口内缓存的未落盘计数合并进来，否则会被覆盖丢失
+		//（读路径 jinyu_ai_crawl_flush_pending 也走同一合并逻辑）。
+		$pending = wp_cache_get( 'jinyu_ai_crawl_pending', 'jinyu_tc' );
+		if ( is_array( $pending ) ) {
+			$meta_all = jinyu_ai_crawl_map();
+			foreach ( $pending as $c => $add ) {
+				$stats[ $c ]['n'] = ( $stats[ $c ]['n'] ?? 0 ) + (int) $add;
+				if ( ! isset( $stats[ $c ]['brand'] ) ) {
+					$m = $meta_all[ $c ] ?? array( 'brand' => '', 'region' => '' );
+					$stats[ $c ]['brand']  = $m['brand'];
+					$stats[ $c ]['region'] = $m['region'];
+				}
+			}
+			wp_cache_delete( 'jinyu_ai_crawl_pending', 'jinyu_tc' );
+		}
 		update_option( JINYU_AI_CRAWL_STATS_OPT, $stats, false );
 		wp_cache_set( 'jinyu_ai_crawl_flush_ts', time(), 'jinyu_tc', 120 );
 	} else {
