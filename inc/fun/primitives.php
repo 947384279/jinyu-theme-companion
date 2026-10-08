@@ -241,6 +241,7 @@ function jinyu_companion_guard( string $nonce_action, string $nonce_field = 'jin
 				'code' => 'bad_nonce',
 			]
         );
+		return; // 显式终止：即便将来 wp_send_json_error 实现变更，也绝不落入后续特权逻辑
 	}
 }
 

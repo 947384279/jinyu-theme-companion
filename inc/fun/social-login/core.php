@@ -649,6 +649,7 @@ function jinyu_sl_ajax_unbind(): void {
 				'code' => 'bad_nonce',
 			]
         );
+		return; // 显式终止，防止失败分支落入后续解绑逻辑
 	}
 
 	if ( ! jinyu_oauth_enabled() ) {

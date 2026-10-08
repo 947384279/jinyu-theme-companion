@@ -734,9 +734,11 @@ if ( ! function_exists( 'jinyu_perf_ajax_warmup' ) ) {
 	function jinyu_perf_ajax_warmup(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( [ 'msg' => __( '权限不足', 'jinyu-theme-companion' ) ] );
+			return;
 		}
 		if ( empty( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'jinyu_perf_center' ) ) {
 			wp_send_json_error( [ 'msg' => __( '安全校验失败，请刷新页面后重试', 'jinyu-theme-companion' ) ] );
+			return;
 		}
 
 		$opts = function_exists( 'jinyu_perf_get_options' ) ? jinyu_perf_get_options() : [];
@@ -776,9 +778,11 @@ if ( ! function_exists( 'jinyu_perf_ajax_warmup_status' ) ) {
 	function jinyu_perf_ajax_warmup_status(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( [ 'msg' => __( '权限不足', 'jinyu-theme-companion' ) ] );
+			return;
 		}
 		if ( empty( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'jinyu_perf_center' ) ) {
 			wp_send_json_error( [ 'msg' => __( '安全校验失败，请刷新页面后重试', 'jinyu-theme-companion' ) ] );
+			return;
 		}
 		$state = function_exists( 'jinyu_warmup_state_get' ) ? jinyu_warmup_state_get() : array();
 		$last  = get_option( 'jinyu_warmup_last', array() );

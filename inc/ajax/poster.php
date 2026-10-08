@@ -22,6 +22,7 @@ add_action( 'wp_ajax_nopriv_jinyu_poster', 'jinyu_poster_generate' );
 function jinyu_poster_generate() {
     if ( ! check_ajax_referer( 'jinyu_poster', '_ajax_nonce', false ) ) {
         wp_send_json_error( __( '海报生成请求已失效，请刷新页面后重试。', 'jinyu-theme-companion' ) );
+        return;
     }
 
     $post_id = absint( wp_unslash( $_REQUEST['post_id'] ?? 0 ) );

@@ -4,7 +4,7 @@ Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.2.12
+Stable tag: 1.2.13
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,9 @@ This plugin does not collect, store or transmit any personal data by default, an
 Administrators can disable any of the above outbound features at any time in the corresponding settings; once disabled, the related requests stop entirely.
 
 == Changelog ==
+
+= 1.2.13 =
+* 水印零字体/纯ASCII自动兜底；设置页字体可用性分级提示；移除文件完整性自检模块；多处Ajax失败分支健壮性。
 
 = 1.2.12 =
 * 悬浮保存：补齐 5 个落库遗漏字段（文章作者通知、薄归档 noindex、GEO 信号开关，及薄归档保留 term ID、GEO 可读选择器/最小长度）——此前保存提示成功但刷新即回滚；导入/导出白名单同步补齐 26 键并新增 float 类型。

@@ -890,11 +890,22 @@ final class Jinyu_Watermark {
 		if ( ! empty( $c['logo'] ) && is_file( $c['logo'] ) ) {
 			return self::composite_logo( $editor, $c );
 		}
+		$text = trim( (string) ( $c['text'] ?? '' ) );
+		if ( '' === $text ) {
+			return false; // 既没 logo 也没文字 → 无从处理
+		}
 		$font = jinyu_companion_find_font();
-		if ( ! $font || '' === trim( (string) $c['text'] ) ) {
-			return false; // 没有文字也没有水印图 → 无从处理
+		// 纯 ASCII（英文 / 数字 / 域名）：无需任何字体文件，交给 GD 内置位图字体兜底。
+		// 仅当含非 ASCII（如中文）且又没字体时才放弃，由配置页提示用户自行放字体。
+		if ( ! $font && ! self::is_ascii( $text ) ) {
+			return false;
 		}
 		return self::composite_text( $editor, $c, $font );
+	}
+
+	/** 是否仅含 ASCII 可打印字符（英文 / 数字 / 基本标点）。用于「零字体」兜底路径。 */
+	private static function is_ascii( string $text ): bool {
+		return 1 === preg_match( '/^[\x20-\x7e]+$/', $text );
 	}
 
 	/**
@@ -1007,6 +1018,10 @@ final class Jinyu_Watermark {
 		$size  = self::font_size( (int) $c['size'], $short );
 		$pad   = (int) round( $short * (float) $c['margin'] );
 		$text  = (string) $c['text'];
+		// 零字体 + 纯 ASCII：用 GD 内置位图字体兜底，无需任何字体文件（编辑器无关）。
+		if ( '' === $font && self::is_ascii( $text ) ) {
+			return self::composite_text_ascii( $editor, $text, $size, (int) $c['opacity'], (string) ( $c['color'] ?? '#ffffff' ), (int) $c['pos'], $pad, $iw, $ih );
+		}
 		$mw    = self::text_metrics( $editor, $text, $font, $size );
 		$lw    = $mw['w'];
 		$lh    = max( (int) round( $size * 1.6 ), 16 );
@@ -1126,6 +1141,76 @@ final class Jinyu_Watermark {
 		imagealphablending( $cv, true );
 		$ok = imagecopy( $cv, $layer, $x, $y, 0, 0, $lw, $lh );
 		return (bool) $ok;
+	}
+
+	/**
+	 * 零字体兜底：纯 ASCII 文字水印，用 GD 内置位图字体（imagestring）绘制，无需任何 TTF 文件。
+	 * 内置字只有 1–5 号、不可直接指定大字号、无描边/抗锯齿，因此先以最大字号(5)渲染再放大到目标尺寸，
+	 * 风格比 TTF 路径朴素（块状放大），但「开箱即用、零体积」，适合英文 / 数字 / 域名水印。
+	 * 编辑器无关：在透明 GD 层画好后，GD 编辑器直接 imagecopy；Imagick 编辑器把该层导出 PNG blob 再
+	 * compositeImage 叠回，绕开 Imagick 没有内置位图字体的限制。
+	 */
+	private static function composite_text_ascii( WP_Image_Editor $editor, string $text, int $size, int $opacity, string $color, int $pos, int $pad, int $iw, int $ih ): bool {
+		if ( ! extension_loaded( 'gd' ) ) {
+			return false; // 连 GD 都没有则无法绘制内置位图字
+		}
+		$target_h = max( 8, (int) round( $size * 1.6 ) );
+		$target_w = max( 1, (int) round( $size * 0.55 * mb_strlen( $text ) ) + 4 );
+		list( $bx, $by ) = self::position( $pos, $target_w, $target_h, $pad, $iw, $ih );
+
+		$builtin = 5;
+		$src_w   = imagefontwidth( $builtin ) * mb_strlen( $text ) + 2;
+		$src_h   = imagefontheight( $builtin ) + 2;
+		$src     = imagecreatetruecolor( max( 1, $src_w ), max( 1, $src_h ) );
+		if ( ! $src ) {
+			return false;
+		}
+		imagealphablending( $src, false );
+		imagesavealpha( $src, true );
+		imagefilledrectangle( $src, 0, 0, max( 0, $src_w - 1 ), max( 0, $src_h - 1 ), imagecolorallocatealpha( $src, 0, 0, 0, 127 ) );
+		imagealphablending( $src, true );
+		list( $r, $g, $b ) = self::color_rgb( $color );
+		$a    = (int) round( max( 1, min( 100, $opacity ) ) / 100 * 127 );
+		$fill = imagecolorallocatealpha( $src, $r, $g, $b, $a );
+		imagestring( $src, $builtin, 1, 1, $text, $fill );
+
+		$layer = imagecreatetruecolor( $target_w, $target_h );
+		if ( ! $layer ) {
+			imagedestroy( $src );
+			return false;
+		}
+		imagealphablending( $layer, false );
+		imagesavealpha( $layer, true );
+		imagefilledrectangle( $layer, 0, 0, $target_w - 1, $target_h - 1, imagecolorallocatealpha( $layer, 0, 0, 0, 127 ) );
+		imagealphablending( $layer, true );
+		imagecopyresampled( $layer, $src, 0, 0, 0, 0, $target_w, $target_h, $src_w, $src_h );
+		imagedestroy( $src );
+
+		$cv = self::canvas( $editor );
+		if ( is_gd_image( $cv ) ) {
+			imagealphablending( $cv, true );
+			return (bool) imagecopy( $cv, $layer, $bx, $by, 0, 0, $target_w, $target_h );
+		}
+		if ( $cv instanceof Imagick ) {
+			ob_start();
+			imagepng( $layer );
+			$blob = ob_get_clean();
+			imagedestroy( $layer );
+			if ( ! is_string( $blob ) || '' === $blob ) {
+				return false;
+			}
+			try {
+				$wm = new Imagick();
+				$wm->readImageBlob( $blob );
+				$cv->compositeImage( $wm, Imagick::COMPOSITE_OVER, $bx, $by );
+				$wm->clear();
+				return true;
+			} catch ( Exception $e ) {
+				return false;
+			}
+		}
+		imagedestroy( $layer );
+		return false;
 	}
 
 	/**

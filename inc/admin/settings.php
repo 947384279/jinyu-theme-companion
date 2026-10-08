@@ -461,6 +461,12 @@ function jinyu_companion_settings_page_html(): void {
 	$wm_font      = function_exists( 'jinyu_companion_find_font' ) ? (string) jinyu_companion_find_font() : '';
 	$wm_supported = class_exists( 'Jinyu_Watermark' ) ? Jinyu_Watermark::supported() : false;
 
+	// 判定检测到的字体是否仅含拉丁字形（中文会渲染成方块）。名单与 watermark.php 中
+	// jinyu_companion_find_font() 的拉丁-only 候选保持一致；其余（含插件自带字体）一律
+	// 视为可用，避免对未知字体误报警告。
+	$wm_latin_only_fonts = array( 'DejaVuSans.ttf', 'LiberationSans-Regular.ttf', 'OpenSans-Regular.ttf' );
+	$wm_font_latin_only  = '' !== $wm_font && in_array( basename( $wm_font ), $wm_latin_only_fonts, true );
+
 	// 性能：Speculation Rules
 	$speculation_enable   = jinyu_companion_get_option( 'speculation_enable', '0' );
 	$speculation_mode     = jinyu_companion_get_option( 'speculation_mode', 'prefetch' );
@@ -1844,9 +1850,11 @@ function jinyu_companion_settings_page_html(): void {
 							<div class="jyc-panel">
 								<div class="jyc-panel-h"><h2><span class="jyc-section-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></span><?php echo esc_html__( '批量处理与状态', 'jinyu-theme-companion' ); ?></h2><span class="jyc-opstate <?php echo $wm_supported ? 'is-on' : 'is-off'; ?>" id="jyc-wmState"><?php echo $wm_supported ? esc_html__( '引擎可用', 'jinyu-theme-companion' ) : esc_html__( '环境不支持图像处理', 'jinyu-theme-companion' ); ?></span></div>
 								<div class="jyc-panel-b">
-									<?php if ( '' === $wm_font ) : ?>
-										<div class="jyc-wm-warn"><?php echo esc_html__( '未检测到可用字体：服务器缺少支持中文的字体，中文水印会渲染成方块。英文 / 数字可用；中文需安装 fonts-wqy-zenhei 或把开源字体放进插件 assets/fonts/。', 'jinyu-theme-companion' ); ?></div>
-									<?php endif; ?>
+								<?php if ( '' === $wm_font ) : ?>
+									<div class="jyc-wm-warn"><?php echo esc_html__( '未检测到字体：英文 / 数字水印可直接使用（内置位图字体，无需任何字体文件）；中文水印需安装中文字体（如 fonts-wqy-zenhei）或把字体放进插件 assets/fonts/ 目录。', 'jinyu-theme-companion' ); ?></div>
+								<?php elseif ( $wm_font_latin_only ) : ?>
+									<div class="jyc-wm-warn"><?php echo esc_html__( '当前字体仅含拉丁字形，中文水印会渲染成方块。如需中文水印，请安装中文字体（如 fonts-wqy-zenhei）或把含中文的字体放进插件 assets/fonts/ 目录。', 'jinyu-theme-companion' ); ?></div>
+								<?php endif; ?>
 									<div class="jyc-actions">
 										<div class="jyc-opcard">
 											<div class="jyc-opcard-h"><span class="jyc-opcard-t"><?php echo esc_html__( '全库批量', 'jinyu-theme-companion' ); ?></span></div>

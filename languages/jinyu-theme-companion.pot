@@ -4092,24 +4092,6 @@ msgstr ""
 msgid "正常"
 msgstr ""
 
-#: inc/fun/monitor.php:482
-msgid "异常"
-msgstr ""
-
-#: inc/fun/monitor.php:483
-msgid "未启用"
-msgstr ""
-
-#. translators: %s: 距上次扫描的时长，如「5 分钟前」。
-#: inc/fun/monitor.php:488
-#, php-format
-msgid "上次扫描 %s"
-msgstr ""
-
-#: inc/fun/monitor.php:489
-msgid "尚未扫描"
-msgstr ""
-
 #. translators: 1: 致命错误数 2: 警告数
 #: inc/fun/monitor.php:496
 #, php-format
@@ -4150,10 +4132,6 @@ msgstr ""
 
 #: inc/fun/monitor.php:523
 msgid "离线"
-msgstr ""
-
-#: inc/fun/monitor.php:525
-msgid "文件完整性"
 msgstr ""
 
 #: inc/fun/monitor.php:527

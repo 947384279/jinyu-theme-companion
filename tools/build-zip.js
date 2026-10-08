@@ -177,7 +177,7 @@ function scanSecrets(rel, data) {
  * 注意只按「文件名形状」拦 —— 生产功能文件（transport-check.php、uninstall.php、stats.php 等）
  * 都不匹配这些形状，不会被误伤。
  */
-const DEBUG_FILE_RE = /(^|\/)(?:_?test|tests|debug|probe|verify|demo|preview|shot)(?:[-_.]|$)|(?:^|[-_])(?:test|debug|probe|verify|demo)(?:[-_.]|$)|(?:^|[-_])(?:test|debug|probe|verify|demo)[-_.][\w.-]+\.(?:php|js|mjs|html?|css)$|\.(?:log|mjs|bak|orig|tmp|swp)(?:$|\.)/i;
+const DEBUG_FILE_RE = /(?:^|[-_/])(?:_?test|tests|debug|probe|verify|demo|preview|shot)(?:[-_.]|$)|(?:^|[-_])(?:test|debug|probe|verify|demo)(?:[-_.]|$)|(?:^|[-_])(?:test|debug|probe|verify|demo)[-_.][\w.-]+\.(?:php|js|mjs|html?|css)$|\.(?:log|mjs|bak|orig|tmp|swp)(?:$|\.)/i;
 
 /** 铁律 2 执行器。 */
 function gateDebugFile(rel) {

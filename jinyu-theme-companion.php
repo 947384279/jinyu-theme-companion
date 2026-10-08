@@ -3,7 +3,7 @@
  * Plugin Name: Jinyu Theme Companion
  * Plugin URI:  https://www.qicaiyun.top/4698.html
  * Description: Functional layer for the Jinyu theme: SEO, structured data, social, related posts, shortcodes, cache and anti-spam. Works on any theme.
- * Version:     1.2.12
+ * Version:     1.2.13
  * Author:      金玉
  * Author URI:  https://www.qicaiyun.top
  * License:     GPL-2.0-or-later
@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * 插件先于主题载入，抢先定义会让主题读到的版本号变成插件版本，造成版本漂移。
  * ------------------------------------------------------------------------ */
 if ( ! defined( 'JINYU_COMPANION_VER' ) ) {
-	define( 'JINYU_COMPANION_VER', '1.2.12' );
+	define( 'JINYU_COMPANION_VER', '1.2.13' );
 }
 
 /*
@@ -250,11 +250,8 @@ add_action(
 		// 性能开关、缓存清理、一键优化。渲染挂在设置面板「性能中心」分区。
 		require_once __DIR__ . '/inc/fun/perf-center.php';
 
-		// 新增模块（站点级 / 基础设施层，与主题解耦）：文件完整性自检、脚本优化、计划任务管理。
+		// 新增模块（站点级 / 基础设施层，与主题解耦）：脚本优化、计划任务管理。
 		// 用 file_exists 包裹：这些属于较新的增量，尚未随主文件一起部署到存量站点时，裸 require 会整站 500；缺文件时静默跳过。
-		if ( file_exists( __DIR__ . '/inc/fun/file-integrity.php' ) ) {
-			require_once __DIR__ . '/inc/fun/file-integrity.php';
-		}
 		if ( file_exists( __DIR__ . '/inc/fun/script-optimize.php' ) ) {
 			require_once __DIR__ . '/inc/fun/script-optimize.php';
 		}

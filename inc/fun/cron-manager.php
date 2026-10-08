@@ -301,6 +301,7 @@ function jinyu_cron_ajax(): void {
 				'msg' => __( '安全校验失败', 'jinyu-theme-companion' ),
             )
         );
+		return;
 	}
 	$act  = isset( $_POST['act'] ) ? sanitize_key( wp_unslash( $_POST['act'] ) ) : '';
 	$hook = isset( $_POST['hook'] ) ? sanitize_text_field( wp_unslash( $_POST['hook'] ) ) : '';

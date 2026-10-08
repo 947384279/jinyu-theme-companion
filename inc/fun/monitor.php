@@ -6,11 +6,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * 站点监控磁贴（概览页「站点监控」分组）。
  *
- * 采集站点级运行指标并展示于概览页，与 cron / file-integrity 互不耦合：
+ * 采集站点级运行指标并展示于概览页：
  *  - 数据源：WP 核心 + 自有服务器可读信息（磁盘 / 负载 / 内存 / 证书 / DB），不依赖主题；
  *  - 快照存独立 option（jinyu_monitor_snapshot），有效期 1 小时，过期或手动巡检时重新采集；
  *  - 每小时定时刷新（jinyu_monitor_hourly），保证后台不打开也有近实时数据；
- *  - 文件完整性仅读取 file-integrity 模块已存状态（不自跑扫描、不触发告警邮件）；
  *  - 与主题的关联一律走 function_exists 守卫，缺失功能优雅降级为「未启用」。
  */
 
@@ -49,7 +48,6 @@ function jinyu_monitor_snapshot( bool $force = false ): array {
  */
 function jinyu_monitor_collect( array $prev = array() ): array {
 	$uptime    = jinyu_monitor_uptime();
-	$integrity = jinyu_monitor_integrity();
 	$php       = jinyu_monitor_php_errors();
 	$server    = jinyu_monitor_server();
 	$ssl       = jinyu_monitor_ssl();
@@ -70,7 +68,6 @@ function jinyu_monitor_collect( array $prev = array() ): array {
 	return array(
 		'built'     => time(),
 		'uptime'    => $uptime,
-		'integrity' => $integrity,
 		'php'       => $php,
 		'server'    => $server,
 		'ssl'       => $ssl,
@@ -113,27 +110,6 @@ function jinyu_monitor_uptime(): array {
 		'code'     => $code,
 		'down'     => '',
 		'sparkline' => array(),
-	);
-}
-
-/**
- * 文件完整性状态（读取 file-integrity 模块已存结果，不自跑扫描）。
- *
- * @return array{status:string,last_run:int,enabled:bool}
- */
-function jinyu_monitor_integrity(): array {
-	if ( ! function_exists( 'jinyu_integrity_settings' ) ) {
-		return array(
-			'status' => 'none',
-			'last_run' => 0,
-			'enabled' => false,
-		);
-	}
-	$st = jinyu_integrity_settings();
-	return array(
-		'status'    => is_string( $st['last_status'] ?? '' ) ? $st['last_status'] : 'none',
-		'last_run'  => (int) ( $st['last_run'] ?? 0 ),
-		'enabled'   => ! empty( $st['enable'] ),
 	);
 }
 
@@ -476,18 +452,6 @@ function jinyu_monitor_render_section(): string {
 		? sprintf( esc_html__( '在线 · HTTP %d', 'jinyu-theme-companion' ), (int) $snap['uptime']['code'] )
 		: esc_html__( '离线：', 'jinyu-theme-companion' ) . esc_html( $snap['uptime']['down'] );
 
-	$ig = $snap['integrity'];
-	$ig_map = array(
-		'clean' => array( 'var(--ok)', esc_html__( '正常', 'jinyu-theme-companion' ) ),
-		'alert' => array( 'var(--danger)', esc_html__( '异常', 'jinyu-theme-companion' ) ),
-		'none'  => array( 'var(--warn)', esc_html__( '未启用', 'jinyu-theme-companion' ) ),
-	);
-	$ig_info = $ig_map[ $ig['status'] ] ?? $ig_map['none'];
-	$ig_sub  = $ig['last_run']
-		/* translators: %s: 距上次扫描的时长，如「5 分钟前」。 */
-		? sprintf( esc_html__( '上次扫描 %s', 'jinyu-theme-companion' ), esc_html( human_time_diff( $ig['last_run'] ) . '前' ) )
-		: esc_html__( '尚未扫描', 'jinyu-theme-companion' );
-
 	$php    = $snap['php'];
 	$php_dot = $php['fatal'] > 0 ? 'var(--danger)' : ( $php['errors'] > 0 ? 'var(--warn)' : 'var(--ok)' );
 	$php_v   = $php['errors'] > 0 ? (int) $php['errors'] : '0';
@@ -521,8 +485,6 @@ function jinyu_monitor_render_section(): string {
 	$stats  = '';
 	// 站点存活
 	$stats .= jinyu_monitor_stat( $up_dot, __( '站点存活', 'jinyu-theme-companion' ), $up_ok ? __( '正常', 'jinyu-theme-companion' ) : __( '离线', 'jinyu-theme-companion' ), $up_sub );
-	// 文件完整性
-	$stats .= jinyu_monitor_stat( $ig_info[0], __( '文件完整性', 'jinyu-theme-companion' ), $ig_info[1], $ig_sub );
 	// PHP 错误
 	$stats .= jinyu_monitor_stat( $php_dot, __( 'PHP 错误', 'jinyu-theme-companion' ), (string) $php_v, $php_sub );
 	// 服务器资源
@@ -579,6 +541,7 @@ function jinyu_monitor_ajax(): void {
 				'msg' => __( '安全校验失败', 'jinyu-theme-companion' ),
             )
         );
+		return; // 显式终止，防止失败分支落入后续采集逻辑
 	}
 	$snap = jinyu_monitor_collect();
 	update_option( JINYU_MONITOR_OPT, $snap );

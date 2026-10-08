@@ -114,6 +114,7 @@ function jinyu_ajax_web_vitals() {
 	// 匿名端点防滥用：每 IP 每小时最多 30 次上报，防恶意刷库放大攻击（一次上报=一次 option 读改写）
 	if ( ! jinyu_companion_rate_limit( 'web_vitals', 30, HOUR_IN_SECONDS ) ) {
 		wp_send_json_error( 'rate_limited' );
+		return;
 	}
 
 	// phpcs:ignore WordPress.Security.NonceVerification -- 公开匿名上报端点（nopriv），无 nonce 属设计，rate_limit 防滥用
