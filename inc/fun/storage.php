@@ -112,6 +112,7 @@ function jinyu_storage_run_multi( $handles, $concurrency = 8 ) {
 					$code              = (int) curl_getinfo( $ch, CURLINFO_HTTP_CODE ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_getinfo -- 对象存储并行上传引擎
 					$results[ $item['index'] ] = ( $code >= 200 && $code < 300 );
 					curl_multi_remove_handle( $mh, $ch ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_multi_remove_handle -- 对象存储并行上传引擎
+					curl_close( $ch ); // phpcs:ignore WordPress.WP.AlternativeFunctions.curl_curl_close -- 对象存储并行上传引擎，单 handle 处理完即释放，避免句柄泄漏
 					unset( $inflight[ $k ] );
 					$inflight = array_values( $inflight );
 					break;
@@ -1207,6 +1208,12 @@ function jinyu_storage_get_task( int $task_id ) {
 function jinyu_storage_finish_batch( int $task_id, string $status, string $message ): void {
 	global $wpdb;
 	$table = jinyu_storage_table();
+	// 尊重停止信号：批次处理途中若用户已点停止（status 被标 stopped），不再将会话写回 running，
+	// 避免「在途批次复活」导致停止失效；任务真正跑完（status 应为 done）时以 done 为准。
+	$cur = $wpdb->get_var( $wpdb->prepare( "SELECT status FROM $table WHERE id = %d", $task_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 自建存储任务表，表名经白名单构造
+	if ( 'stopped' === $cur && 'done' !== $status ) {
+		$status = 'stopped';
+	}
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 自建存储任务表 CRUD；表名经 jinyu_storage_table() 白名单构造，管理端触发
 	$wpdb->update(
 		$table,

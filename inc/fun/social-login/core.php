@@ -421,6 +421,8 @@ function jinyu_sl_callback(): void {
 	}
 	wp_set_current_user( $uid );
 	wp_set_auth_cookie( $uid, true );
+	// 触发 wp_login：让暴破防护、登录审计等依赖该钩子的插件/机制正常工作（否则社交登录会绕过其检测）。
+	do_action( 'wp_login', $uid, get_userdata( $uid ) );
 
 	// 绑定意图：回跳用户中心（或指定 redirect_to），不再落到写文章页
 	if ( 'bind' === $intent ) {
@@ -609,8 +611,8 @@ function jinyu_sl_create_oauth_user( string $platform, array $ud ): int|WP_Error
 		[
 			'ID'            => $uid,
 			'role'          => $role,
-			'display_name'  => $ud['nickname'] ?: $username,
-			'nickname'      => $ud['nickname'] ?: $username,
+			'display_name'  => sanitize_text_field( $ud['nickname'] ) ?: $username,
+			'nickname'      => sanitize_text_field( $ud['nickname'] ) ?: $username,
 		]
 	);
 	update_user_meta( $uid, jinyu_sl_oauth_id_key( $platform ), $ud['id'] );

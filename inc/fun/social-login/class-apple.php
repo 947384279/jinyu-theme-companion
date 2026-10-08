@@ -209,6 +209,10 @@ class Jinyu_OAuth_Provider_Apple extends Jinyu_OAuth_Provider {
 		if ( ! is_array( $payload ) ) {
 			return new WP_Error( 'jinyu_apple_jwt', 'id_token 解析失败' );
 		}
+		// 纵深防御：Apple id_token 仅以 RS256 签发，显式拒绝其它算法（含 alg=none / 对称算法降级攻击）。
+		if ( ! is_array( $header ) || ( $header['alg'] ?? '' ) !== 'RS256' ) {
+			return new WP_Error( 'jinyu_apple_jwt', 'id_token 算法不支持' );
+		}
 
 		$kid = (string) ( $header['kid'] ?? '' );
 		$pem = $this->apple_public_key( $kid );

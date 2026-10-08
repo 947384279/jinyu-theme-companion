@@ -475,19 +475,28 @@ function jinyu_llms_serve_full( string $cache_key = 'jinyu_llms_full_cache' ): v
 	$out .= $desc ? $desc . "\n\n" : '';
 	$out .= '> 本文件为全站已发布内容（文章与页面）正文纯文本（markdown），供 AI 助理（如 ChatGPT、Claude、Perplexity、元宝等）整站吸收与引用。' . "\n\n";
 
-	$posts = get_posts(
-        [
-			'post_type'      => [ 'post', 'page' ],
-			'post_status'    => 'publish',
-			'has_password'    => false,
-			'posts_per_page' => -1,
-			'orderby'        => 'date',
-			'order'          => 'DESC',
-			'no_found_rows'  => true,
-		]
-    );
-
-	foreach ( $posts as $p ) {
+	// 分页流式拼接：避免 get_posts(-1) 一次性把全站文章对象载入内存，导致大站点生成 /llms-full.txt 时内存耗尽/超时。
+	// 输出本身已整体缓存（见 jinyu_llms_cache_output），此处只降低生成时的内存峰值。
+	set_time_limit( 0 );
+	$paged = 1;
+	$per   = 100;
+	do {
+		$posts = get_posts(
+			[
+				'post_type'      => [ 'post', 'page' ],
+				'post_status'    => 'publish',
+				'has_password'    => false,
+				'posts_per_page' => $per,
+				'paged'          => $paged,
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+				'no_found_rows'  => true,
+			]
+		);
+		if ( empty( $posts ) ) {
+			break;
+		}
+		foreach ( $posts as $p ) {
 		$url     = get_permalink( $p );
 		$title   = wp_strip_all_tags( get_the_title( $p ) );
 		$date    = get_the_date( 'Y-m-d', $p );
@@ -507,7 +516,10 @@ function jinyu_llms_serve_full( string $cache_key = 'jinyu_llms_full_cache' ): v
 			$out .= '- 标签：' . implode( '、', $tags ) . "\n";
 		}
 		$out .= "\n" . $content . "\n\n---\n\n";
-	}
+		}
+		unset( $posts );
+		++$paged;
+	} while ( true );
 
 	jinyu_llms_cache_output( $cache_key, $out );
 	echo $out; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 受控/对外原始输出（SVG/JSON-LD/缓存页/CSP nonce/内部构造 HTML），无需转义

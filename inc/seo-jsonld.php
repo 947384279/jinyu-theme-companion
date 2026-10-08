@@ -192,7 +192,6 @@ function jinyu_json_ld() {
             '@context'    => 'https://schema.org',
             '@type'       => 'Article',
             'headline'    => $post->post_title,
-            'articleSection' => ! empty( $cats ) ? $cats[0]->name : '',
             'datePublished' => get_the_date( 'c', $post->ID ),
             'dateModified'  => get_the_modified_date( 'c', $post->ID ),
             'author'      => $author_node,
@@ -201,10 +200,15 @@ function jinyu_json_ld() {
 				'@type' => 'WebPage',
 				'@id' => get_permalink( $post->ID ),
 			],
-            'image'       => $cover,
             'description' => jinyu_truncate_desc( $ld_desc ),
             'wordCount'   => (int) mb_strlen( preg_replace( '/\s+/', '', wp_strip_all_tags( $post->post_content ) ), 'UTF-8' ),
         ];
+        if ( $cats ) {
+            $article['articleSection'] = $cats[0]->name;
+        }
+        if ( $cover ) {
+            $article['image'] = $cover;
+        }
         if ( is_singular( 'page' ) ) {
             unset( $article['articleSection'] );
         }
@@ -212,7 +216,7 @@ function jinyu_json_ld() {
         // 不输出 articleBody：Google 官方 Article 字段清单把该字段列在「非推荐」一档，
         // 既不参与富媒体呈现，又把整篇正文塞进 JSON-LD（单页约 +2KB），是纯粹的净亏损。
         // 同理，这里的 apply_filters('the_content') 二次渲染与 transient 缓存也随之不再需要。
-        $article['inLanguage']          = get_locale();
+        $article['inLanguage']          = str_replace( '_', '-', get_locale() );
         $article['isAccessibleForFree'] = true;
         $data[] = $article;
     }

@@ -90,35 +90,45 @@ function jinyu_bulk_push_run(): array {
 		'ok' => 0,
 	];
 
-	// IndexNow：单次请求最多 10000 条，全量一份直发。
+	// IndexNow：单次请求上限 10000 条，超出分块发送（否则整批 400 失败）。
 	if ( jinyu_companion_is_checked( 'indexnow_enable', false ) ) {
 		$key = (string) get_option( 'jinyu_indexnow_key' );
 		if ( $key && $all_urls ) {
 			$indexnow['enabled'] = true;
 			$host                = (string) wp_parse_url( home_url(), PHP_URL_HOST );
-			$payload             = wp_json_encode(
-				[
-					'host'        => $host,
-					'key'         => $key,
-					'keyLocation' => home_url( '/' . $key . '.txt' ),
-					'urlList'     => $all_urls,
-				],
-				JSON_UNESCAPED_SLASHES
-			);
-			$resp                = wp_remote_post(
-				'https://api.indexnow.org/indexnow',
-				[
-					'headers'   => [ 'Content-Type' => 'application/json; charset=utf-8' ],
-					'body'      => $payload,
-					'timeout'   => 20,
-					'blocking'  => true,
-					'sslverify' => true,
-				]
-			);
-			$indexnow['sent']    = count( $all_urls );
-			$code                = wp_remote_retrieve_response_code( $resp );
-			$indexnow['code']    = (int) $code;
-			$indexnow['ok']      = ( 200 === $code || 202 === $code ) ? 1 : 0;
+			$sent                = 0;
+			$ok                  = 1;
+			$code                = 0;
+			foreach ( array_chunk( $all_urls, 10000 ) as $chunk ) {
+				$payload = wp_json_encode(
+					[
+						'host'        => $host,
+						'key'         => $key,
+						'keyLocation' => home_url( '/' . $key . '.txt' ),
+						'urlList'     => $chunk,
+					],
+					JSON_UNESCAPED_SLASHES
+				);
+				$resp = wp_remote_post(
+					'https://api.indexnow.org/indexnow',
+					[
+						'headers'   => [ 'Content-Type' => 'application/json; charset=utf-8' ],
+						'body'      => $payload,
+						'timeout'   => 20,
+						'blocking'  => true,
+						'sslverify' => true,
+					]
+				);
+				$sent += count( $chunk );
+				$c     = (int) wp_remote_retrieve_response_code( $resp );
+				$code  = $c ? $c : $code;
+				if ( 200 !== $c && 202 !== $c ) {
+					$ok = 0;
+				}
+			}
+			$indexnow['sent'] = $sent;
+			$indexnow['code'] = $code;
+			$indexnow['ok']   = $ok;
 		}
 	}
 

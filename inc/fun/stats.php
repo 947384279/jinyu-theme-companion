@@ -159,6 +159,18 @@ function jinyu_stats_record_uv_ajax(): void {
     $date = isset( $_REQUEST['date'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['date'] ) ) : '';
     $today = current_time( 'Y-m-d' );
 
+    // 极简 IP 频率限制：同一 IP 每 5 秒最多放行一次 beacon，抑制脚本刷量虚高 UV。
+    // 真实访客由下方 cookie 一天去重，本限速不影响正常统计；仅挡无 cookie 的自动化高频请求。
+    $ip = (string) ( $_SERVER['REMOTE_ADDR'] ?? '' );
+    if ( '' !== $ip ) {
+        $rl_key = 'jinyu_uv_rl_' . md5( $ip );
+        if ( false !== get_transient( $rl_key ) ) {
+            jinyu_stats_beacon_done();
+            return;
+        }
+        set_transient( $rl_key, 1, 5 );
+    }
+
     // 先写好 Set-Cookie（必须在任何 header() 输出之前），再下发其余防缓存头。
     $uv_key = 'jinyu_uv_' . $today;
     $needs_cookie = ( $date === $today && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) && jinyu_stats_is_valid_visitor() && ! isset( $_COOKIE[ $uv_key ] ) );
