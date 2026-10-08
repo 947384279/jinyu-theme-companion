@@ -141,8 +141,12 @@ if ( ! function_exists( 'jinyu_companion_maybe_migrate_smtp' ) ) {
 				&& ! preg_match( '#^jinyu_enc2?::#', $plain )
 				&& ( $layers > 1 || 0 !== strpos( $stored, 'jinyu_enc2::' ) );
 			if ( $need_write ) {
-				$s['smtp_pwd'] = jinyu_companion_encrypt( $plain );
-				$changed       = true;
+				$enc = jinyu_companion_encrypt( $plain );
+				// 加密不可用时（如缺 openssl）跳过，保留原值，绝不降级为明文落库。
+				if ( false !== $enc ) {
+					$s['smtp_pwd'] = $enc;
+					$changed       = true;
+				}
 			}
 		}
 

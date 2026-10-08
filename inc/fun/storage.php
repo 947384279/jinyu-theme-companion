@@ -847,10 +847,14 @@ if ( ! function_exists( 'jinyu_storage_maybe_migrate' ) ) {
 				$enc = (string) jinyu_get_option( 'storage_secret', '' );
 				if ( '' !== $enc ) {
 					$plain = jinyu_companion_decrypt( $enc );
-					if ( '' !== $plain ) {
-						$s['storage_secret'] = jinyu_companion_encrypt( $plain );
+				if ( '' !== $plain ) {
+					$enc = jinyu_companion_encrypt( $plain );
+					// 加密不可用时（如缺 openssl）跳过，保留原值，绝不降级为明文落库。
+					if ( false !== $enc ) {
+						$s['storage_secret'] = $enc;
 						$changed             = true;
 					}
+				}
 				}
 			}
 		}
@@ -1602,11 +1606,20 @@ function jinyu_storage_process_one( $type ) {
 		// 整批推进：不存在的本地文件视为已跳过，仍计入 done（与 AJAX 处理器 $done=$end 一致）
 		$done = $end;
 	} else { // pull
+		// 拉回方向同样拦截危险可执行后缀（.php/.phtml/.phar 等），复用与推送一致的黑名单，
+		// 避免把云端脚本写入 Web 可访问的 uploads 目录造成远程代码执行。
+		$excluded_exts = jinyu_storage_excluded_exts();
 		for ( $i = $done; $i < $end; $i++ ) {
 			$key = $data[ $i ];
 			// prefix 为空时 substr 会剥掉 key 首字符：先确认前缀命中再剥，未命中原样返回。
 			$rel = jinyu_storage_safe_rel( (string) ( 0 === strpos( $key, $prefix ) ? substr( $key, strlen( $prefix ) ) : $key ) );
 			if ( '' === $rel ) {
+				++$done;
+				continue;
+			}
+			// 拦截危险可执行后缀：拉回方向也必须禁止把脚本写入 Web 目录。
+			$ext = strtolower( pathinfo( $rel, PATHINFO_EXTENSION ) );
+			if ( in_array( $ext, $excluded_exts, true ) ) {
 				++$done;
 				continue;
 			}

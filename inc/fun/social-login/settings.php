@@ -78,7 +78,9 @@ function jinyu_sl_process_post(): void {
 		// 掩码 •••••••• 不是真实密钥：提交它等价于「不修改」，须沿用原密文；
 		// 否则会把占位符当密钥加密存储（曾导致 QQ 登录报 client secret is illegal）。
 		if ( '' !== $post_sec && ! jinyu_sl_is_placeholder( $post_sec ) ) {
-			$row['client_secret'] = jinyu_sl_encrypt( $post_sec );
+			$enc = jinyu_sl_encrypt( $post_sec );
+			// 加密不可用时（如缺 openssl）保留原密文，绝不降级为明文落库。
+			$row['client_secret'] = ( false !== $enc ) ? $enc : $old_enc;
 		} elseif ( '' !== $old_enc ) {
 			$row['client_secret'] = $old_enc; // 沿用原密文
 		} else {
@@ -93,9 +95,11 @@ function jinyu_sl_process_post(): void {
 			$val = isset( $_POST[ $fid . '_' . $p ] ) ? sanitize_text_field( wp_unslash( $_POST[ $fid . '_' . $p ] ) ) : '';
 			if ( 'private_key' === $fid ) {
 				$old_pk = isset( $_POST[ 'private_key_old_' . $p ] ) ? sanitize_text_field( wp_unslash( $_POST[ 'private_key_old_' . $p ] ) ) : '';
-				if ( '' !== $val && ! jinyu_sl_is_placeholder( $val ) ) {
-					$row[ $fid ] = jinyu_sl_encrypt( $val );
-				} elseif ( '' !== $old_pk ) {
+			if ( '' !== $val && ! jinyu_sl_is_placeholder( $val ) ) {
+				$enc = jinyu_sl_encrypt( $val );
+				// 加密不可用时（如缺 openssl）保留原私钥，绝不降级为明文落库。
+				$row[ $fid ] = ( false !== $enc ) ? $enc : $old_pk;
+			} elseif ( '' !== $old_pk ) {
 					$row[ $fid ] = $old_pk;
 				} else {
 					$row[ $fid ] = '';

@@ -320,7 +320,7 @@ function jinyu_comment_cleanup_delete() {
 	$ph            = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB -- 评论清理/备份操作，管理端手动触发；备份表为插件自建表
 	$approved_ids  = $wpdb->get_col(
-		$wpdb->prepare( "SELECT comment_ID FROM {$wpdb->comments} WHERE comment_ID IN ({$ph}) AND ...'1'", ...$ids ) // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- 占位符来自 $ph（implode 出的 %d 串），同理静态分析看不见，运行时 prepare 有效
+		$wpdb->prepare( "SELECT comment_ID FROM {$wpdb->comments} WHERE comment_ID IN ({$ph}) AND comment_approved = '1'", ...$ids ) // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- 占位符来自 $ph（implode 出的 %d 串），同理静态分析看不见，运行时 prepare 有效
 	);
 	if ( empty( $approved_ids ) ) {
 		wp_send_json_error( __( '未找到可删除的已批准评论。', 'jinyu-theme-companion' ) );

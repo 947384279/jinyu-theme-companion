@@ -18,7 +18,9 @@ if ( ! function_exists( 'jinyu_companion_encrypt' ) ) {
 			return $plain;
 		}
 		if ( ! function_exists( 'openssl_encrypt' ) ) {
-			return $plain;
+			// 无 openssl 时拒绝加密：返回 false 由调用方决定是否保存，绝不降级为明文落库，
+			// 避免 SMTP 授权码 / 对象存储 Secret / OAuth client_secret 等凭证明文入库。
+			return false;
 		}
 		$key     = hash( 'sha256', wp_salt( 'auth' ), true );
 		$mac_key = hash( 'sha256', wp_salt( 'auth' ) . '|jinyu_mac', true );

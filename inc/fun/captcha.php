@@ -157,7 +157,7 @@ function jinyu_captcha_markup( string $scene ): string {
         <svg class="jinyu-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
         </button>
         <input type="text" name="captcha" inputmode="latin" autocomplete="off"
-            maxlength="4" placeholder="<?php esc_attr_e( '验证码', 'jinyu-theme-companion' ); ?>">
+            maxlength="5" placeholder="<?php esc_attr_e( '验证码', 'jinyu-theme-companion' ); ?>">
     </div>
     <?php
     return (string) ob_get_clean();
