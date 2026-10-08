@@ -4,7 +4,7 @@ Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.2.13
+Stable tag: 1.2.14
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,10 @@ This plugin does not collect, store or transmit any personal data by default, an
 Administrators can disable any of the above outbound features at any time in the corresponding settings; once disabled, the related requests stop entirely.
 
 == Changelog ==
+
+= 1.2.14 =
+* 修复 4 个严重缺陷：垃圾评论删除 SQL 语法错误（功能报废）；验证码输入框长度与生成位数不一致（恒失败）；对象存储拉回分支缺扩展名黑名单（潜在 RCE）；缺 openssl 时凭据明文落库。
+* 修复一批中风险缺陷：/llms-full.txt 全量导出改为分页流式（避免大站点内存耗尽/超时）；社交登录登录后触发 wp_login 钩子、昵称入库前消毒、Apple id_token 校验算法必须为 RS256；JSON-LD 的 inLanguage 改用 zh-CN 且 articleSection/image 仅在有效值时输出；IndexNow 按 10000 条分块避免超量 400；UV beacon 增加按 IP 频率限制；对象存储 curl 句柄释放与 finish_batch 尊重停止信号。
 
 = 1.2.13 =
 * 水印零字体/纯ASCII自动兜底；设置页字体可用性分级提示；移除文件完整性自检模块；多处Ajax失败分支健壮性。
