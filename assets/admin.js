@@ -2766,4 +2766,216 @@ if (nav) {
 		}
 	}());
 
+	/* ---------------- 设置项搜索：Command Palette（Ctrl + K） ----------------
+	 * 不占布局：平时隐藏，Ctrl/⌘+K 或底栏放大镜钮呼出居中悬浮面板。
+	 * 索引在首次交互时扫 DOM 建立（各分区的面板标题 + 每行 .jyc-frow / .jyc-fl 的
+	 * 名称与描述），新增设置项零维护自动纳入。命中后经 selectPane 切分区，
+	 * 再把目标行滚进视口并脉冲高亮。纯前端实现，无任何网络请求。 */
+	(function () {
+		var root = document.getElementById('jyc-cmdk');
+		if (!root) { return; }
+		var inp = document.getElementById('jyc-cmdk-inp');
+		var list = document.getElementById('jyc-cmdk-list');
+		var openBtn = document.getElementById('jyc-ssOpen');
+		var backdrop = document.getElementById('jyc-cmdk-backdrop');
+		var foot = document.getElementById('jyc-cmdk-foot');
+		var cnt = document.getElementById('jyc-cmdk-cnt');
+		var INDEX = null, rows = [], activeIdx = -1, hitTimer = null, lastFocus = null;
+
+		/* 窄屏（≤879px）导航条：CSS 固定视口底部（宿主 #jyc-nav-slot，fixed bottom + 安全区），
+		 * JS 不做任何定位——旧版 fixed + scroll 监听实时算 top，滚动跟随滞后「会飘」，且与 ≥880px
+		 * 侧栏模式在 880~920px 重叠区打架。这里只在断点切换时把 .jyc-nav-wrap 搬进/搬出宿主：
+		 * 窄屏进底部槽，宽屏移回顶栏（brand 与操作钮之间，左栏纵排位置不变）。 */
+		var topnav = document.getElementById('jyc-topnav');
+		var navWrap = document.querySelector('.jyc-nav-wrap');
+		var navSlot = document.getElementById('jyc-nav-slot');
+		var navActions = topnav ? topnav.querySelector('.jyc-top-actions') : null;
+		var mqNarrow = window.matchMedia('(max-width: 879px)');
+		function moveNav() {
+			if (!navWrap || !navSlot || !topnav || !navActions) { return; }
+			if (mqNarrow.matches) { navSlot.appendChild(navWrap); }
+			else { topnav.insertBefore(navWrap, navActions); }
+		}
+		if (mqNarrow.addEventListener) { mqNarrow.addEventListener('change', moveNav); }
+		moveNav();
+
+		function isOpen() { return !root.hidden; }
+		function open() {
+			lastFocus = document.activeElement;
+			root.hidden = false;
+			inp.value = '';
+			list.innerHTML = '';
+			if (foot) { foot.hidden = true; }
+			setTimeout(function () { inp.focus(); }, 0);
+		}
+		function close() {
+			root.hidden = true;
+			inp.blur();
+			if (lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch (e) {} }
+		}
+		if (openBtn) { openBtn.addEventListener('click', open); }
+		if (backdrop) { backdrop.addEventListener('click', close); }
+
+		/* .jyc-fl 直接由文本节点 + input 组成，取其前置文本作名称。 */
+		function firstText(el) {
+			var out = '';
+			for (var n = el.firstChild; n; n = n.nextSibling) {
+				if (n.nodeType === 3) { out += n.textContent; }
+			}
+			return out.replace(/\s+/g, ' ').trim();
+		}
+		function rowTitle(row) {
+			var name = row.querySelector('.jyc-fname');
+			return name ? name.textContent.replace(/\s+/g, ' ').trim() : firstText(row);
+		}
+		function buildIndex() {
+			var list = [];
+			Object.keys(panes).forEach(function (mod) {
+				var pane = panes[mod];
+				if (!pane) { return; }
+				var tab = document.querySelector('#jyc-nav .jyc-nav-item[data-mod="' + mod + '"] span');
+				var label = tab ? tab.textContent.trim() : mod;
+				pane.querySelectorAll('.jyc-panel').forEach(function (panel) {
+					var h2 = panel.querySelector('.jyc-panel-h h2');
+					var panelTitle = h2 ? h2.textContent.replace(/\s+/g, ' ').trim() : '';
+					panel.querySelectorAll('.jyc-frow, .jyc-fl').forEach(function (row) {
+						var title = rowTitle(row);
+						if (!title) { return; }
+						var desc = row.querySelector('.jyc-fdesc');
+						list.push({
+							pane: mod, label: label, panel: panelTitle, el: row,
+							title: title,
+							desc: desc ? desc.textContent.replace(/\s+/g, ' ').trim() : ''
+						});
+					});
+				});
+			});
+			return list;
+		}
+		function esc(s) {
+			return s.replace(/[&<>"']/g, function (c) {
+				return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+			});
+		}
+		/* 每个分区的线性图标，与左侧导航一一对应（复用同一套 SVG，保持视觉一致）；不使用 emoji。 */
+		var PANE_ICON = {
+			seo: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+			content: '<path d="M4 6h16M4 12h16M4 18h10"/>',
+			perf: '<path d="M13 2 3 14h7l-1 8 10-12h-7z"/>',
+			perfcenter: '<path d="M3 12h4l2.5-6 4 12 2.5-6H21"/>',
+			comment: '<path d="M21 11.5a8.38 8.38 0 0 1-9 8.3 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 0 1 12 3a8.38 8.38 0 0 1 9 8.5z"/>',
+			smtp: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/>',
+			storage: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>',
+			social: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+			io: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+			wechat: '<path d="M8 13a4.5 4.5 0 0 1-4.5-4.5A4.5 4.5 0 0 1 8 4c2 0 3.7 1.2 4.4 3"/><path d="M16 19a4 4 0 0 1-4-4 4 4 0 0 1 4-4 4 4 0 0 1 4 4v.5a3 3 0 0 1-3 3h-.5a2 2 0 0 0-1.5.7L13 21l2-2.5c.5.1 1 .4 1.6.4z"/>',
+			media: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.8"/><path d="m21 16-5-5-9 9"/>'
+		};
+		function iconFor(pane) {
+			var inner = PANE_ICON[pane] || '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>';
+			return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
+		}
+		/* 命中子串加 <b> 高亮；原文先经 esc 转义再分段拼回，杜绝注入。 */
+		function mark(text, q) {
+			var i = text.toLowerCase().indexOf(q);
+			if (i < 0) { return esc(text); }
+			return esc(text.slice(0, i))
+				+ '<b class="jyc-ss-hl">' + esc(text.slice(i, i + q.length)) + '</b>'
+				+ esc(text.slice(i + q.length));
+		}
+		function search(q) {
+			if (!INDEX) { INDEX = buildIndex(); }
+			var out = [], ql = q.toLowerCase();
+			for (var i = 0; i < INDEX.length && out.length < 12; i++) {
+				var it = INDEX[i];
+				if ((it.title + ' ' + it.desc + ' ' + it.panel).toLowerCase().indexOf(ql) > -1) {
+					out.push(it);
+				}
+			}
+			return out;
+		}
+		function render(q) {
+			rows = search(q);
+			activeIdx = rows.length ? 0 : -1;
+			if (!rows.length) {
+				list.innerHTML = '<div class="jyc-cmdk-empty">未找到匹配的设置项</div>';
+				if (foot) { foot.hidden = true; }
+				return;
+			}
+			// 按分区分组渲染：同分组内保留原始命中顺序，data-i 仍与 rows 一一对应（键盘导航不破）。
+			var html = '', cur = null;
+			rows.forEach(function (it, i) {
+				if (it.pane !== cur) {
+					cur = it.pane;
+					html += '<div class="jyc-cmdk-grp">' + esc(it.label) + '</div>';
+				}
+				html += '<button type="button" class="jyc-cmdk-item' + (0 === i ? ' jyc-active' : '') + '" data-i="' + i + '">'
+					+ '<span class="jyc-cmdk-ico">' + iconFor(it.pane) + '</span>'
+					+ '<span class="jyc-cmdk-body">'
+					+ '<span class="t">' + mark(it.title, q) + '</span>'
+					+ (it.panel ? '<span class="jyc-cmdk-sub">' + esc(it.panel) + '</span>' : '')
+					+ '</span></button>';
+			});
+			list.innerHTML = html;
+			if (foot) {
+				foot.hidden = false;
+				if (cnt) { cnt.textContent = rows.length + ' 个结果'; }
+			}
+		}
+		function go(it) {
+			if (!it) { return; }
+			selectPane(it.pane, true);
+			close();
+			// pane 刚显示完同帧内布局未稳定，延一帧再滚动 + 脉冲高亮目标行。
+			requestAnimationFrame(function () {
+				it.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				it.el.classList.remove('jyc-setsearch-hit');
+				void it.el.offsetWidth; /* 强制 reflow 重启动画 */
+				it.el.classList.add('jyc-setsearch-hit');
+				clearTimeout(hitTimer);
+				hitTimer = setTimeout(function () { it.el.classList.remove('jyc-setsearch-hit'); }, 3800);
+			});
+		}
+		inp.addEventListener('input', function () {
+			var q = inp.value.trim();
+			if (!q) { list.innerHTML = ''; if (foot) { foot.hidden = true; } return; }
+			render(q);
+		});
+		inp.addEventListener('keydown', function (e) {
+			// 输入框在保存表单内：Enter / 方向键一律拦下，避免误提交整表。
+			if ('Enter' === e.key || 'ArrowDown' === e.key || 'ArrowUp' === e.key || 'Escape' === e.key) {
+				e.preventDefault();
+			}
+			if ('Escape' === e.key) { close(); return; }
+			if (!isOpen()) { return; }
+			var items = list.querySelectorAll('.jyc-cmdk-item');
+			if (!items.length) { return; }
+			if ('ArrowDown' === e.key || 'ArrowUp' === e.key) {
+				activeIdx += 'ArrowDown' === e.key ? 1 : -1;
+				if (activeIdx < 0) { activeIdx = items.length - 1; }
+				if (activeIdx >= items.length) { activeIdx = 0; }
+				for (var i = 0; i < items.length; i++) {
+					items[i].classList.toggle('jyc-active', i === activeIdx);
+				}
+				if (items[activeIdx] && items[activeIdx].scrollIntoView) {
+					items[activeIdx].scrollIntoView({ block: 'nearest' });
+				}
+			} else if ('Enter' === e.key) {
+				go(rows[activeIdx] || rows[0]);
+			}
+		});
+		list.addEventListener('mousedown', function (e) {
+			// mousedown 而非 click：抢在 input blur 之前完成选中，避免面板先被关闭。
+			e.preventDefault();
+			var btn = e.target.closest('.jyc-cmdk-item');
+			if (btn) { go(rows[parseInt(btn.getAttribute('data-i'), 10)]); }
+		});
+		document.addEventListener('keydown', function (e) {
+			if ((e.ctrlKey || e.metaKey) && ('k' === e.key || 'K' === e.key)) {
+				e.preventDefault();
+				if (isOpen()) { close(); } else { open(); }
+			}
+		});
+	}());
+
 })();

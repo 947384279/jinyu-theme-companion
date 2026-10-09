@@ -514,6 +514,23 @@ function jinyu_companion_settings_page_html(): void {
 			// 既无展开态闪现、也无入场动画；admin.js 加载后会在下一帧移除 no-anim 恢复手动切换动画。
 			?>
 			<script>var jA=document.querySelector('.jyc-app');if(jA&&localStorage.getItem('jinyu_rail')==='1'){jA.classList.add('jyc-rail-collapsed','jyc-no-anim');requestAnimationFrame(function(){requestAnimationFrame(function(){jA.classList.remove('jyc-no-anim');});});}</script>
+				<!-- 设置项搜索 = Command Palette（不占布局）：平时隐藏，Ctrl/⌘+K 或底栏放大镜钮呼出；
+					 居中悬浮 + 背景压暗，Esc / 点空白关闭。挂在 .jyc-app 直下以继承主题变量。 -->
+				<div class="jyc-cmdk" id="jyc-cmdk" hidden>
+					<div class="jyc-cmdk-backdrop" id="jyc-cmdk-backdrop"></div>
+					<div class="jyc-cmdk-panel" role="dialog" aria-modal="true" aria-label="<?php echo esc_attr__( '搜索设置项', 'jinyu-theme-companion' ); ?>">
+						<div class="jyc-cmdk-head">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+							<input type="text" id="jyc-cmdk-inp" placeholder="<?php echo esc_attr__( '搜索设置项，如「缓存」「SMTP」…', 'jinyu-theme-companion' ); ?>" autocomplete="off" spellcheck="false" aria-label="<?php echo esc_attr__( '搜索设置项', 'jinyu-theme-companion' ); ?>">
+							<kbd>Esc</kbd>
+						</div>
+						<div class="jyc-cmdk-list" id="jyc-cmdk-list"></div>
+						<div class="jyc-cmdk-foot" id="jyc-cmdk-foot" hidden>
+							<span class="jyc-cmdk-keys"><kbd>↑</kbd><kbd>↓</kbd> 选择 <kbd>↵</kbd> 跳转 <kbd>Ctrl K</kbd> 关闭</span>
+							<span class="jyc-cmdk-cnt" id="jyc-cmdk-cnt"></span>
+						</div>
+					</div>
+				</div>
 				<!-- ===================== TOP NAV ===================== -->
 				<div class="jyc-main">
 					<header class="jyc-topnav" id="jyc-topnav">
@@ -532,11 +549,11 @@ function jinyu_companion_settings_page_html(): void {
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
 									<span>SEO / 社交</span>
 								</button>
-								<button type="button" class="jyc-nav-item<?php echo 'content' === $active_pane ? ' jyc-active' : ''; ?>" data-mod="content">
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-									<span>内容增强</span>
-								</button>
-								<button type="button" class="jyc-nav-item<?php echo 'perf' === $active_pane ? ' jyc-active' : ''; ?>" data-mod="perf">
+							<button type="button" class="jyc-nav-item<?php echo 'content' === $active_pane ? ' jyc-active' : ''; ?>" data-mod="content">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+							<span>内容增强</span>
+						</button>
+							<button type="button" class="jyc-nav-item<?php echo 'perf' === $active_pane ? ' jyc-active' : ''; ?>" data-mod="perf">
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg>
 									<span>前台加速</span>
 								</button>
@@ -576,9 +593,15 @@ function jinyu_companion_settings_page_html(): void {
 							<button type="button" class="jyc-nav-edge jyc-nav-edge-right" aria-label="<?php echo esc_attr__( '向右滚动', 'jinyu-theme-companion' ); ?>"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
 						</div>
 						<div class="jyc-top-actions">
-							<button type="button" class="jyc-rail-toggle" id="jyc-railToggle" aria-expanded="true" aria-controls="jyc-topnav" title="<?php echo esc_attr__( '收起 / 展开侧栏', 'jinyu-theme-companion' ); ?>">
-								<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
-							</button>
+						<button type="button" class="jyc-rail-toggle" id="jyc-railToggle" aria-expanded="true" aria-controls="jyc-topnav" title="<?php echo esc_attr__( '收起 / 展开侧栏', 'jinyu-theme-companion' ); ?>">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+						</button>
+						<button type="button" class="jyc-theme-tog" id="jyc-ssOpen"
+								title="<?php echo esc_attr__( '搜索设置（Ctrl + K）', 'jinyu-theme-companion' ); ?>"
+								aria-label="<?php echo esc_attr__( '搜索设置项', 'jinyu-theme-companion' ); ?>"
+								aria-haspopup="dialog" aria-controls="jyc-cmdk">
+							<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+						</button>
 							<button class="jyc-theme-tog" id="jyc-themeTog" type="button" title="<?php echo esc_attr__( '切换深色 / 浅色', 'jinyu-theme-companion' ); ?>">
 								<svg id="jyc-themeIco" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
 							</button>
@@ -590,6 +613,9 @@ function jinyu_companion_settings_page_html(): void {
 							</button>
 						</div>
 					</header>
+					<!-- 窄屏（≤879px）底部固定导航条的宿主：JS 在窄屏把 .jyc-nav-wrap 移入此处（CSS fixed bottom），
+						     宽屏（≥880px 左侧栏模式）移回顶栏。空槽不占位（宽屏永远为空）。 -->
+					<div class="jyc-nav-slot" id="jyc-nav-slot"></div>
 
 					<main class="jyc-content">
 						<!-- ===================== OVERVIEW ===================== -->

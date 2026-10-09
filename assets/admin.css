@@ -116,6 +116,8 @@
 
 /* 导航包装：flex 兄弟项 [左箭头][nav][右箭头]，箭头独占固定宽度，不遮挡菜单内容 */
 .jyc-nav-wrap { position: relative; display: flex; align-items: stretch; gap: 3px; flex: 1; min-width: 0; overflow: hidden; }
+/* 窄屏底部固定导航条宿主：JS 在 ≤879px 把 .jyc-nav-wrap 移入此处（CSS fixed bottom），宽屏移回顶栏、此槽为空不占位 */
+.jyc-nav-slot:empty { display: none; }
 .jyc-nav { display: flex; align-items: center; gap: 3px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; position: relative; padding-bottom: 3px; }
 .jyc-nav::-webkit-scrollbar { display: none; }
 /* 滑动指示器：底部高亮条随激活 tab 平滑滑动（GPU transform 加速，比 left 更顺） */
@@ -910,25 +912,52 @@ select.jyc-inp option:checked { background: var(--brand-soft); color: var(--bran
 
 /* ===================== Responsive ===================== */
 @media (max-width: 1080px) { .jyc-bento { grid-template-columns: repeat(2,1fr); } }
-@media (max-width: 920px) {
-  /* 手机 / 平板：管理栏 46px 且导航换行会占掉约 100px 视口 —— 取消吸顶，整条随页面滚动 */
-  .jyc-topnav { position: static; flex-wrap: wrap; gap: 10px; padding: 10px 16px; }
+/* 断点与下方 ≥880px 侧栏模式严格互补（879/880），不留重叠区：
+   旧版 ≤920 悬浮胶囊与 ≥880 侧栏在 880~920px 叠加——placeNav 量到的是 248px 左栏（高≈全视口），
+   胶囊被钳到屏幕下方悬空；且 fixed + JS 滚动监听在手机上跟随滞后，视觉上「会飘」。 */
+@media (max-width: 879px) {
+  /* 手机 / 平板：顶栏只留品牌 + 操作钮（约 56px 一行），吸顶（承接基础规则 sticky）。
+     导航胶囊抽离为【底部固定条】（iOS 风格底部 tab bar）：单手拇指可达、不占顶部本就紧张的内容空间、
+     不与顶部条叠两层抢视口；宽屏 (>879) 维持顶部吸顶，符合 WP 后台 PC 习惯。 */
+  .jyc-topnav { flex-wrap: wrap; gap: 10px; padding: 10px 16px; position: sticky; top: var(--wp-admin--admin-bar--height, 46px); z-index: 30; }
   .jyc-brand-txt span { display: none; }
   /* 新版导航是 [.jyc-nav-wrap] 内 [‹][nav][›] flex 兄弟项，nav 内部横向滚动；
      旧版的 order:3 / flex-basis:100% 会让 nav 被排到两个箭头之后，造成箭头堆叠，已删除。 */
   .jyc-nav-item { padding: 8px 11px; font-size: 13px; gap: 6px; }
   .jyc-top-actions { margin-left: auto; }
+  /* 导航胶囊：固定视口底部居中，带 iPhone 底部安全区（home indicator）；脱离文档流，滚动始终可见。
+     内容区底部留白（见 .jyc-content padding-bottom）防止末屏被盖。 */
+  .jyc-nav-slot {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    width: min(92vw, 620px); z-index: 9500; margin: 0;
+  }
+  /* WP 核心在 ≤600px 把管理栏改为 absolute（随页滚走），--wp-admin--admin-bar--height 仍是 46px
+     ——顶栏吸附点归零，管理栏滚走后顶栏贴视口顶（导航已固定底部，与之无关）。 */
+  @media (max-width: 600px) {
+    .jyc-topnav { top: 0; }
+  }
+  .jyc-nav-slot > .jyc-nav-wrap {
+    padding: 5px 6px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, .16);
+  }
+  .jyc-app[data-theme="dark"] .jyc-nav-wrap { box-shadow: 0 10px 28px rgba(0, 0, 0, .55); }
+  .jyc-nav-item { border-radius: 999px; }
   .jyc-field-grid, .jyc-smtp-grid, .jyc-checks { grid-template-columns: 1fr; }
   .jyc-bento { grid-template-columns: 1fr 1fr; }
-  /* 浮条贴边：小屏居中胶囊两侧只剩几十像素，视觉上像「浮在内容上」而非贴底 */
-  .jyc-dirtybar { left: 12px; right: 12px; transform: translateY(12px); border-radius: 18px; }
+  /* 内容区底部留白：让出底部导航条高度（~48px）+ 间距，避免末屏内容被盖住 */
+  .jyc-content { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+  /* 底部固定导航与底部悬浮保存条（全局脏条 / 性能中心）错开：两浮条上移到导航之上 */
+  .jyc-dirtybar { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); left: 12px; right: 12px; transform: translateY(12px); border-radius: 18px; }
   .jyc-dirtybar.jyc-db-on { transform: translateY(0); }
   /* 铺满后按钮组推到最右：左提示 / 右操作，消除保存按钮右侧大片空白 */
   .jyc-db-actions { margin-left: auto; }
 }
 @media (max-width: 560px) {
   .jyc-bento { grid-template-columns: 1fr; }
-  .jyc-content { padding: 16px 14px max(36px, env(safe-area-inset-bottom)); }
+  /* 顶部 18px：底部固定导航条需预留 72px 高度，避免末屏内容被盖 */
+  .jyc-content { padding: 18px 14px calc(72px + env(safe-area-inset-bottom, 0px)); }
   .jyc-brand-txt { display: none; }
   /* 字号与留白收缩：小屏信息密度优先 */
   .jyc-hero-inner { padding: 22px 20px; border-radius: var(--r-lg); }
@@ -1519,7 +1548,7 @@ textarea.jyc-inp{font-weight:400}
 }
 /* 窄屏贴边：与全局 .jyc-dirtybar 行为一致，胶囊铺满、操作钮推到最右 */
 @media (max-width: 920px){
-	.jperf-floatsave{left:12px;right:12px;transform:translateY(12px);border-radius:18px;padding-left:16px}
+	.jperf-floatsave{left:12px;right:12px;transform:translateY(12px);border-radius:18px;padding-left:16px;bottom:calc(72px + env(safe-area-inset-bottom, 0px))}
 	.jperf-floatsave.show{transform:translateY(0)}
 	.jperf-floatsave-act{margin-left:auto}
 	/* 标题行右上组件（状态胶囊 + 清除缓存按钮）：窄屏改为整行换行，各组件整体不折行、垂直居中 */
@@ -2690,3 +2719,76 @@ body.jyc-dark { background: #0a111c; }
 .jyc-app[data-theme="dark"] .jyc-cs-cell,
 .jyc-app[data-theme="dark"] .jyc-cache-lu-result { background: rgba(255,255,255,.04); }
 .jyc-app[data-theme="dark"] .jyc-cache-clear .jyc-btn-ghost:hover { color: #ff9090; border-color: #6b3a3a; }
+
+/* ===================== 设置项搜索：Command Palette（Ctrl + K） ===================== */
+/* 触发钮复用 .jyc-theme-tog 方钮样式（见 top-actions），此处仅面板本身。
+   DOM 挂在 .jyc-app 直下以继承主题变量（暗色同样正确）；fixed 层级压过保存浮条。
+   面板横向 + 垂直双向居中（Spotlight / Raycast 式），小屏时由 padding 兜底。 */
+.jyc-cmdk { position: fixed; inset: 0; z-index: 100000;
+  display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+.jyc-cmdk[hidden] { display: none; }
+.jyc-cmdk-backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, .42);
+  backdrop-filter: blur(6px) saturate(1.1); -webkit-backdrop-filter: blur(6px) saturate(1.1); }
+.jyc-cmdk-panel { position: relative; width: min(560px, 100%); max-height: 66vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, .06), 0 24px 70px rgba(15, 23, 42, .32);
+  animation: jycCmdkIn .2s var(--ease); }
+@keyframes jycCmdkIn { from { opacity: 0; transform: translateY(6px) scale(.975); } }
+.jyc-cmdk-head { display: flex; align-items: center; gap: 12px; flex: 0 0 auto;
+  padding: 15px 18px; border-bottom: 1px solid var(--line); }
+.jyc-cmdk-head svg { flex: 0 0 auto; width: 18px; height: 18px; color: var(--ink-3); }
+.jyc-cmdk-head input { flex: 1 1 auto; min-width: 0; border: 0; outline: 0; background: transparent;
+  font-family: inherit; font-size: 15.5px; line-height: 1.4; color: var(--ink);
+  caret-color: var(--brand); }
+.jyc-cmdk-head input::placeholder { color: var(--ink-3); }
+.jyc-cmdk-head kbd { flex: 0 0 auto; font-family: inherit; font-size: 11px; line-height: 1;
+  padding: 5px 8px; border-radius: 7px; border: 1px solid var(--line);
+  border-bottom-width: 2px; background: var(--surface-2); color: var(--ink-3); }
+.jyc-cmdk-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 8px;
+  scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.jyc-cmdk-list::-webkit-scrollbar { width: 8px; }
+.jyc-cmdk-list::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px;
+  border: 2px solid var(--surface); }
+.jyc-cmdk-empty { padding: 26px 10px; text-align: center; font-size: 13px; color: var(--ink-3); }
+.jyc-cmdk-item { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+  padding: 9px 11px; margin: 0; border: 0; border-radius: 11px; background: transparent;
+  cursor: pointer; transition: background .12s ease; }
+.jyc-cmdk-item:hover { background: var(--surface-2); }
+.jyc-cmdk-item.jyc-active { background: var(--brand-soft); }
+.jyc-cmdk-ico { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 9px;
+  display: grid; place-items: center; background: var(--surface-2); color: var(--ink-2);
+  transition: background .12s ease, color .12s ease; }
+.jyc-cmdk-ico svg { width: 16px; height: 16px; display: block; }
+.jyc-cmdk-item.jyc-active .jyc-cmdk-ico { background: var(--brand); color: #fff; }
+.jyc-cmdk-body { flex: 1 1 auto; min-width: 0; }
+.jyc-cmdk-item .t { display: block; font-size: 13.5px; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jyc-cmdk-item.jyc-active .t { color: var(--brand); font-weight: 600; }
+.jyc-cmdk-sub { display: block; margin-top: 1px; font-size: 11.5px; color: var(--ink-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jyc-cmdk-grp { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--ink-3);
+  padding: 11px 12px 4px; }
+.jyc-cmdk-foot { flex: 0 0 auto; display: flex; align-items: center; gap: 14px;
+  padding: 9px 14px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--ink-3); }
+.jyc-cmdk-keys { display: inline-flex; align-items: center; gap: 5px; }
+.jyc-cmdk-foot kbd, .jyc-cmdk-foot .jbd { font-family: inherit; font-size: 11px; line-height: 1;
+  padding: 3px 6px; border-radius: 5px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); }
+.jyc-cmdk-cnt { margin-left: auto; }
+.jyc-ss-hl { color: var(--brand); font-weight: 600; }
+@keyframes jycSsPulse { 0%, 35% { background: var(--brand-soft); } 100% { background: transparent; } }
+.jyc-setsearch-hit { animation: jycSsPulse 1.8s ease 2; border-radius: 8px; }
+.jyc-app[data-theme="dark"] .jyc-cmdk-panel { box-shadow: 0 2px 6px rgba(0, 0, 0, .2), 0 24px 70px rgba(0, 0, 0, .6); }
+.jyc-app[data-theme="dark"] .jyc-cmdk-backdrop { background: rgba(0, 0, 0, .5); }
+
+/* 移动端：面板铺满屏、防 iOS 输入框聚焦缩放（font-size ≥ 16px 才不触发自动放大）、
+   触屏无键盘故隐藏 Esc 键徽标（点空白即关），边距收窄让出更多结果空间。 */
+@media (max-width: 640px) {
+  .jyc-cmdk { padding: 14px 10px; }
+  .jyc-cmdk-panel { border-radius: 18px; max-height: 82vh; }
+  .jyc-cmdk-head { padding: 14px 16px; }
+  .jyc-cmdk-head input { font-size: 16px; }
+  .jyc-cmdk-head kbd { display: none; }
+  .jyc-cmdk-foot kbd { display: none; }
+}
+.jyc-app[data-theme="dark"] .jyc-cmdk-backdrop { background: rgba(0, 0, 0, .5); }

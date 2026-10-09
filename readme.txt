@@ -4,7 +4,7 @@ Tags: seo, schema, social, related-posts, cache
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.2.14
+Stable tag: 1.2.15
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -120,6 +120,12 @@ This plugin does not collect, store or transmit any personal data by default, an
 Administrators can disable any of the above outbound features at any time in the corresponding settings; once disabled, the related requests stop entirely.
 
 == Changelog ==
+
+= 1.2.15 =
+* 新增：友情链接模块 —— 注册 jy_link 自定义文章类型与 jy_link_cat 分类法（后台独立菜单，字段沿用 jy_link_url / jy_link_desc），经 jinyu_flink_items 过滤器向主题供给友链数据。该能力原属主题 inc/link.php，随「主题纯呈现层」解耦迁入插件。
+* 新增：后台设置页 Command Palette（Ctrl / ⌘ + K 或顶栏放大镜按钮呼出），支持实时模糊搜索设置项、↑↓ 选择、回车跳转定位、Esc / 点空白关闭；顶栏新增专用入口按钮。
+* 优化：窄屏（≤879px）下顶栏导航自动迁移为底部固定导航条，宽屏恢复左侧栏布局。
+* 修复：AI 爬虫统计丢数 —— 落盘前未合并仍在 pending 缓存中的计数，导致部分访问不计入统计。
 
 = 1.2.14 =
 * 修复 4 个严重缺陷：垃圾评论删除 SQL 语法错误（功能报废）；验证码输入框长度与生成位数不一致（恒失败）；对象存储拉回分支缺扩展名黑名单（潜在 RCE）；缺 openssl 时凭据明文落库。
